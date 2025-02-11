@@ -42,7 +42,7 @@
 *                                                                    *
 **********************************************************************
 *                                                                    *
-*       SystemView version: 3.56                                    *
+*       SystemView version: 3.56a                                    *
 *                                                                    *
 **********************************************************************
 -------------------------- END-OF-HEADER -----------------------------
@@ -460,20 +460,22 @@ static U8* _EncodeData(U8* pPayload, const char* pSrc, unsigned int NumBytes) {
 *    content.
 */
 static U8* _EncodeFloat(U8* pPayload, float Value) {
-   float Val = Value;                                
-   U8* pSysviewPointer;                             
-   U32* SysViewData;                                 
-   pSysviewPointer = pPayload;                        
-   SysViewData = (U32*)&Val;                             
-   while((*SysViewData) > 0x7F) {          
-     *pSysviewPointer++ = (U8)((*SysViewData) | 0x80); 
-     (*SysViewData) >>= 7;                            
-   };                                               
-   *pSysviewPointer++ = (U8)(*SysViewData);            
-   pPayload = pSysviewPointer;
+  float  Val;                                
+  U8*    pSysviewPointer;                             
+  U32*   SysViewData;
 
-   return pPayload;
-}                         
+  Val = Value;                                 
+  pSysviewPointer = pPayload;                        
+  SysViewData = (U32*)&Val;                             
+  while((*SysViewData) > 0x7F) {          
+    *pSysviewPointer++ = (U8)((*SysViewData) | 0x80); 
+    (*SysViewData) >>= 7;                            
+  }                                               
+  *pSysviewPointer++ = (U8)(*SysViewData);            
+  pPayload = pSysviewPointer;
+
+  return pPayload;
+}
 
 /*********************************************************************
 *
@@ -2038,7 +2040,7 @@ void SEGGER_SYSVIEW_SampleData(const SEGGER_SYSVIEW_DATA_SAMPLE *pInfo) {
   //
   pPayload = pPayloadStart;
   ENCODE_U32(pPayload, pInfo->ID);
-  pPayload = _EncodeFloat(pPayload, *(pInfo->pFloat_Value));
+  pPayload = _EncodeFloat(pPayload, *(pInfo->pValue.pFloat));
   _SendPacket(pPayloadStart, pPayload, SYSVIEW_EVTID_DATA_SAMPLE);
   
   RECORD_END();
@@ -2552,7 +2554,7 @@ void SEGGER_SYSVIEW_RegisterData(SEGGER_SYSVIEW_DATA_REGISTER* pInfo) {
   ENCODE_U32(pPayload, pInfo->ID);
   pPayload = _EncodeStr(pPayload, pInfo->sName, SEGGER_SYSVIEW_MAX_STRING_LEN);
   
-  if (pInfo->sName != 0) {
+  if (pInfo->sUnit != 0) {
     ENCODE_U32(pPayload, pInfo->DataType);
     ENCODE_U32(pPayload, pInfo->Offset);
     ENCODE_U32(pPayload, pInfo->RangeMin);

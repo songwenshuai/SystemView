@@ -42,7 +42,7 @@
 *                                                                    *
 **********************************************************************
 *                                                                    *
-*       SystemView version: 3.56                                    *
+*       SystemView version: 3.56a                                    *
 *                                                                    *
 **********************************************************************
 -------------------------- END-OF-HEADER -----------------------------
@@ -209,10 +209,10 @@ typedef struct {
 typedef struct {
   U32          ID;
   union {
-    U32*   pU32_Value;
-    I32*   pI32_Value;
-    float* pFloat_Value;
-  };  
+    U32*   pU32;
+    I32*   pI32;
+    float* pFloat;
+  } pValue;  
 } SEGGER_SYSVIEW_DATA_SAMPLE;
 
 typedef enum {
