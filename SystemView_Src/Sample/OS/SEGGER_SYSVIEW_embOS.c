@@ -52,14 +52,14 @@
 *                                                                    *
 **********************************************************************
 *                                                                    *
-*       SystemView version: V2.40b                                    *
+*       SystemView version: V2.40c                                    *
 *                                                                    *
 **********************************************************************
 -------------------------- END-OF-HEADER -----------------------------
 
 File    : SEGGER_SYSVIEW_embOS.c
 Purpose : Interface between embOS and System View.
-Revision: $Rev: 5626 $
+Revision: $Rev: 5643 $
 */
 
 #include "RTOS.h"
@@ -141,6 +141,46 @@ static void _RecordEndCallU32(unsigned int Id, OS_U32 RetVal) {
   SEGGER_SYSVIEW_RecordEndCallU32(Id, RetVal);
 }
 
+#if (OS_VERSION < 43200)  // Work around different embOS Trace API function types prior to V4.32
+static void _cbOnTaskCreate(unsigned int TaskId) {
+  SEGGER_SYSVIEW_OnTaskCreate((OS_U32)TaskId);
+}
+#else
+#define _cbOnTaskCreate   SEGGER_SYSVIEW_OnTaskCreate
+#endif
+
+#if (OS_VERSION < 43200)  // Work around different embOS Trace API function types prior to V4.32
+static void _cbOnTaskStartExec(unsigned int TaskId) {
+  SEGGER_SYSVIEW_OnTaskStartReady((OS_U32)TaskId);
+}
+#else
+#define _cbOnTaskStartExec  SEGGER_SYSVIEW_OnTaskStartReady
+#endif
+
+#if (OS_VERSION < 43200)  // Work around different embOS Trace API function types prior to V4.32
+static void _cbOnTaskStartReady(unsigned int TaskId) {
+  SEGGER_SYSVIEW_OnTaskStartExec((OS_U32)TaskId);
+}
+#else
+#define _cbOnTaskStartReady SEGGER_SYSVIEW_OnTaskStartExec
+#endif
+
+#if (OS_VERSION < 43200)  // Work around different embOS Trace API function types prior to V4.32
+static void _cbOnTaskStopReady(unsigned int TaskId, unsigned int Reason) {
+  SEGGER_SYSVIEW_OnTaskStopReady((OS_U32)TaskId, Reason);
+}
+#else
+#define _cbOnTaskStopReady  SEGGER_SYSVIEW_OnTaskStopReady
+#endif
+
+#if (OS_VERSION < 43200)  // Work around different embOS Trace API function types prior to V4.32
+static void _cbOnTaskTerminate(unsigned int TaskId) {
+  SEGGER_SYSVIEW_OnTaskTerminate((OS_U32)TaskId);
+}
+#else
+#define _cbOnTaskTerminate  SEGGER_SYSVIEW_OnTaskTerminate
+#endif
+
 // embOS trace API that targets SYSVIEW
 const OS_TRACE_API embOS_TraceAPI_SYSVIEW = {
 //
@@ -150,11 +190,11 @@ SEGGER_SYSVIEW_RecordEnterISR,                //  void (*pfRecordEnterISR)      
 SEGGER_SYSVIEW_RecordExitISR,                 //  void (*pfRecordExitISR)               (void);
 SEGGER_SYSVIEW_RecordExitISRToScheduler,      //  void (*pfRecordExitISRToScheduler)    (void);
 _cbSendTaskInfo,                              //  void (*pfRecordTaskInfo)              (const OS_TASK* pTask);
-SEGGER_SYSVIEW_OnTaskCreate,                  //  void (*pfRecordTaskCreate)            (OS_U32 TaskId);
-SEGGER_SYSVIEW_OnTaskStartExec,               //  void (*pfRecordTaskStartExec)         (OS_U32 TaskId);
+_cbOnTaskCreate,                              //  void (*pfRecordTaskCreate)            (OS_U32 TaskId);
+_cbOnTaskStartExec,                           //  void (*pfRecordTaskStartExec)         (OS_U32 TaskId);
 SEGGER_SYSVIEW_OnTaskStopExec,                //  void (*pfRecordTaskStopExec)          (void);
-SEGGER_SYSVIEW_OnTaskStartReady,              //  void (*pfRecordTaskStartReady)        (OS_U32 TaskId);
-SEGGER_SYSVIEW_OnTaskStopReady,               //  void (*pfRecordTaskStopReady)         (OS_U32 TaskId, unsigned Reason);
+_cbOnTaskStartReady,                          //  void (*pfRecordTaskStartReady)        (OS_U32 TaskId);
+_cbOnTaskStopReady,                           //  void (*pfRecordTaskStopReady)         (OS_U32 TaskId, unsigned Reason);
 SEGGER_SYSVIEW_OnIdle,                        //  void (*pfRecordIdle)                  (void);
 //
 // Generic Trace Event logging
@@ -172,7 +212,7 @@ _RecordExitTimer,                             //  void    (*pfRecordExitTimer)  
 #if (OS_VERSION >= 42400)   // Tracing end of call supported since embOS V4.24
 SEGGER_SYSVIEW_RecordEndCall,                 //  void    (*pfRecordEndCall)            (unsigned int Id);
 _RecordEndCallU32,                            //  void    (*pfRecordEndCallReturnValue) (unsigned int Id, OS_U32 ReturnValue);
-SEGGER_SYSVIEW_OnTaskTerminate,               //  void    (*pfRecordTaskTerminate)      (unsigned TaskId);
+_cbOnTaskTerminate,                           //  void    (*pfRecordTaskTerminate)      (OS_U32 TaskId);
 _cbRecordU32x5,                               //  void    (*pfRecordU32x5)              (unsigned Id, OS_U32 Para0, OS_U32 Para1, OS_U32 Para2, OS_U32 Para3, OS_U32 Para4);
 #endif
 };
