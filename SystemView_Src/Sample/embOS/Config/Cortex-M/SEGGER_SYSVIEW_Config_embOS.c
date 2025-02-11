@@ -17,24 +17,14 @@
 *                                                                    *
 * SEGGER strongly recommends to not make any changes                 *
 * to or modify the source code of this software in order to stay     *
-* compatible with the RTT protocol and J-Link.                       *
+* compatible with the SystemView and RTT protocol, and J-Link.       *
 *                                                                    *
 * Redistribution and use in source and binary forms, with or         *
 * without modification, are permitted provided that the following    *
-* conditions are met:                                                *
+* condition is met:                                                  *
 *                                                                    *
 * o Redistributions of source code must retain the above copyright   *
-*   notice, this list of conditions and the following disclaimer.    *
-*                                                                    *
-* o Redistributions in binary form must reproduce the above          *
-*   copyright notice, this list of conditions and the following      *
-*   disclaimer in the documentation and/or other materials provided  *
-*   with the distribution.                                           *
-*                                                                    *
-* o Neither the name of SEGGER Microcontroller GmbH         *
-*   nor the names of its contributors may be used to endorse or      *
-*   promote products derived from this software without specific     *
-*   prior written permission.                                        *
+*   notice, this condition and the following disclaimer.             *
 *                                                                    *
 * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND             *
 * CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES,        *
@@ -52,14 +42,14 @@
 *                                                                    *
 **********************************************************************
 *                                                                    *
-*       SystemView version: V2.52h                                    *
+*       SystemView version: 3.10                                    *
 *                                                                    *
 **********************************************************************
 -------------------------- END-OF-HEADER -----------------------------
 
 File    : SEGGER_SYSVIEW_Config_embOS.c
 Purpose : Sample setup configuration of SystemView with embOS.
-Revision: $Rev: 12706 $
+Revision: $Rev: 17066 $
 */
 #include "RTOS.h"
 #include "SEGGER_SYSVIEW.h"
@@ -67,8 +57,8 @@ Revision: $Rev: 12706 $
 #include "SEGGER_SYSVIEW_embOS.h"
 
 //
-// SystemcoreClock can be used in most CMSIS compatible projects.
-// In non-CMSIS projects define SYSVIEW_CPU_FREQ.
+// SystemCoreClock can be used in most CMSIS compatible projects.
+// In non-CMSIS projects define SYSVIEW_CPU_FREQ directly.
 //
 extern unsigned int SystemCoreClock;
 
@@ -80,12 +70,12 @@ extern unsigned int SystemCoreClock;
 */
 // The application name to be displayed in SystemViewer
 #ifndef   SYSVIEW_APP_NAME
-  #define SYSVIEW_APP_NAME        "Demo Application"
+  #define SYSVIEW_APP_NAME        "embOS start project"
 #endif
 
 // The target device name
 #ifndef   SYSVIEW_DEVICE_NAME
-  #define SYSVIEW_DEVICE_NAME     "Cortex-M4"
+  #define SYSVIEW_DEVICE_NAME     "Cortex-M3/M4/M7"
 #endif
 
 // Frequency of the timestamp. Must match SEGGER_SYSVIEW_Conf.h
@@ -100,7 +90,7 @@ extern unsigned int SystemCoreClock;
 
 // The lowest RAM address used for IDs (pointers)
 #ifndef   SYSVIEW_RAM_BASE
-  #define SYSVIEW_RAM_BASE        (0x20000000)
+  #define SYSVIEW_RAM_BASE        (0x00000000)
 #endif
 
 #ifndef   SYSVIEW_SYSDESC0
@@ -112,14 +102,15 @@ extern unsigned int SystemCoreClock;
   #define USE_CYCCNT_TIMESTAMP    1
 #endif
 
-// Define as 1 if the Cortex-M cycle counter is used and there might be no debugger attached while recording.
+// Define as 1 if the Cortex-M cycle counter is used and there might be no debugger attached while recording,
+// for example in post-mortem mode, or when recording via IP.
 #ifndef   ENABLE_DWT_CYCCNT
   #define ENABLE_DWT_CYCCNT       (USE_CYCCNT_TIMESTAMP & SEGGER_SYSVIEW_POST_MORTEM_MODE)
 #endif
 
 // Define as 1 to immediately start recording after initialization to catch system initialization.
 #ifndef   SYSVIEW_START_ON_INIT
-  #define SYSVIEW_START_ON_INIT 0
+  #define SYSVIEW_START_ON_INIT   0
 #endif
 
 //#ifndef   SYSVIEW_SYSDESC1
@@ -136,11 +127,11 @@ extern unsigned int SystemCoreClock;
 *
 **********************************************************************
 */
-#define DEMCR                     (*(volatile OS_U32*) (0xE000EDFCuL))  // Debug Exception and Monitor Control Register
-#define TRACEENA_BIT              (1uL << 24)                           // Trace enable bit
-#define DWT_CTRL                  (*(volatile OS_U32*) (0xE0001000uL))  // DWT Control Register
-#define NOCYCCNT_BIT              (1uL << 25)                           // Cycle counter support bit
-#define CYCCNTENA_BIT             (1uL << 0)                            // Cycle counter enable bit
+#define DEMCR         (*(volatile U32*) (0xE000EDFCuL))  // Debug Exception and Monitor Control Register
+#define TRACEENA_BIT  (1uL << 24)                        // Trace enable bit
+#define DWT_CTRL      (*(volatile U32*) (0xE0001000uL))  // DWT Control Register
+#define NOCYCCNT_BIT  (1uL << 25)                        // Cycle counter support bit
+#define CYCCNTENA_BIT (1uL << 0)                         // Cycle counter enable bit
 
 /*********************************************************************
 *
@@ -191,7 +182,7 @@ void SEGGER_SYSVIEW_Conf(void) {
   SEGGER_SYSVIEW_Init(SYSVIEW_TIMESTAMP_FREQ, SYSVIEW_CPU_FREQ,
                       &SYSVIEW_X_OS_TraceAPI, _cbSendSystemDesc);
   SEGGER_SYSVIEW_SetRAMBase(SYSVIEW_RAM_BASE);
-  OS_SetTraceAPI(&embOS_TraceAPI_SYSVIEW);    // Configure embOS to use SYSVIEW.
+  OS_TRACE_SetAPI(&embOS_TraceAPI_SYSVIEW);   // Configure embOS to use SYSVIEW.
 #if SYSVIEW_START_ON_INIT
   SEGGER_SYSVIEW_Start();                     // Start recording to catch system initialization.
 #endif

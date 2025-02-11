@@ -45,29 +45,35 @@
 *       SystemView version: 3.10                                    *
 *                                                                    *
 **********************************************************************
-* ---------------
-*           uC/OS-II is provided in source form for FREE short-term evaluation, for educational use or
-*           for peaceful research.  If you plan or intend to use uC/OS-II in a commercial application/
-*           product then, you need to contact Micrium to properly license uC/OS-II for its use in your
-*           application/product.   We provide ALL the source code for your convenience and to help you
-*           experience uC/OS-II.  The fact that the source is provided does NOT mean that you can use
-*           it commercially without paying a licensing fee.
-*
-*           Knowledge of the source code may NOT be used to develop a similar product.
-*
-*           Please help us continue to provide the embedded community with the finest software available.
-*           Your honesty is greatly appreciated.
-*
-*           You can find our product's user manual, API reference, release notes and
-*           more information at https://doc.micrium.com.
-*           You can contact us at www.micrium.com.
-************************************************************************************************************************
+--------- END-OF-HEADER --------------------------------------------
+File    : Main_RTT_MenuApp.c
+Purpose : Sample application to demonstrate RTT bi-directional functionality
 */
 
-#ifndef  OS_CFG_TRACE_H
-#define  OS_CFG_TRACE_H
+#define MAIN_C
 
-#define  OS_CFG_TRACE_MAX_TASK                    32u       /* Maximum number of tasks to record.                     */
-#define  OS_CFG_TRACE_MAX_RESOURCES              128u       /* Maximum number of combined kernel objects to record.   */
+#include <stdio.h>
 
-#endif
+#include "SEGGER_RTT.h"
+
+volatile int _Cnt;
+volatile int _Delay;
+
+static char r;
+
+/*********************************************************************
+*
+*       main
+*/
+void main(void) {
+
+  SEGGER_RTT_WriteString(0, "SEGGER Real-Time-Terminal Sample\r\n");
+  SEGGER_RTT_ConfigUpBuffer(0, NULL, NULL, 0, SEGGER_RTT_MODE_NO_BLOCK_SKIP);
+  do {
+    r = SEGGER_RTT_WaitKey();
+    SEGGER_RTT_Write(0, &r, 1);
+    r++;
+  } while (1);
+}
+
+/*************************** End of file ****************************/

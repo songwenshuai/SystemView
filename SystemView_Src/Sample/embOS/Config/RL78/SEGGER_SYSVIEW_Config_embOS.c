@@ -17,24 +17,14 @@
 *                                                                    *
 * SEGGER strongly recommends to not make any changes                 *
 * to or modify the source code of this software in order to stay     *
-* compatible with the RTT protocol and J-Link.                       *
+* compatible with the SystemView and RTT protocol, and J-Link.       *
 *                                                                    *
 * Redistribution and use in source and binary forms, with or         *
 * without modification, are permitted provided that the following    *
-* conditions are met:                                                *
+* condition is met:                                                  *
 *                                                                    *
 * o Redistributions of source code must retain the above copyright   *
-*   notice, this list of conditions and the following disclaimer.    *
-*                                                                    *
-* o Redistributions in binary form must reproduce the above          *
-*   copyright notice, this list of conditions and the following      *
-*   disclaimer in the documentation and/or other materials provided  *
-*   with the distribution.                                           *
-*                                                                    *
-* o Neither the name of SEGGER Microcontroller GmbH         *
-*   nor the names of its contributors may be used to endorse or      *
-*   promote products derived from this software without specific     *
-*   prior written permission.                                        *
+*   notice, this condition and the following disclaimer.             *
 *                                                                    *
 * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND             *
 * CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES,        *
@@ -52,28 +42,22 @@
 *                                                                    *
 **********************************************************************
 *                                                                    *
-*       SystemView version: V2.52h                                    *
+*       SystemView version: 3.10                                    *
 *                                                                    *
 **********************************************************************
 -------------------------- END-OF-HEADER -----------------------------
 
 File    : SEGGER_SYSVIEW_Config_embOS.c
 Purpose : Sample setup configuration of SystemView with embOS.
-Revision: $Rev: 12706 $
+Revision: $Rev: 15024 $
 */
 #include "RTOS.h"
 #include "SEGGER_SYSVIEW.h"
 #include "SEGGER_SYSVIEW_embOS.h"
 
 //
-// SystemcoreClock can be used in most CMSIS compatible projects.
-// In non-CMSIS projects define SYSVIEW_CPU_FREQ.
-//
-unsigned long SystemCoreClock = 32000000;
-
-//
 // SEGGER_SYSVIEW_TickCnt has to be defined in the module which
-// handles the SysTick and must be incremented in the SysTick
+// handles the System Tick and must be incremented in the System Tick
 // handler before any SYSVIEW event is generated.
 //
 // Example in embOS RTOSInit.c:
@@ -190,8 +174,8 @@ void SEGGER_SYSVIEW_Conf(void) {
 *
 * Function description
 *   Returns the current timestamp in ticks using the system tick
-*   count and the SysTick counter.
-*   All parameters of the SysTick have to be known and are set via
+*   count and the System Tick counter.
+*   All parameters of the System Tick have to be known and are set via
 *   configuration defines on top of the file.
 *
 * Return value
@@ -207,7 +191,7 @@ U32 SEGGER_SYSVIEW_X_GetTimestamp(void) {
   U32 CyclesPerTick;
   //
   // Get the cycles of the current system tick.
-  // SysTick is down-counting, subtract the current value from the number of cycles per tick.
+  // System Tick is down-counting, subtract the current value from the number of cycles per tick.
   //
   CyclesPerTick = TDR00 + 1;
   Cycles = (CyclesPerTick - TCR00);
@@ -216,7 +200,7 @@ U32 SEGGER_SYSVIEW_X_GetTimestamp(void) {
   //
   TickCount = SEGGER_SYSVIEW_TickCnt;
   //
-  // If a SysTick interrupt is pending, re-read timer and adjust result
+  // If a System Tick interrupt is pending, re-read timer and adjust result
   //
   if (IF1 & (1u << 4u)) {
     Cycles = (CyclesPerTick - TCR00);

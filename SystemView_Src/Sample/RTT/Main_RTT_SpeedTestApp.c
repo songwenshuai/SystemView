@@ -45,29 +45,61 @@
 *       SystemView version: 3.10                                    *
 *                                                                    *
 **********************************************************************
-* ---------------
-*           uC/OS-II is provided in source form for FREE short-term evaluation, for educational use or
-*           for peaceful research.  If you plan or intend to use uC/OS-II in a commercial application/
-*           product then, you need to contact Micrium to properly license uC/OS-II for its use in your
-*           application/product.   We provide ALL the source code for your convenience and to help you
-*           experience uC/OS-II.  The fact that the source is provided does NOT mean that you can use
-*           it commercially without paying a licensing fee.
-*
-*           Knowledge of the source code may NOT be used to develop a similar product.
-*
-*           Please help us continue to provide the embedded community with the finest software available.
-*           Your honesty is greatly appreciated.
-*
-*           You can find our product's user manual, API reference, release notes and
-*           more information at https://doc.micrium.com.
-*           You can contact us at www.micrium.com.
-************************************************************************************************************************
+--------- END-OF-HEADER --------------------------------------------
+File    : Main_RTT_SpeedTestApp.c
+Purpose : Sample program for measuring RTT performance.
 */
 
-#ifndef  OS_CFG_TRACE_H
-#define  OS_CFG_TRACE_H
+#include "RTOS.h"
+#include "BSP.h"
 
-#define  OS_CFG_TRACE_MAX_TASK                    32u       /* Maximum number of tasks to record.                     */
-#define  OS_CFG_TRACE_MAX_RESOURCES              128u       /* Maximum number of combined kernel objects to record.   */
+#include "SEGGER_RTT.h"
+#include <stdio.h>
 
-#endif
+OS_STACKPTR int StackHP[128], StackLP[128];          /* Task stacks */
+OS_TASK TCBHP, TCBLP;                        /* Task-control-blocks */
+
+static void HPTask(void) {
+  while (1) {
+    //
+    // Measure time needed for RTT output
+    // Perform dummy write with 0 characters, so we know the overhead of toggling LEDs and RTT in general
+    //
+// Set BP here. Then start sampling on scope
+    BSP_ClrLED(0);
+    SEGGER_RTT_Write(0, 0, 0);
+    BSP_SetLED(0);
+    BSP_ClrLED(0);
+    SEGGER_RTT_Write(0, "01234567890123456789012345678901234567890123456789012345678901234567890123456789\r\n", 82);
+    BSP_SetLED(0);
+// Set BP here. Then stop sampling on scope
+    OS_Delay(200);
+  }
+}
+
+static void LPTask(void) {
+  while (1) {
+    BSP_ToggleLED(1);
+    OS_Delay (500);
+  }
+}
+
+/*********************************************************************
+*
+*       main
+*
+*********************************************************************/
+
+int main(void) {
+  OS_IncDI();                      /* Initially disable interrupts  */
+  OS_InitKern();                   /* Initialize OS                 */
+  OS_InitHW();                     /* Initialize Hardware for OS    */
+  BSP_Init();                      /* Initialize LED ports          */
+  BSP_SetLED(0);
+  /* You need to create at least one task before calling OS_Start() */
+  OS_CREATETASK(&TCBHP, "HP Task", HPTask, 100, StackHP);
+  OS_CREATETASK(&TCBLP, "LP Task", LPTask,  50, StackLP);
+  OS_Start();                      /* Start multitasking            */
+  return 0;
+}
+

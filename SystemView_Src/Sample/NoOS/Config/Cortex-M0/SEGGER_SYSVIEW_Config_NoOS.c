@@ -17,24 +17,14 @@
 *                                                                    *
 * SEGGER strongly recommends to not make any changes                 *
 * to or modify the source code of this software in order to stay     *
-* compatible with the RTT protocol and J-Link.                       *
+* compatible with the SystemView and RTT protocol, and J-Link.       *
 *                                                                    *
 * Redistribution and use in source and binary forms, with or         *
 * without modification, are permitted provided that the following    *
-* conditions are met:                                                *
+* condition is met:                                                  *
 *                                                                    *
 * o Redistributions of source code must retain the above copyright   *
-*   notice, this list of conditions and the following disclaimer.    *
-*                                                                    *
-* o Redistributions in binary form must reproduce the above          *
-*   copyright notice, this list of conditions and the following      *
-*   disclaimer in the documentation and/or other materials provided  *
-*   with the distribution.                                           *
-*                                                                    *
-* o Neither the name of SEGGER Microcontroller GmbH         *
-*   nor the names of its contributors may be used to endorse or      *
-*   promote products derived from this software without specific     *
-*   prior written permission.                                        *
+*   notice, this condition and the following disclaimer.             *
 *                                                                    *
 * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND             *
 * CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES,        *
@@ -52,14 +42,14 @@
 *                                                                    *
 **********************************************************************
 *                                                                    *
-*       SystemView version: V2.52h                                    *
+*       SystemView version: 3.10                                    *
 *                                                                    *
 **********************************************************************
 -------------------------- END-OF-HEADER -----------------------------
 
 File    : SEGGER_SYSVIEW_Config_NoOS.c
 Purpose : Sample setup configuration of SystemView without an OS for Cortex-M0.
-Revision: $Rev: 9599 $
+Revision: $Rev: 14318 $
 */
 #include "SEGGER_SYSVIEW.h"
 #include "SEGGER_SYSVIEW_Conf.h"
@@ -67,6 +57,18 @@ Revision: $Rev: 9599 $
 // SystemcoreClock can be used in most CMSIS compatible projects.
 // In non-CMSIS projects define SYSVIEW_CPU_FREQ.
 extern unsigned int SystemCoreClock;
+extern unsigned int SEGGER_SYSVIEW_TickCnt;
+
+/*********************************************************************
+*
+*       Defines, fixed
+*
+**********************************************************************
+*/
+#define SCB_ICSR  (*(volatile U32*) (0xE000ED04uL)) // Interrupt Control State Register
+#define SCB_ICSR_PENDSTSET_MASK     (1UL << 26)     // SysTick pending bit
+#define SYST_RVR  (*(volatile U32*) (0xE000E014uL)) // SysTick Reload Value Register
+#define SYST_CVR  (*(volatile U32*) (0xE000E018uL)) // SysTick Current Value Register
 
 /*********************************************************************
 *

@@ -45,29 +45,63 @@
 *       SystemView version: 3.10                                    *
 *                                                                    *
 **********************************************************************
-* ---------------
-*           uC/OS-II is provided in source form for FREE short-term evaluation, for educational use or
-*           for peaceful research.  If you plan or intend to use uC/OS-II in a commercial application/
-*           product then, you need to contact Micrium to properly license uC/OS-II for its use in your
-*           application/product.   We provide ALL the source code for your convenience and to help you
-*           experience uC/OS-II.  The fact that the source is provided does NOT mean that you can use
-*           it commercially without paying a licensing fee.
-*
-*           Knowledge of the source code may NOT be used to develop a similar product.
-*
-*           Please help us continue to provide the embedded community with the finest software available.
-*           Your honesty is greatly appreciated.
-*
-*           You can find our product's user manual, API reference, release notes and
-*           more information at https://doc.micrium.com.
-*           You can contact us at www.micrium.com.
-************************************************************************************************************************
+--------- END-OF-HEADER --------------------------------------------
+File    : Main_RTT_MenuApp.c
+Purpose : Sample application to demonstrate RTT bi-directional functionality
 */
 
-#ifndef  OS_CFG_TRACE_H
-#define  OS_CFG_TRACE_H
+#define MAIN_C
 
-#define  OS_CFG_TRACE_MAX_TASK                    32u       /* Maximum number of tasks to record.                     */
-#define  OS_CFG_TRACE_MAX_RESOURCES              128u       /* Maximum number of combined kernel objects to record.   */
+#include <stdio.h>
 
-#endif
+#include "SEGGER_RTT.h"
+
+volatile int _Cnt;
+volatile int _Delay;
+
+/*********************************************************************
+*
+*       main
+*/
+void main(void) {
+  int r;
+  int CancelOp;
+
+  do {
+    _Cnt = 0;
+
+    SEGGER_RTT_WriteString(0, "SEGGER Real-Time-Terminal Sample\r\n");
+    SEGGER_RTT_WriteString(0, "Press <1> to continue in blocking mode (Application waits if necessary, no data lost)\r\n");
+    SEGGER_RTT_WriteString(0, "Press <2> to continue in non-blocking mode (Application does not wait, data lost if fifo full)\r\n");
+    do {
+      r = SEGGER_RTT_WaitKey();
+    } while ((r != '1') && (r != '2'));
+    if (r == '1') {
+      SEGGER_RTT_WriteString(0, "\r\nSelected <1>. Configuring RTT and starting...\r\n");
+      SEGGER_RTT_ConfigUpBuffer(0, NULL, NULL, 0, SEGGER_RTT_MODE_BLOCK_IF_FIFO_FULL);
+    } else {
+      SEGGER_RTT_WriteString(0, "\r\nSelected <2>. Configuring RTT and starting...\r\n");
+      SEGGER_RTT_ConfigUpBuffer(0, NULL, NULL, 0, SEGGER_RTT_MODE_NO_BLOCK_SKIP);
+    }
+    CancelOp = 0;
+    do {
+      //for (_Delay = 0; _Delay < 10000; _Delay++);
+      SEGGER_RTT_printf(0, "Count: %d. Press <Space> to get back to menu.\r\n", _Cnt++);
+      r = SEGGER_RTT_HasKey();
+      if (r) {
+        CancelOp = (SEGGER_RTT_GetKey() == ' ') ? 1 : 0;
+      }
+      //
+      // Check if user selected to cancel the current operation
+      //
+      if (CancelOp) {
+        SEGGER_RTT_WriteString(0, "Operation cancelled, going back to menu...\r\n");
+        break;
+      }
+    } while (1);
+    SEGGER_RTT_GetKey();
+    SEGGER_RTT_WriteString(0, "\r\n");
+  } while (1);
+}
+
+/*************************** End of file ****************************/

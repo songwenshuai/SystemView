@@ -17,24 +17,14 @@
 *                                                                    *
 * SEGGER strongly recommends to not make any changes                 *
 * to or modify the source code of this software in order to stay     *
-* compatible with the RTT protocol and J-Link.                       *
+* compatible with the SystemView and RTT protocol, and J-Link.       *
 *                                                                    *
 * Redistribution and use in source and binary forms, with or         *
 * without modification, are permitted provided that the following    *
-* conditions are met:                                                *
+* condition is met:                                                  *
 *                                                                    *
 * o Redistributions of source code must retain the above copyright   *
-*   notice, this list of conditions and the following disclaimer.    *
-*                                                                    *
-* o Redistributions in binary form must reproduce the above          *
-*   copyright notice, this list of conditions and the following      *
-*   disclaimer in the documentation and/or other materials provided  *
-*   with the distribution.                                           *
-*                                                                    *
-* o Neither the name of SEGGER Microcontroller GmbH         *
-*   nor the names of its contributors may be used to endorse or      *
-*   promote products derived from this software without specific     *
-*   prior written permission.                                        *
+*   notice, this condition and the following disclaimer.             *
 *                                                                    *
 * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND             *
 * CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES,        *
@@ -52,62 +42,44 @@
 *                                                                    *
 **********************************************************************
 *                                                                    *
-*       SystemView version: V2.52h                                    *
+*       SystemView version: 3.10                                    *
 *                                                                    *
 **********************************************************************
 -------------------------- END-OF-HEADER -----------------------------
 
 File    : SEGGER_SYSVIEW_Config_embOS_CM0.c
 Purpose : Sample setup configuration of SystemView with embOS
-          on Cortex-M0/Cortex-M0+/Cortex-M1 systems which do not 
+          on Cortex-M0/Cortex-M0+/Cortex-M1 systems which do not
           have a cycle counter.
-Revision: $Rev: 12706 $
-              
-Additional information:
-  SEGGER_SYSVIEW_TickCnt has to be defined in the module which handles
-  the SysTick and must be incremented in the SysTick_Handler.
-  
-  This configuration can be adopted for any other OS and device.
+Revision: $Rev: 15024 $
 */
 #include "RTOS.h"
 #include "SEGGER_SYSVIEW.h"
+#include "SEGGER_SYSVIEW_Conf.h"
 #include "SEGGER_SYSVIEW_embOS.h"
 
 //
-// SystemcoreClock can be used in most CMSIS compatible projects.
+// SystemCoreClock can be used in most CMSIS compatible projects.
 // In non-CMSIS projects define SYSVIEW_CPU_FREQ directly.
 //
 extern unsigned int SystemCoreClock;
 
 //
-// SEGGER_SYSVIEW_TickCnt has to be defined in the module which
-// handles the SysTick and must be incremented in the SysTick
+// SEGGER_SYSVIEW_TickCnt must be incremented in the SysTick
 // handler before any SYSVIEW event is generated.
 //
 // Example in embOS RTOSInit.c:
 //
-// unsigned int SEGGER_SYSVIEW_TickCnt; // <<-- Define SEGGER_SYSVIEW_TickCnt.
 // void SysTick_Handler(void) {
-// #if OS_PROFILE
-//   SEGGER_SYSVIEW_TickCnt++;                 // <<-- Increment SEGGER_SYSVIEW_TickCnt before calling OS_EnterNestableInterrupt.
+// #if (OS_PROFILE != 0)
+//   SEGGER_SYSVIEW_TickCnt++;  // Increment SEGGER_SYSVIEW_TickCnt before calling OS_INT_EnterNestable().
 // #endif
-//   OS_EnterNestableInterrupt();
+//   OS_INT_EnterNestable();
 //   OS_TICK_Handle();
-//   OS_LeaveNestableInterrupt();
+//   OS_INT_LeaveNestable();
 // }
 //
-extern unsigned int SEGGER_SYSVIEW_TickCnt;
-
-/*********************************************************************
-*
-*       Defines, fixed
-*
-**********************************************************************
-*/
-#define SCB_ICSR  (*(volatile U32*) (0xE000ED04uL)) // Interrupt Control State Register
-#define SCB_ICSR_PENDSTSET_MASK     (1UL << 26)     // SysTick pending bit
-#define SYST_RVR  (*(volatile U32*) (0xE000E014uL)) // SysTick Reload Value Register
-#define SYST_CVR  (*(volatile U32*) (0xE000E018uL)) // SysTick Current Value Register
+unsigned int SEGGER_SYSVIEW_TickCnt;
 
 /*********************************************************************
 *
@@ -117,12 +89,12 @@ extern unsigned int SEGGER_SYSVIEW_TickCnt;
 */
 // The application name to be displayed in SystemViewer
 #ifndef   SYSVIEW_APP_NAME
-  #define SYSVIEW_APP_NAME          "Demo Application"
+  #define SYSVIEW_APP_NAME        "embOS start project"
 #endif
 
 // The target device name
 #ifndef   SYSVIEW_DEVICE_NAME
-  #define SYSVIEW_DEVICE_NAME       "Cortex-M0"
+  #define SYSVIEW_DEVICE_NAME     "Cortex-M0/M0+/M1"
 #endif
 
 // Frequency of the timestamp. Must match SEGGER_SYSVIEW_Conf.h
@@ -137,16 +109,16 @@ extern unsigned int SEGGER_SYSVIEW_TickCnt;
 
 // The lowest RAM address used for IDs (pointers)
 #ifndef   SYSVIEW_RAM_BASE
-  #define SYSVIEW_RAM_BASE        (0x20000000)
-#endif
-
-// Define as 1 to immediately start recording after initialization to catch system initialization.
-#ifndef   SYSVIEW_START_ON_INIT
-  #define SYSVIEW_START_ON_INIT 0
+  #define SYSVIEW_RAM_BASE        (0x00000000)
 #endif
 
 #ifndef   SYSVIEW_SYSDESC0
   #define SYSVIEW_SYSDESC0        "I#15=SysTick"
+#endif
+
+// Define as 1 to immediately start recording after initialization to catch system initialization.
+#ifndef   SYSVIEW_START_ON_INIT
+  #define SYSVIEW_START_ON_INIT   0
 #endif
 
 //#ifndef   SYSVIEW_SYSDESC1
@@ -157,7 +129,18 @@ extern unsigned int SEGGER_SYSVIEW_TickCnt;
 //  #define SYSVIEW_SYSDESC2      ""
 //#endif
 
-/********************************************************************* 
+/*********************************************************************
+*
+*       Defines, fixed
+*
+**********************************************************************
+*/
+#define SCB_ICSR  (*(volatile U32*) (0xE000ED04uL))  // Interrupt Control State Register
+#define SCB_ICSR_PENDSTSET_MASK     (1UL << 26)      // SysTick pending bit
+#define SYST_RVR  (*(volatile U32*) (0xE000E014uL))  // SysTick Reload Value Register
+#define SYST_CVR  (*(volatile U32*) (0xE000E018uL))  // SysTick Current Value Register
+
+/*********************************************************************
 *
 *       _cbSendSystemDesc()
 *
@@ -184,12 +167,12 @@ static void _cbSendSystemDesc(void) {
 **********************************************************************
 */
 void SEGGER_SYSVIEW_Conf(void) {
-  SEGGER_SYSVIEW_Init(SYSVIEW_TIMESTAMP_FREQ, SYSVIEW_CPU_FREQ, 
+  SEGGER_SYSVIEW_Init(SYSVIEW_TIMESTAMP_FREQ, SYSVIEW_CPU_FREQ,
                       &SYSVIEW_X_OS_TraceAPI, _cbSendSystemDesc);
   SEGGER_SYSVIEW_SetRAMBase(SYSVIEW_RAM_BASE);
-  OS_SetTraceAPI(&embOS_TraceAPI_SYSVIEW);    // Configure embOS to use SYSVIEW.
+  OS_TRACE_SetAPI(&embOS_TraceAPI_SYSVIEW);  // Configure embOS to use SYSVIEW.
 #if SYSVIEW_START_ON_INIT
-  SEGGER_SYSVIEW_Start();                     // Start recording to catch system initialization.
+  SEGGER_SYSVIEW_Start();                    // Start recording to catch system initialization.
 #endif
 }
 
@@ -198,7 +181,7 @@ void SEGGER_SYSVIEW_Conf(void) {
 *       SEGGER_SYSVIEW_X_GetTimestamp()
 *
 * Function description
-*   Returns the current timestamp in ticks using the system tick 
+*   Returns the current timestamp in ticks using the system tick
 *   count and the SysTick counter.
 *   All parameters of the SysTick have to be known and are set via
 *   configuration defines on top of the file.
