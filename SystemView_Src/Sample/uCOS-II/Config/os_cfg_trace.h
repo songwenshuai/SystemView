@@ -55,25 +55,29 @@
 *       SystemView version: V2.52a                                    *
 *                                                                    *
 **********************************************************************
--------------------------- END-OF-HEADER -----------------------------
-
-File    : SEGGER_SYSVIEW_embOS.h
-Purpose : Interface between embOS and System View.
-Revision: $Rev: 7745 $
+* ---------------
+*           uC/OS-II is provided in source form for FREE short-term evaluation, for educational use or
+*           for peaceful research.  If you plan or intend to use uC/OS-II in a commercial application/
+*           product then, you need to contact Micrium to properly license uC/OS-II for its use in your
+*           application/product.   We provide ALL the source code for your convenience and to help you
+*           experience uC/OS-II.  The fact that the source is provided does NOT mean that you can use
+*           it commercially without paying a licensing fee.
+*
+*           Knowledge of the source code may NOT be used to develop a similar product.
+*
+*           Please help us continue to provide the embedded community with the finest software available.
+*           Your honesty is greatly appreciated.
+*
+*           You can find our product's user manual, API reference, release notes and
+*           more information at https://doc.micrium.com.
+*           You can contact us at www.micrium.com.
+************************************************************************************************************************
 */
 
-#ifndef SYSVIEW_EMBOS_H
-#define SYSVIEW_EMBOS_H
+#ifndef  OS_CFG_TRACE_H
+#define  OS_CFG_TRACE_H
 
-#include "RTOS.h"
-#include "SEGGER_SYSVIEW.h"
-
-// embOS trace API that targets SYSVIEW
-extern const OS_TRACE_API          embOS_TraceAPI_SYSVIEW;
-
-// Services provided to SYSVIEW by embOS
-extern const SEGGER_SYSVIEW_OS_API SYSVIEW_X_OS_TraceAPI;
+#define  OS_CFG_TRACE_MAX_TASK                    32u       /* Maximum number of tasks to record.                     */
+#define  OS_CFG_TRACE_MAX_RESOURCES              128u       /* Maximum number of combined kernel objects to record.   */
 
 #endif
-
-/*************************** End of file ****************************/

@@ -57,9 +57,9 @@
 **********************************************************************
 -------------------------- END-OF-HEADER -----------------------------
 
-File    : SEGGER_SYSVIEW_uCOSIII.c
-Purpose : Interface between Micrium uC/OS-III and SystemView.
-Revision: $Rev: 7745 $
+File    : SEGGER_SYSVIEW_uCOSII.c
+Purpose : Interface between Micrium uC/OS-II and SystemView.
+Revision: $Rev: 7946 $
 */
 
 #include <os_trace_events.h>
@@ -73,30 +73,30 @@ Revision: $Rev: 7745 $
 #define  OS_CFG_TRACE_MAX_RESOURCES              0
 #endif
 
-typedef struct SYSVIEW_UCOSIII_TASK_STATUS SYSVIEW_UCOSIII_TASK_STATUS;
+typedef struct SYSVIEW_UCOSII_TASK_STATUS SYSVIEW_UCOSII_TASK_STATUS;
 
-struct SYSVIEW_UCOSIII_TASK_STATUS {
-  U32           TaskID;
-  const char*   NamePtr;
-  OS_PRIO       Prio;
-  CPU_STK*      StkBasePtr;
-  CPU_STK_SIZE  StkSize;
+struct SYSVIEW_UCOSII_TASK_STATUS {
+  U32          TaskID;
+  const char*  OSTCBTaskName;
+  INT8U        OSTCBPrio;
+  OS_STK*      OSTCBStkBottom;
+  INT32U       OSTCBStkSize;
 };
 
-typedef struct SYSVIEW_UCOSIII_RESOURCE SYSVIEW_UCOSIII_RESOURCE;
+typedef struct SYSVIEW_UCOSII_RESOURCE SYSVIEW_UCOSII_RESOURCE;
 
-struct SYSVIEW_UCOSIII_RESOURCE {
+struct SYSVIEW_UCOSII_RESOURCE {
   U32         ResourceId;
   const char* sResource;
   U32         Registered;
 };
 
-static SYSVIEW_UCOSIII_TASK_STATUS _aTasks[OS_CFG_TRACE_MAX_TASK];
+static SYSVIEW_UCOSII_TASK_STATUS _aTasks[OS_CFG_TRACE_MAX_TASK];
 static unsigned _NumTasks;
 
 #if OS_CFG_TRACE_MAX_RESOURCES > 0
-static SYSVIEW_UCOSIII_RESOURCE _aResources[OS_CFG_TRACE_MAX_RESOURCES];
-static unsigned                 _NumResources;
+static SYSVIEW_UCOSII_RESOURCE _aResources[OS_CFG_TRACE_MAX_RESOURCES];
+static unsigned                _NumResources;
 #endif
 
 /*********************************************************************
@@ -112,7 +112,7 @@ static void _cbSendTaskList(void) {
   unsigned n;
 
   for (n = 0; n < _NumTasks; n++) {
-    SYSVIEW_SendTaskInfo((U32)_aTasks[n].TaskID, _aTasks[n].NamePtr, (unsigned)_aTasks[n].Prio, (U32)_aTasks[n].StkBasePtr, (unsigned)_aTasks[n].StkSize);
+    SYSVIEW_SendTaskInfo((U32)_aTasks[n].TaskID, _aTasks[n].OSTCBTaskName, (unsigned)_aTasks[n].OSTCBPrio, (U32)_aTasks[n].OSTCBStkBottom, (unsigned)_aTasks[n].OSTCBStkSize);
   }
 }
 
@@ -126,13 +126,10 @@ static void _cbSendTaskList(void) {
 *    current system time in micro seconds.
 */
 static U64 _cbGetTime(void) {
-  OS_ERR Err;
-  OS_TICK Tick;
+  INT32U Tick;
 
-  Tick = OSTimeGet(&Err);
-  if (Err != OS_ERR_NONE) {
-    Tick = 0;
-  }
+  Tick = OSTimeGet();
+
   return Tick * 1000;
 }
 
@@ -151,7 +148,7 @@ static U64 _cbGetTime(void) {
 *    Record when a task is ready for execution.
 */
 void SYSVIEW_TaskReady(U32 TaskID) {
-  if (TaskID != (U32)&OSIdleTaskTCB) {
+  if (TaskID != (U32)OSTCBPrioTbl[OS_TASK_IDLE_PRIO]) {
     SEGGER_SYSVIEW_OnTaskStartReady(TaskID);
   }
 }
@@ -165,7 +162,7 @@ void SYSVIEW_TaskReady(U32 TaskID) {
 *    If the idle task continues, record an on idle event.
 */
 void SYSVIEW_TaskSwitchedIn(U32 TaskID) {
-  if (TaskID != (U32)&OSIdleTaskTCB) {
+  if (TaskID != (U32)OSTCBPrioTbl[OS_TASK_IDLE_PRIO]) {
     SEGGER_SYSVIEW_OnTaskStartExec(TaskID);
   } else {
     SEGGER_SYSVIEW_OnIdle();
@@ -180,7 +177,7 @@ void SYSVIEW_TaskSwitchedIn(U32 TaskID) {
 *    Record when a task is suspended.
 */
 void SYSVIEW_TaskSuspend(U32 TaskID) {
-  if (TaskID != (U32)&OSIdleTaskTCB) {
+  if (TaskID != (U32)OSTCBPrioTbl[OS_TASK_IDLE_PRIO]) {
     SEGGER_SYSVIEW_OnTaskStopReady(TaskID,  (1u << 2));
   }
 }
@@ -192,22 +189,22 @@ void SYSVIEW_TaskSuspend(U32 TaskID) {
 *  Function description
 *    Add a task to the internal list and record its information.
 */
-void SYSVIEW_AddTask(U32 TaskID, const char* NamePtr, OS_PRIO Prio, CPU_STK* StkBasePtr, CPU_STK_SIZE StkSize) {
-  if (TaskID != (U32)&OSIdleTaskTCB) {
+void SYSVIEW_AddTask(U32 TaskID, const char* OSTCBTaskName, INT8U OSTCBPrio, OS_STK* OSTCBStkBottom, INT32U OSTCBStkSize) {
+  if (TaskID != (U32)OSTCBPrioTbl[OS_TASK_IDLE_PRIO]) {
     if (_NumTasks >= OS_CFG_TRACE_MAX_TASK) {
       SEGGER_SYSVIEW_Warn("SYSTEMVIEW: Could not record task information. Maximum number of tasks reached.");
       return;
     }
 
-    _aTasks[_NumTasks].TaskID = TaskID;
-    _aTasks[_NumTasks].NamePtr = NamePtr;
-    _aTasks[_NumTasks].Prio = Prio;
-    _aTasks[_NumTasks].StkBasePtr = StkBasePtr;
-    _aTasks[_NumTasks].StkSize = StkSize;
+    _aTasks[_NumTasks].TaskID         = TaskID;
+    _aTasks[_NumTasks].OSTCBTaskName  = OSTCBTaskName;
+    _aTasks[_NumTasks].OSTCBPrio      = OSTCBPrio;
+    _aTasks[_NumTasks].OSTCBStkBottom = OSTCBStkBottom;
+    _aTasks[_NumTasks].OSTCBStkSize   = OSTCBStkSize;
 
     _NumTasks++;
 
-    SYSVIEW_SendTaskInfo(TaskID, NamePtr, (unsigned)Prio, (U32)StkBasePtr, (unsigned)StkSize);
+    SYSVIEW_SendTaskInfo(TaskID, OSTCBTaskName, (unsigned)OSTCBPrio, (U32)OSTCBStkBottom, (unsigned)OSTCBStkSize);
   }
 }
 
@@ -218,24 +215,24 @@ void SYSVIEW_AddTask(U32 TaskID, const char* NamePtr, OS_PRIO Prio, CPU_STK* Stk
 *  Function description
 *    Update a task in the internal list and record its information.
 */
-void SYSVIEW_UpdateTask(U32 TaskID, const char* NamePtr, OS_PRIO Prio, CPU_STK* StkBasePtr, CPU_STK_SIZE StkSize) {
+void SYSVIEW_UpdateTask(U32 TaskID, const char* OSTCBTaskName, INT8U OSTCBPrio, OS_STK* OSTCBStkBottom, INT32U OSTCBStkSize) {
   unsigned n;
 
-  if (TaskID != (U32)&OSIdleTaskTCB) {
+  if (TaskID != (U32)OSTCBPrioTbl[OS_TASK_IDLE_PRIO]) {
     for (n = 0; n < _NumTasks; n++) {
       if (_aTasks[n].TaskID == TaskID) {
         break;
       }
     }
     if (n < _NumTasks) {
-      _aTasks[n].NamePtr = NamePtr;
-      _aTasks[n].Prio = Prio;
-      _aTasks[n].StkBasePtr = StkBasePtr;
-      _aTasks[n].StkSize = StkSize;
+      _aTasks[n].OSTCBTaskName  = OSTCBTaskName;
+      _aTasks[n].OSTCBPrio      = OSTCBPrio;
+      _aTasks[n].OSTCBStkBottom = OSTCBStkBottom;
+      _aTasks[n].OSTCBStkSize   = OSTCBStkSize;
 
-      SYSVIEW_SendTaskInfo(TaskID, NamePtr, (unsigned)Prio, (U32)StkBasePtr, (unsigned)StkSize);
+      SYSVIEW_SendTaskInfo(TaskID, OSTCBTaskName, (unsigned)OSTCBPrio, (U32)OSTCBStkBottom, (unsigned)OSTCBStkSize);
     } else {
-      SYSVIEW_AddTask(TaskID, NamePtr, Prio, StkBasePtr, StkSize);
+      SYSVIEW_AddTask(TaskID, OSTCBTaskName, OSTCBPrio, OSTCBStkBottom, OSTCBStkSize);
     }
   }
 }
@@ -261,6 +258,30 @@ void SYSVIEW_SendTaskInfo(U32 TaskID, const char* sName, unsigned Prio, U32 Stac
   TaskInfo.StackSize  = StackSize;
   SEGGER_SYSVIEW_SendTaskInfo(&TaskInfo);
 }
+
+
+/*********************************************************************
+*
+*       SYSVIEW_UpdateResource()
+*
+*  Function description
+*    Update a kernel object in the internal list and record its information.
+*/
+void SYSVIEW_UpdateResource(U32 EventID, const char* OSEventName) {
+  unsigned n;
+
+  for (n = 0; n < _NumResources; n++) {
+      if (_aResources[n].ResourceId == EventID) {
+        break;
+      }
+    }
+    if (n < _NumResources) {
+      _aResources[n].sResource  = OSEventName;
+
+      SEGGER_SYSVIEW_NameResource(_aResources[n].ResourceId, _aResources[n].sResource);
+    } 
+}
+
 
 /*********************************************************************
 *

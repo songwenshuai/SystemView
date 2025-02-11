@@ -52,19 +52,25 @@
 *                                                                    *
 **********************************************************************
 *                                                                    *
-*       SystemView version: V2.52                                    *
+*       SystemView version: V2.52a                                    *
 *                                                                    *
 **********************************************************************
 -------------------------- END-OF-HEADER -----------------------------
 
-File    : SEGGER_SYSVIEW_Config_FreeRTOS.c
-Purpose : Sample setup configuration of SystemView with FreeRTOS.
-Revision: $Rev: 7745 $
+File    : SEGGER_SYSVIEW_Config_uCOSII.c
+Purpose : Sample setup configuration of SystemView with Micrium
+          uC/OS-II.
+Revision: $Rev: 7946 $
 */
-#include "FreeRTOS.h"
 #include "SEGGER_SYSVIEW.h"
+#include "os.h"
+#include "cpu_core.h"
+
+#if (defined(OS_TRACE_EN) && (OS_TRACE_EN > 0u))
 
 extern const SEGGER_SYSVIEW_OS_API SYSVIEW_X_OS_TraceAPI;
+
+CPU_ERR  local_err;
 
 /*********************************************************************
 *
@@ -73,21 +79,23 @@ extern const SEGGER_SYSVIEW_OS_API SYSVIEW_X_OS_TraceAPI;
 **********************************************************************
 */
 // The application name to be displayed in SystemViewer
-#define SYSVIEW_APP_NAME        "FreeRTOS Demo Application"
+#define SYSVIEW_APP_NAME        "ARM Cortex-M Demo"
 
 // The target device name
-#define SYSVIEW_DEVICE_NAME     "Cortex-M4"
+#define SYSVIEW_DEVICE_NAME     "Cortex-M Device"
+
+
 
 // Frequency of the timestamp. Must match SEGGER_SYSVIEW_GET_TIMESTAMP in SEGGER_SYSVIEW_Conf.h
-#define SYSVIEW_TIMESTAMP_FREQ  (configCPU_CLOCK_HZ)
+#define SYSVIEW_TIMESTAMP_FREQ  (CPU_TS_TmrFreqGet(&local_err))
 
 // System Frequency. SystemcoreClock is used in most CMSIS compatible projects.
-#define SYSVIEW_CPU_FREQ        configCPU_CLOCK_HZ
+#define SYSVIEW_CPU_FREQ        (CPU_TS_TmrFreqGet(&local_err))
 
 // The lowest RAM address used for IDs (pointers)
-#define SYSVIEW_RAM_BASE        (0x10000000)
+#define SYSVIEW_RAM_BASE        (0x20000000)
 
-/********************************************************************* 
+/*********************************************************************
 *
 *       _cbSendSystemDesc()
 *
@@ -95,8 +103,10 @@ extern const SEGGER_SYSVIEW_OS_API SYSVIEW_X_OS_TraceAPI;
 *    Sends SystemView description strings.
 */
 static void _cbSendSystemDesc(void) {
-  SEGGER_SYSVIEW_SendSysDesc("N="SYSVIEW_APP_NAME",D="SYSVIEW_DEVICE_NAME",O=FreeRTOS");
+  SEGGER_SYSVIEW_SendSysDesc("N="SYSVIEW_APP_NAME",D="SYSVIEW_DEVICE_NAME",O=uCOS-II");
   SEGGER_SYSVIEW_SendSysDesc("I#15=SysTick");
+  //
+  SYSVIEW_SendResourceList();
 }
 
 /*********************************************************************
@@ -106,9 +116,11 @@ static void _cbSendSystemDesc(void) {
 **********************************************************************
 */
 void SEGGER_SYSVIEW_Conf(void) {
-  SEGGER_SYSVIEW_Init(SYSVIEW_TIMESTAMP_FREQ, SYSVIEW_CPU_FREQ, 
+  SEGGER_SYSVIEW_Init(SYSVIEW_TIMESTAMP_FREQ, SYSVIEW_CPU_FREQ,
                       &SYSVIEW_X_OS_TraceAPI, _cbSendSystemDesc);
   SEGGER_SYSVIEW_SetRAMBase(SYSVIEW_RAM_BASE);
 }
+
+#endif
 
 /*************************** End of file ****************************/

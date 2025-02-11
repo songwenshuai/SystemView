@@ -52,14 +52,14 @@
 *                                                                    *
 **********************************************************************
 *                                                                    *
-*       SystemView version: V2.52                                    *
+*       SystemView version: V2.52a                                    *
 *                                                                    *
 **********************************************************************
 -------------------------- END-OF-HEADER -----------------------------
 
 File    : SEGGER_SYSVIEW_FreeRTOS.c
 Purpose : Interface between FreeRTOS and SystemView.
-Revision: $Rev: 7745 $
+Revision: $Rev: 7947 $
 */
 #include "FreeRTOS.h"
 #include "task.h"
@@ -218,11 +218,11 @@ void SYSVIEW_DeleteTask(U32 xHandle) {
     // Move last item to current position and decrement number of tasks.
     // Order of tasks does not really matter, so no need to move all following items.
     //
-    _aTasks[n].TaskID     = _aTasks[_NumTasks - 1].TaskID;
-    _aTasks[n].sName      = _aTasks[_NumTasks - 1].sName;
-    _aTasks[n].Prio       = _aTasks[_NumTasks - 1].Prio;
-    _aTasks[n].StackBase  = _aTasks[_NumTasks - 1].StackBase;
-    _aTasks[n].StackSize  = _aTasks[_NumTasks - 1].StackSize;
+    _aTasks[n].xHandle             = _aTasks[_NumTasks - 1].xHandle;
+    _aTasks[n].pcTaskName          = _aTasks[_NumTasks - 1].pcTaskName;
+    _aTasks[n].uxCurrentPriority   = _aTasks[_NumTasks - 1].uxCurrentPriority;
+    _aTasks[n].pxStack             = _aTasks[_NumTasks - 1].pxStack;
+    _aTasks[n].uStackHighWaterMark = _aTasks[_NumTasks - 1].uStackHighWaterMark;
     memset(&_aTasks[_NumTasks - 1], 0, sizeof(_aTasks[_NumTasks - 1]));
     _NumTasks--;
   }
