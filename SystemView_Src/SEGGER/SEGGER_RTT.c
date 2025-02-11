@@ -1,5 +1,5 @@
 /*********************************************************************
-*                SEGGER Microcontroller GmbH & Co. KG                *
+*                    SEGGER Microcontroller GmbH                     *
 *                        The Embedded Experts                        *
 **********************************************************************
 *                                                                    *
@@ -31,7 +31,7 @@
 *   disclaimer in the documentation and/or other materials provided  *
 *   with the distribution.                                           *
 *                                                                    *
-* o Neither the name of SEGGER Microcontroller GmbH & Co. KG         *
+* o Neither the name of SEGGER Microcontroller GmbH         *
 *   nor the names of its contributors may be used to endorse or      *
 *   promote products derived from this software without specific     *
 *   prior written permission.                                        *
@@ -52,7 +52,7 @@
 *                                                                    *
 **********************************************************************
 *                                                                    *
-*       SystemView version: V2.52f                                    *
+*       SystemView version: V2.52g                                    *
 *                                                                    *
 **********************************************************************
 ---------------------------END-OF-HEADER------------------------------
@@ -60,7 +60,7 @@ File    : SEGGER_RTT.c
 Purpose : Implementation of SEGGER real-time transfer (RTT) which
           allows real-time communication on targets which support
           debugger memory accesses while the CPU is running.
-Revision: $Rev: 13432 $
+Revision: $Rev: 13375 $
 
 Additional information:
           Type "int" is assumed to be 32-bits in size
@@ -783,15 +783,15 @@ CopyStraight:
     }
     Avail += RdOff;                                     // Space incl. wrap-around
     if (Avail >= NumBytes) {                            // Case 2? => If not, we have case 3) (does not fit)
-      Rem = pRing->SizeOfBuffer - WrOff;      // Space until end of buffer
+      Rem = pRing->SizeOfBuffer - WrOff;                // Space until end of buffer
       memcpy(pRing->pBuffer + WrOff, pData, Rem);       // Copy 1st chunk
       NumBytes -= Rem;
-        //
+      //
       // Special case: First check that assumed RdOff == 0 calculated that last element before wrap-around could not be used
       // But 2nd check (considering space until wrap-around and until RdOff) revealed that RdOff is not 0, so we can use the last element
       // In this case, we may use a copy straight until buffer end anyway without needing to copy 2 chunks
       // Therefore, check if 2nd memcpy is necessary at all
-        //
+      //
       if (NumBytes) {
         memcpy(pRing->pBuffer, pData + Rem, NumBytes);
       }

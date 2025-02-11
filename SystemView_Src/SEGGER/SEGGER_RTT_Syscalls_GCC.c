@@ -55,102 +55,40 @@
 *       SystemView version: V2.52g                                    *
 *                                                                    *
 **********************************************************************
--------------------------- END-OF-HEADER -----------------------------
-
-File    : SEGGER_SYSVIEW_Config_NoOS_RX.c
-Purpose : Sample setup configuration of SystemView on Renesas RX 
-          systems without an operating system.
-Revision: $Rev: 12706 $
+---------------------------END-OF-HEADER------------------------------
+File    : SEGGER_RTT_Syscalls_GCC.c
+Purpose : Low-level functions for using printf() via RTT in GCC.
+          To use RTT for printf output, include this file in your 
+          application.
+Revision: $Rev: 9599 $
+----------------------------------------------------------------------
 */
-#include "RTOS.h"
-#include "SEGGER_SYSVIEW.h"
-#include "SEGGER_SYSVIEW_embOS.h"
+#if (defined __GNUC__) && !(defined __SES_ARM) && !(defined __CROSSWORKS_ARM)
 
-//
-// SystemcoreClock can be used in most CMSIS compatible projects.
-// In non-CMSIS projects define SYSVIEW_CPU_FREQ directly.
-//
-extern unsigned int SystemCoreClock;
+#include <reent.h>  // required for _write_r
+#include "SEGGER_RTT.h"
+
 
 /*********************************************************************
 *
-*       Defines, fixed
+*       Types
 *
 **********************************************************************
 */
+//
+// If necessary define the _reent struct 
+// to match the one passed by the used standard library.
+//
+struct _reent;
 
 /*********************************************************************
 *
-*       Defines, configurable
+*       Function prototypes
 *
 **********************************************************************
 */
-// The application name to be displayed in SystemViewer
-#ifndef   SYSVIEW_APP_NAME
-  #define SYSVIEW_APP_NAME          "Demo Application"
-#endif
-
-// The target device name
-#ifndef   SYSVIEW_DEVICE_NAME
-  #define SYSVIEW_DEVICE_NAME       "RX64M"
-#endif
-
-// System Frequency. SystemcoreClock is used in most CMSIS compatible projects.
-#ifndef   SYSVIEW_CPU_FREQ
-  #define SYSVIEW_CPU_FREQ        (SystemCoreClock)
-#endif
-
-// Frequency of the timestamp. Must match SEGGER_SYSVIEW_Conf.h and RTOSInit.c
-#ifndef   SYSVIEW_TIMESTAMP_FREQ
-  #define SYSVIEW_TIMESTAMP_FREQ  (SYSVIEW_CPU_FREQ/2u/8u) // Assume system timer runs at 1/16th of the CPU frequency
-#endif
-
-// The lowest RAM address used for IDs (pointers)
-#ifndef   SYSVIEW_RAM_BASE
-  #define SYSVIEW_RAM_BASE        (0)
-#endif
-
-#ifndef   SYSVIEW_SYSDESC0
-  #define SYSVIEW_SYSDESC0        "I#0=IntPrio0,I#1=IntPrio1,I#2=IntPrio2,I#3=IntPrio3,I#4=IntPrio4"
-#endif
-
-//#ifndef   SYSVIEW_SYSDESC1
-//  #define SYSVIEW_SYSDESC1      "I#5=IntPrio5,I#6=IntPrio6,I#7=IntPrio7,I#8=IntPrio8,I#9=IntPrio9,I#10=IntPrio10"
-//#endif
-
-//#ifndef   SYSVIEW_SYSDESC2
-//  #define SYSVIEW_SYSDESC2      "I#11=IntPrio11,I#12=IntPrio12,I#13=IntPrio13,I#14=IntPrio14,I#15=IntPrio15"
-//#endif
-
-// System Timer configuration
-#define IRR_BASE_ADDR        (0x00087000u)
-#define CMT0_VECT            28u
-#define OS_TIMER_VECT        CMT0_VECT
-#define TIMER_PRESCALE       (8u)
-#define CMT0_BASE_ADDR       (0x00088000u)
-#define CMT0_CMCNT           (*(volatile U16*) (CMT0_BASE_ADDR + 0x04u))
-
-extern unsigned SEGGER_SYSVIEW_TickCnt;  // Tick Counter value incremented in the tick handler.
-
-/*********************************************************************
-*
-*       _cbSendSystemDesc()
-*
-*  Function description
-*    Sends SystemView description strings.
-*/
-static void _cbSendSystemDesc(void) {
-  SEGGER_SYSVIEW_SendSysDesc("N="SYSVIEW_APP_NAME",D="SYSVIEW_DEVICE_NAME);
-#ifdef SYSVIEW_SYSDESC0
-  SEGGER_SYSVIEW_SendSysDesc(SYSVIEW_SYSDESC0);
-#endif
-#ifdef SYSVIEW_SYSDESC1
-  SEGGER_SYSVIEW_SendSysDesc(SYSVIEW_SYSDESC1);
-#endif
-#ifdef SYSVIEW_SYSDESC2
-  SEGGER_SYSVIEW_SendSysDesc(SYSVIEW_SYSDESC2);
-#endif
-}
+int _write(int file, char *ptr, int len);
+int _write_r(struct _reent *r, int file, const void *ptr, int len);
 
 /*********************************************************************
 *
@@ -158,64 +96,39 @@ static void _cbSendSystemDesc(void) {
 *
 **********************************************************************
 */
-void SEGGER_SYSVIEW_Conf(void) {
-  SEGGER_SYSVIEW_Init(SYSVIEW_TIMESTAMP_FREQ, SYSVIEW_CPU_FREQ,
-                      0, _cbSendSystemDesc);
-  SEGGER_SYSVIEW_SetRAMBase(SYSVIEW_RAM_BASE);
-}
 
 /*********************************************************************
 *
-*       SEGGER_SYSVIEW_X_GetTimestamp()
+*       _write()
 *
 * Function description
-*   Returns the current timestamp in ticks using the system tick
-*   count and the SysTick counter.
-*   All parameters of the SysTick have to be known and are set via
-*   configuration defines on top of the file.
-*
-* Return value
-*   The current timestamp.
-*
-* Additional information
-*   SEGGER_SYSVIEW_X_GetTimestamp is always called when interrupts are
-*   disabled. 
-*   Therefore locking here is not required and OS_GetTime_Cycles() may
-*   be called.
+*   Low-level write function.
+*   libc subroutines will use this system routine for output to all files,
+*   including stdout.
+*   Write data via RTT.
 */
-U32 SEGGER_SYSVIEW_X_GetTimestamp(void) {
-  U32 Time;
-  U32 Cnt;
-
-  Time = SEGGER_SYSVIEW_TickCnt;
-  Cnt  = CMT0_CMCNT;
-  //
-  // Check if timer interrupt pending ...
-  //
-  if ((*(volatile U8*)(IRR_BASE_ADDR + OS_TIMER_VECT) & (1u << 0u)) != 0u) {
-    Cnt = CMT0_CMCNT;      // Interrupt pending, re-read timer and adjust result
-    Time++;
-  }
-  return ((SYSVIEW_TIMESTAMP_FREQ/1000) * Time) + Cnt;
+int _write(int file, char *ptr, int len) {
+  (void) file;  /* Not used, avoid warning */
+  SEGGER_RTT_Write(0, ptr, len);
+  return len;
 }
 
 /*********************************************************************
 *
-*       SEGGER_SYSVIEW_X_GetInterruptId()
+*       _write_r()
 *
-*  Function description
-*    Return the priority of the currently active interrupt.
+* Function description
+*   Low-level reentrant write function.
+*   libc subroutines will use this system routine for output to all files,
+*   including stdout.
+*   Write data via RTT.
 */
-U32 SEGGER_SYSVIEW_X_GetInterruptId(void) {
-  U32 IntId;
- __asm volatile ("mvfc    PSW, %0           \t\n" // Load current PSW
-                 "and     #0x0F000000, %0   \t\n" // Clear all except IPL ([27:24])
-                 "shlr    #24, %0           \t\n" // Shift IPL to [3:0]
-                 : "=r" (IntId)                   // Output result
-                 :                                // Input
-                 :                                // Clobbered list
-                );
-  return IntId;
+int _write_r(struct _reent *r, int file, const void *ptr, int len) {
+  (void) file;  /* Not used, avoid warning */
+  (void) r;     /* Not used, avoid warning */
+  SEGGER_RTT_Write(0, ptr, len);
+  return len;
 }
 
-/*************************** End of file ****************************/
+#endif
+/****** End Of File *************************************************/

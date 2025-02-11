@@ -1,5 +1,5 @@
 /*********************************************************************
-*                SEGGER Microcontroller GmbH & Co. KG                *
+*                    SEGGER Microcontroller GmbH                     *
 *                        The Embedded Experts                        *
 **********************************************************************
 *                                                                    *
@@ -31,7 +31,7 @@
 *   disclaimer in the documentation and/or other materials provided  *
 *   with the distribution.                                           *
 *                                                                    *
-* o Neither the name of SEGGER Microcontroller GmbH & Co. KG         *
+* o Neither the name of SEGGER Microcontroller GmbH         *
 *   nor the names of its contributors may be used to endorse or      *
 *   promote products derived from this software without specific     *
 *   prior written permission.                                        *
@@ -52,13 +52,10 @@
 *                                                                    *
 **********************************************************************
 *                                                                    *
-*       SystemView version: V2.52f                                    *
+*       SystemView version: V2.52g                                    *
 *                                                                    *
 **********************************************************************
-----------------------------------------------------------------------
-File    : SEGGER.h
-Purpose : Global types etc & general purpose utility functions
----------------------------END-OF-HEADER------------------------------
+-------------------------- END-OF-HEADER -----------------------------
 */
 
 #ifndef SEGGER_H            // Guard against multiple inclusion

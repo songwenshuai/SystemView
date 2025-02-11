@@ -29,7 +29,7 @@ Additional information:
 #define _CCIAR   0
 #define _CCCLANG 1
 
-#if defined (__SES_ARM)
+#if (defined __SES_ARM) || (defined __GNUC__) || (defined __clang__)
   #define _CC_TYPE             _CCCLANG
   #define _PUB_SYM             .global
   #define _EXT_SYM             .extern
@@ -155,8 +155,8 @@ SEGGER_RTT_ASM_WriteSkipNoLock:   // unsigned SEGGER_RTT_WriteSkipNoLock(unsigne
         ADD      R6,R0,#+24
         LDR      R0,[R6, #+16]                   // RdOff = pRing->RdOff;
         LDR      R7,[R6, #+12]                   // WrOff = pRing->WrOff;
-        LDR      R5,[R6, #+4]                    // Remember pRing->pBuffer + WrOff which is always the 1st write address
-        CMP      R7,R0                                          
+        LDR      R5,[R6, #+4]                    // pRing->pBuffer
+        CMP      R7,R0
         BCC.N    _CheckCase4                     // if (RdOff <= WrOff) {                           => Case 1), 2) or 3)
         //
         // Handling for case 1, later on identical to case 4
@@ -167,8 +167,8 @@ SEGGER_RTT_ASM_WriteSkipNoLock:   // unsigned SEGGER_RTT_WriteSkipNoLock(unsigne
         CMP      R3,R2
         BCC.N    _CheckCase2                     // if (Avail >= NumBytes) {  => Case 1)?
 _Case4:
-        ADDS     R5,R7,R5
-        ADDS     R0,R2,R7
+        ADDS     R5,R7,R5                        // pBuffer += WrOff
+        ADDS     R0,R2,R7                        // v = WrOff + NumBytes
         //
         // 2x unrolling for the copy loop that is used most of the time
         // This is a special optimization for small SystemView packets and makes them even faster
@@ -195,12 +195,12 @@ _CheckCase2:
         //
         // Handling for case 2
         //
-        ADDS     R0,R7,R5                        // Do not change R5 (pRing->pBuffer) here because 2nd chunk needs org. value
-        SUBS     R2,R2,R4                        // NumBytes -= Rem;
+        ADDS     R0,R7,R5                        // v = pRing->pBuffer + WrOff => Do not change pRing->pBuffer here because 2nd chunk needs org. value
+        SUBS     R2,R2,R4                        // NumBytes -= Rem;  (Rem = pRing->SizeOfBuffer - WrOff; => Space until end of buffer)
 _LoopCopyBeforeWrapAround:                       // memcpy(pRing->pBuffer + WrOff, pData, Rem); => Copy 1st chunk
         LDRB     R3,[R1], #+1
         STRB     R3,[R0], #+1                    // *pDest++ = *pSrc++
-        SUBS     R4,R4,#+1                       // Rem = pRing->SizeOfBuffer - WrOff; => Space until end of buffer
+        SUBS     R4,R4,#+1
         BNE      _LoopCopyBeforeWrapAround
         //
         // Special case: First check that assumed RdOff == 0 calculated that last element before wrap-around could not be used
@@ -208,7 +208,7 @@ _LoopCopyBeforeWrapAround:                       // memcpy(pRing->pBuffer + WrOf
         // In this case, we may use a copy straight until buffer end anyway without needing to copy 2 chunks
         // Therefore, check if 2nd memcpy is necessary at all
         //
-        ADDS     R2,R2,#+0                       // Save <NumBytes> because we need it after the loop, also update flags so that we can handle the if(NumBytes) in the next instruction
+        ADDS     R4,R2,#+0                       // Save <NumBytes> (needed as counter in loop but must be written to <WrOff> after the loop). Also use this inst to update the flags to skip 2nd loop if possible
         BEQ.N    _No2ChunkNeeded                 // if (NumBytes) {
 _LoopCopyAfterWrapAround:                        // memcpy(pRing->pBuffer, pData + Rem, NumBytes);
         LDRB     R3,[R1], #+1                    // pData already points to the next src byte due to copy loop increment before this loop
@@ -216,7 +216,7 @@ _LoopCopyAfterWrapAround:                        // memcpy(pRing->pBuffer, pData
         SUBS     R2,R2,#+1
         BNE      _LoopCopyAfterWrapAround
 _No2ChunkNeeded:
-        STR      R2,[R6, #+12]                   // pRing->WrOff = NumBytes;
+        STR      R4,[R6, #+12]                   // pRing->WrOff = NumBytes; => Must be written after copying data because J-Link may read control block asynchronously while writing into buffer
         MOVS     R0,#+1
         POP      {R4-R7}
         BX       LR                              // Return 1
