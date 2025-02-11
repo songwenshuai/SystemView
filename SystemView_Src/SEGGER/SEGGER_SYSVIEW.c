@@ -42,14 +42,14 @@
 *                                                                    *
 **********************************************************************
 *                                                                    *
-*       SystemView version: 3.50                                    *
+*       SystemView version: 3.50a                                    *
 *                                                                    *
 **********************************************************************
 -------------------------- END-OF-HEADER -----------------------------
 
 File    : SEGGER_SYSVIEW.c
 Purpose : System visualization API implementation.
-Revision: $Rev: 28768 $
+Revision: $Rev: 29107 $
 
 Additional information:
   Packet format:
@@ -1209,6 +1209,7 @@ static void _VPrintTarget(const char* sFormat, U32 Options, va_list* pParamList)
   unsigned int  FormatFlags;
   unsigned int  FieldWidth;
   U8*           pPayloadStart;
+  const char*   s;
 #if SEGGER_SYSVIEW_USE_STATIC_BUFFER == 0
   RECORD_START(SEGGER_SYSVIEW_INFO_SIZE + SEGGER_SYSVIEW_MAX_STRING_LEN + 1 + 2 * SEGGER_SYSVIEW_QUANTA_U32);
   SEGGER_SYSVIEW_LOCK();
@@ -1314,7 +1315,7 @@ static void _VPrintTarget(const char* sFormat, U32 Options, va_list* pParamList)
         _PrintUnsigned(&BufferDesc, (unsigned int)v, 16u, NumDigits, FieldWidth, FormatFlags);
         break;
       case 's':
-        const char* s = va_arg(*pParamList, const char*);
+        s = va_arg(*pParamList, const char*);
         if (s == NULL) {
           s = "(null)";
         }
