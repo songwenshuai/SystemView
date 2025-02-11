@@ -10,7 +10,7 @@ File    : SEGGER_RTT_ASM_ARMv7M.S
 Purpose : Assembler implementation of RTT functions for ARMv7M
 
 Additional information:
-  This moodule is written to be assembler-indepentent and works with
+  This module is written to be assembler-independent and works with
   GCC and clang (Embedded Studio) and IAR.
 */
 
@@ -138,7 +138,7 @@ SEGGER_RTT_ASM_WriteSkipNoLock:   // unsigned SEGGER_RTT_WriteSkipNoLock(unsigne
         //
         // 1) is the most common case for large buffers and assuming that J-Link reads the data fast enough
         //
-        // Regiser usage:
+        // Register usage:
         //   R0 Temporary needed as RdOff, <Tmp> register later on
         //   R1 pData
         //   R2 <NumBytes>
