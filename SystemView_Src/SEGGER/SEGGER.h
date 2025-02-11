@@ -52,13 +52,12 @@
 *                                                                    *
 **********************************************************************
 *                                                                    *
-*       SystemView version: V2.52e                                    *
+*       SystemView version: V2.52f                                    *
 *                                                                    *
 **********************************************************************
 ----------------------------------------------------------------------
 File    : SEGGER.h
 Purpose : Global types etc & general purpose utility functions
-Revision: $Rev: 6695 $
 ---------------------------END-OF-HEADER------------------------------
 */
 
@@ -66,7 +65,7 @@ Revision: $Rev: 6695 $
 #define SEGGER_H
 
 #include <stdarg.h>
-#include "GLOBAL.h"         // Type definitions: U8, U16, U32, I8, I16, I32
+#include "Global.h"         // Type definitions: U8, U16, U32, I8, I16, I32
 
 #if defined(__cplusplus)
 extern "C" {     /* Make sure we have C-declarations in C++ programs */
@@ -154,7 +153,7 @@ typedef struct {
 } SEGGER_BUFFER_DESC;
 
 typedef struct {
-  int  CacheLineSize;                                 // 0: No Cache. Most Systems such as ARM9 use a 32 bytes cache line size.
+  unsigned int CacheLineSize;                         // 0: No Cache. Most Systems such as ARM9 use a 32 bytes cache line size.
   void (*pfDMB)       (void);                         // Optional DMB function for Data Memory Barrier to make sure all memory operations are completed.
   void (*pfClean)     (void *p, unsigned NumBytes);   // Optional clean function for cached memory.
   void (*pfInvalidate)(void *p, unsigned NumBytes);   // Optional invalidate function for cached memory.
@@ -193,14 +192,18 @@ typedef struct SEGGER_PRINTF_FORMATTER {
 // Memory operations.
 //
 void SEGGER_ARM_memcpy(void* pDest, const void* pSrc, int NumBytes);
-void SEGGER_memcpy    (void* pDest, const void* pSrc, int NumBytes);
+void SEGGER_memcpy    (void* pDest, const void* pSrc, unsigned NumBytes);
 void SEGGER_memxor    (void* pDest, const void* pSrc, unsigned NumBytes);
 
 //
 // String functions.
 //
-int      SEGGER_atoi  (const char* s);
-unsigned SEGGER_strlen(const char* s);
+int      SEGGER_atoi      (const char* s);
+int      SEGGER_isalnum   (int c);
+int      SEGGER_isalpha   (int c);
+unsigned SEGGER_strlen    (const char* s);
+int      SEGGER_tolower   (int c);
+int      SEGGER_strcasecmp(const char* sText1, const char* sText2);
 
 //
 // Buffer/printf related.
