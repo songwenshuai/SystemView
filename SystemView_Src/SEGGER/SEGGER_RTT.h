@@ -42,7 +42,7 @@
 *                                                                    *
 **********************************************************************
 *                                                                    *
-*       SystemView version: 3.10                                    *
+*       SystemView version: V3.12                                    *
 *                                                                    *
 **********************************************************************
 ---------------------------END-OF-HEADER------------------------------
@@ -50,7 +50,7 @@ File    : SEGGER_RTT.h
 Purpose : Implementation of SEGGER real-time transfer which allows
           real-time communication on targets which support debugger 
           memory accesses while the CPU is running.
-Revision: $Rev: 17066 $
+Revision: $Rev: 17697 $
 ----------------------------------------------------------------------
 */
 

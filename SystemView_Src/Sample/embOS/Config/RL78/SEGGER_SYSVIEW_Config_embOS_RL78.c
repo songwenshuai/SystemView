@@ -42,41 +42,34 @@
 *                                                                    *
 **********************************************************************
 *                                                                    *
-*       SystemView version: 3.10                                    *
+*       SystemView version: V3.12                                    *
 *                                                                    *
 **********************************************************************
 -------------------------- END-OF-HEADER -----------------------------
 
-File    : SEGGER_SYSVIEW_Config_embOS_CM0.c
-Purpose : Sample setup configuration of SystemView with embOS
-          on Cortex-M0/Cortex-M0+/Cortex-M1 systems which do not
-          have a cycle counter.
-Revision: $Rev: 15024 $
+File    : SEGGER_SYSVIEW_Config_embOS_RL78.c
+Purpose : Sample setup configuration of SystemView with embOS.
+Revision: $Rev: 18585 $
 */
 #include "RTOS.h"
 #include "SEGGER_SYSVIEW.h"
-#include "SEGGER_SYSVIEW_Conf.h"
 #include "SEGGER_SYSVIEW_embOS.h"
 
 //
-// SystemCoreClock can be used in most CMSIS compatible projects.
-// In non-CMSIS projects define SYSVIEW_CPU_FREQ directly.
-//
-extern unsigned int SystemCoreClock;
-
-//
-// SEGGER_SYSVIEW_TickCnt must be incremented in the SysTick
+// SEGGER_SYSVIEW_TickCnt has to be defined in the module which
+// handles the System Tick and must be incremented in the System Tick
 // handler before any SYSVIEW event is generated.
 //
 // Example in embOS RTOSInit.c:
 //
+// unsigned int SEGGER_SYSVIEW_TickCnt; // <<-- Define SEGGER_SYSVIEW_TickCnt.
 // void SysTick_Handler(void) {
-// #if (OS_PROFILE != 0)
-//   SEGGER_SYSVIEW_TickCnt++;  // Increment SEGGER_SYSVIEW_TickCnt before calling OS_INT_EnterNestable().
+// #if OS_PROFILE
+//   SEGGER_SYSVIEW_TickCnt++;          // <<-- Increment SEGGER_SYSVIEW_TickCnt before calling OS_EnterNestableInterrupt.
 // #endif
-//   OS_INT_EnterNestable();
+//   OS_EnterNestableInterrupt();
 //   OS_TICK_Handle();
-//   OS_INT_LeaveNestable();
+//   OS_LeaveNestableInterrupt();
 // }
 //
 unsigned int SEGGER_SYSVIEW_TickCnt;
@@ -94,17 +87,17 @@ unsigned int SEGGER_SYSVIEW_TickCnt;
 
 // The target device name
 #ifndef   SYSVIEW_DEVICE_NAME
-  #define SYSVIEW_DEVICE_NAME     "Cortex-M0/M0+/M1"
+  #define SYSVIEW_DEVICE_NAME     "RL78G14"
 #endif
 
 // Frequency of the timestamp. Must match SEGGER_SYSVIEW_Conf.h
 #ifndef   SYSVIEW_TIMESTAMP_FREQ
-  #define SYSVIEW_TIMESTAMP_FREQ  (SystemCoreClock)
+  #define SYSVIEW_TIMESTAMP_FREQ  (32000000uL)
 #endif
 
 // System Frequency. SystemcoreClock is used in most CMSIS compatible projects.
 #ifndef   SYSVIEW_CPU_FREQ
-  #define SYSVIEW_CPU_FREQ        (SystemCoreClock)
+  #define SYSVIEW_CPU_FREQ        (32000000uL)
 #endif
 
 // The lowest RAM address used for IDs (pointers)
@@ -112,14 +105,14 @@ unsigned int SEGGER_SYSVIEW_TickCnt;
   #define SYSVIEW_RAM_BASE        (0x00000000)
 #endif
 
-#ifndef   SYSVIEW_SYSDESC0
-  #define SYSVIEW_SYSDESC0        "I#15=SysTick"
-#endif
-
 // Define as 1 to immediately start recording after initialization to catch system initialization.
 #ifndef   SYSVIEW_START_ON_INIT
-  #define SYSVIEW_START_ON_INIT   0
+  #define SYSVIEW_START_ON_INIT 0
 #endif
+
+//#ifndef   SYSVIEW_SYSDESC0
+//  #define SYSVIEW_SYSDESC0        ""
+//#endif
 
 //#ifndef   SYSVIEW_SYSDESC1
 //  #define SYSVIEW_SYSDESC1      ""
@@ -135,10 +128,9 @@ unsigned int SEGGER_SYSVIEW_TickCnt;
 *
 **********************************************************************
 */
-#define SCB_ICSR  (*(volatile U32*) (0xE000ED04uL))  // Interrupt Control State Register
-#define SCB_ICSR_PENDSTSET_MASK     (1UL << 26)      // SysTick pending bit
-#define SYST_RVR  (*(volatile U32*) (0xE000E014uL))  // SysTick Reload Value Register
-#define SYST_CVR  (*(volatile U32*) (0xE000E018uL))  // SysTick Current Value Register
+#define TDR00  (*(volatile U16*) (0xFF18)) // System Timer Reload Value Register
+#define TCR00  (*(volatile U16*) (0x0180)) // System Timer Current Value Register
+#define IF1    (*(volatile U16*) (0xFFE2))
 
 /*********************************************************************
 *
@@ -170,9 +162,9 @@ void SEGGER_SYSVIEW_Conf(void) {
   SEGGER_SYSVIEW_Init(SYSVIEW_TIMESTAMP_FREQ, SYSVIEW_CPU_FREQ,
                       &SYSVIEW_X_OS_TraceAPI, _cbSendSystemDesc);
   SEGGER_SYSVIEW_SetRAMBase(SYSVIEW_RAM_BASE);
-  OS_TRACE_SetAPI(&embOS_TraceAPI_SYSVIEW);  // Configure embOS to use SYSVIEW.
+  OS_SetTraceAPI(&embOS_TraceAPI_SYSVIEW);    // Configure embOS to use SYSVIEW.
 #if SYSVIEW_START_ON_INIT
-  SEGGER_SYSVIEW_Start();                    // Start recording to catch system initialization.
+  SEGGER_SYSVIEW_Start();                     // Start recording to catch system initialization.
 #endif
 }
 
@@ -181,9 +173,9 @@ void SEGGER_SYSVIEW_Conf(void) {
 *       SEGGER_SYSVIEW_X_GetTimestamp()
 *
 * Function description
-*   Returns the current timestamp in ticks using the system tick
-*   count and the SysTick counter.
-*   All parameters of the SysTick have to be known and are set via
+*   Returns the current timestamp in cycles using the system tick
+*   count and the System Tick counter.
+*   All parameters of the System Tick have to be known and are set via
 *   configuration defines on top of the file.
 *
 * Return value
@@ -199,24 +191,35 @@ U32 SEGGER_SYSVIEW_X_GetTimestamp(void) {
   U32 CyclesPerTick;
   //
   // Get the cycles of the current system tick.
-  // SysTick is down-counting, subtract the current value from the number of cycles per tick.
+  // System Tick is down-counting, subtract the current value from the number of cycles per tick.
   //
-  CyclesPerTick = SYST_RVR + 1;
-  Cycles = (CyclesPerTick - SYST_CVR);
+  CyclesPerTick = TDR00 + 1;
+  Cycles = (CyclesPerTick - TCR00);
   //
   // Get the system tick count.
   //
   TickCount = SEGGER_SYSVIEW_TickCnt;
   //
-  // If a SysTick interrupt is pending, re-read timer and adjust result
+  // If a System Tick interrupt is pending, re-read timer and adjust result
   //
-  if ((SCB_ICSR & SCB_ICSR_PENDSTSET_MASK) != 0) {
-    Cycles = (CyclesPerTick - SYST_CVR);
+  if (IF1 & (1u << 4u)) {
+    Cycles = (CyclesPerTick - TCR00);
     TickCount++;
   }
   Cycles += TickCount * CyclesPerTick;
 
   return Cycles;
+}
+
+/*********************************************************************
+*
+*       SEGGER_SYSVIEW_X_GetInterruptId()
+*
+*  Function description
+*    Return the priority of the currently active interrupt.
+*/
+U32 SEGGER_SYSVIEW_X_GetInterruptId(void) {
+  return 0;
 }
 
 /*************************** End of file ****************************/

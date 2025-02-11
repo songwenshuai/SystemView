@@ -42,43 +42,83 @@
 *                                                                    *
 **********************************************************************
 *                                                                    *
-*       SystemView version: 3.10                                    *
+*       SystemView version: V3.12                                    *
 *                                                                    *
 **********************************************************************
--------------------------- END-OF-HEADER -----------------------------
-File    : SEGGER_SYSVIEW.h
-Purpose : System visualization API.
-Revision: $Rev: 16723 $
+---------------------------END-OF-HEADER------------------------------
+File    : SEGGER_RTT_Syscalls_GCC.c
+Purpose : Low-level functions for using printf() via RTT in GCC.
+          To use RTT for printf output, include this file in your 
+          application.
+Revision: $Rev: 17697 $
+----------------------------------------------------------------------
 */
+#if (defined __GNUC__) && !(defined __SES_ARM) && !(defined __CROSSWORKS_ARM)
 
-#ifndef SEGGER_SYSVIEW_WIN32_H
-#define SEGGER_SYSVIEW_WIN32_H
+#include <reent.h>  // required for _write_r
+#include "SEGGER_RTT.h"
+
 
 /*********************************************************************
 *
-*       #include Section
+*       Types
+*
+**********************************************************************
+*/
+//
+// If necessary define the _reent struct 
+// to match the one passed by the used standard library.
+//
+struct _reent;
+
+/*********************************************************************
+*
+*       Function prototypes
+*
+**********************************************************************
+*/
+int _write(int file, char *ptr, int len);
+int _write_r(struct _reent *r, int file, const void *ptr, int len);
+
+/*********************************************************************
+*
+*       Global functions
 *
 **********************************************************************
 */
 
-#include "SEGGER_SYSVIEW.h"
-
 /*********************************************************************
 *
-*       Prototypes
+*       _write()
 *
-**********************************************************************
+* Function description
+*   Low-level write function.
+*   libc subroutines will use this system routine for output to all files,
+*   including stdout.
+*   Write data via RTT.
 */
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-void SEGGER_SYSVIEW_X_SetISRName(char* sName);
-
-#ifdef __cplusplus
+int _write(int file, char *ptr, int len) {
+  (void) file;  /* Not used, avoid warning */
+  SEGGER_RTT_Write(0, ptr, len);
+  return len;
 }
-#endif
+
+/*********************************************************************
+*
+*       _write_r()
+*
+* Function description
+*   Low-level reentrant write function.
+*   libc subroutines will use this system routine for output to all files,
+*   including stdout.
+*   Write data via RTT.
+*/
+int _write_r(struct _reent *r, int file, const void *ptr, int len) {
+  (void) file;  /* Not used, avoid warning */
+  (void) r;     /* Not used, avoid warning */
+  SEGGER_RTT_Write(0, ptr, len);
+  return len;
+}
 
 #endif
-
-/*************************** End of file ****************************/
+/****** End Of File *************************************************/

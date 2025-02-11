@@ -42,13 +42,13 @@
 *                                                                    *
 **********************************************************************
 *                                                                    *
-*       SystemView version: 3.10                                    *
+*       SystemView version: V3.12                                    *
 *                                                                    *
 **********************************************************************
 ---------------------------END-OF-HEADER------------------------------
 File    : SEGGER_RTT_printf.c
 Purpose : Replacement for printf to write formatted data via RTT
-Revision: $Rev: 16733 $
+Revision: $Rev: 17697 $
 ----------------------------------------------------------------------
 */
 #include "SEGGER_RTT.h"

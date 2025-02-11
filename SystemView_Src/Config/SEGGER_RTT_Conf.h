@@ -42,7 +42,7 @@
 *                                                                    *
 **********************************************************************
 *                                                                    *
-*       SystemView version: 3.10                                    *
+*       SystemView version: V3.12                                    *
 *                                                                    *
 **********************************************************************
 ---------------------------END-OF-HEADER------------------------------
@@ -50,7 +50,7 @@ File    : SEGGER_RTT_Conf.h
 Purpose : Implementation of SEGGER real-time transfer (RTT) which
           allows real-time communication on targets which support
           debugger memory accesses while the CPU is running.
-Revision: $Rev: 17066 $
+Revision: $Rev: 18601 $
 
 */
 
@@ -136,7 +136,7 @@ Revision: $Rev: 17066 $
 *       RTT lock configuration for SEGGER Embedded Studio,
 *       Rowley CrossStudio and GCC
 */
-#if (defined(__SES_ARM) || defined(__CROSSWORKS_ARM) || defined(__GNUC__) || defined(__clang__)) && !defined (__CC_ARM)
+#if ((defined(__SES_ARM) || defined(__SES_RISCV) || defined(__CROSSWORKS_ARM) || defined(__GNUC__) || defined(__clang__)) && !defined (__CC_ARM) && !defined(WIN32))
   #if (defined(__ARM_ARCH_6M__) || defined(__ARM_ARCH_8M_BASE__))
     #define SEGGER_RTT_LOCK()   {                                                                   \
                                     unsigned int LockState;                                         \
@@ -198,6 +198,28 @@ Revision: $Rev: 17066 $
                                                 : "r0", "r1"                   \
                                                 );                             \
                             }
+  #elif defined(__riscv) || defined(__riscv_xlen)
+    #define SEGGER_RTT_LOCK()  {                                               \
+                                 unsigned int LockState;                       \
+                                 __asm volatile ("csrr  %0, mstatus  \n\t"     \
+                                                 "csrci mstatus, 8   \n\t"     \
+                                                 "andi  %0, %0,  8   \n\t"     \
+                                                 : "=r" (LockState)            \
+                                                 :                             \
+                                                 :                             \
+                                                );
+                               
+  #define SEGGER_RTT_UNLOCK()    __asm volatile ("csrr  a1, mstatus  \n\t"     \
+                                                 "or    %0, %0, a1   \n\t"     \
+                                                 "csrs  mstatus, %0  \n\t"     \
+                                                 :                             \
+                                                 : "r"  (LockState)            \
+                                                 : "a1"                        \
+                                                );                             \
+                               }
+  #else
+    #define SEGGER_RTT_LOCK()
+    #define SEGGER_RTT_UNLOCK()
   #endif
 #endif
 
@@ -206,7 +228,8 @@ Revision: $Rev: 17066 $
 *       RTT lock configuration for IAR EWARM
 */
 #ifdef __ICCARM__
-  #if (defined (__ARM6M__) && (__CORE__ == __ARM6M__))
+  #if (defined (__ARM6M__)          && (__CORE__ == __ARM6M__))             ||                      \
+      (defined (__ARM8M_BASELINE__) && (__CORE__ == __ARM8M_BASELINE__))
     #define SEGGER_RTT_LOCK()   {                                                                   \
                                   unsigned int LockState;                                           \
                                   LockState = __get_PRIMASK();                                      \
@@ -214,7 +237,10 @@ Revision: $Rev: 17066 $
 
     #define SEGGER_RTT_UNLOCK()   __set_PRIMASK(LockState);                                         \
                                 }
-  #elif ((defined (__ARM7EM__) && (__CORE__ == __ARM7EM__)) || (defined (__ARM7M__) && (__CORE__ == __ARM7M__)))
+  #elif (defined (__ARM7EM__)         && (__CORE__ == __ARM7EM__))          ||                      \
+        (defined (__ARM7M__)          && (__CORE__ == __ARM7M__))           ||                      \
+        (defined (__ARM8M_MAINLINE__) && (__CORE__ == __ARM8M_MAINLINE__))  ||                      \
+        (defined (__ARM8M_MAINLINE__) && (__CORE__ == __ARM8M_MAINLINE__))
     #ifndef   SEGGER_RTT_MAX_INTERRUPT_PRIORITY
       #define SEGGER_RTT_MAX_INTERRUPT_PRIORITY   (0x20)
     #endif

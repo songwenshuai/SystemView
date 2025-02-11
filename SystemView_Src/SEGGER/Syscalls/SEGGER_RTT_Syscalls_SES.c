@@ -42,7 +42,7 @@
 *                                                                    *
 **********************************************************************
 *                                                                    *
-*       SystemView version: 3.10                                    *
+*       SystemView version: V3.12                                    *
 *                                                                    *
 **********************************************************************
 ---------------------------END-OF-HEADER------------------------------
@@ -51,10 +51,10 @@ Purpose : Reimplementation of printf, puts and __getchar using RTT
           in SEGGER Embedded Studio.
           To use RTT for printf output, include this file in your
           application.
-Revision: $Rev: 12804 $
+Revision: $Rev: 18539 $
 ----------------------------------------------------------------------
 */
-#if (defined __SES_ARM) || (defined __CROSSWORKS_ARM)
+#if (defined __SES_ARM) || (defined __SES_RISCV) || (defined __CROSSWORKS_ARM)
 
 #include "SEGGER_RTT.h"
 #include <stdarg.h>

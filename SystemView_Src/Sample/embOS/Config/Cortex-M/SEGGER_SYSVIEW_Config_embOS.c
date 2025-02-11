@@ -42,14 +42,14 @@
 *                                                                    *
 **********************************************************************
 *                                                                    *
-*       SystemView version: 3.10                                    *
+*       SystemView version: V3.12                                    *
 *                                                                    *
 **********************************************************************
 -------------------------- END-OF-HEADER -----------------------------
 
 File    : SEGGER_SYSVIEW_Config_embOS.c
 Purpose : Sample setup configuration of SystemView with embOS.
-Revision: $Rev: 17066 $
+Revision: $Rev: 18585 $
 */
 #include "RTOS.h"
 #include "SEGGER_SYSVIEW.h"
@@ -61,6 +61,23 @@ Revision: $Rev: 17066 $
 // In non-CMSIS projects define SYSVIEW_CPU_FREQ directly.
 //
 extern unsigned int SystemCoreClock;
+//
+// In case timestamp is not retrieved from cycle counter but from system timer,
+// SEGGER_SYSVIEW_TickCnt must be incremented in the SysTick
+// handler before any SYSVIEW event is generated.
+//
+// Example in embOS RTOSInit.c:
+//
+// void SysTick_Handler(void) {
+// #if (OS_PROFILE != 0)
+//   SEGGER_SYSVIEW_TickCnt++;  // Increment SEGGER_SYSVIEW_TickCnt before calling OS_INT_EnterNestable().
+// #endif
+//   OS_INT_EnterNestable();
+//   OS_TICK_Handle();
+//   OS_INT_LeaveNestable();
+// }
+//
+unsigned int SEGGER_SYSVIEW_TickCnt;
 
 /*********************************************************************
 *

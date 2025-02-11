@@ -42,34 +42,32 @@
 *                                                                    *
 **********************************************************************
 *                                                                    *
-*       SystemView version: 3.10                                    *
+*       SystemView version: V3.12                                    *
 *                                                                    *
 **********************************************************************
 ---------------------------END-OF-HEADER------------------------------
-File    : SEGGER_RTT_Syscalls_GCC.c
-Purpose : Low-level functions for using printf() via RTT in GCC.
-          To use RTT for printf output, include this file in your 
-          application.
-Revision: $Rev: 16265 $
+File    : SEGGER_RTT_Syscalls_IAR.c
+Purpose : Low-level functions for using printf() via RTT in IAR.
+          To use RTT for printf output, include this file in your
+          application and set the Library Configuration to Normal.
+Revision: $Rev: 17697 $
 ----------------------------------------------------------------------
 */
-#if (defined __GNUC__) && !(defined __SES_ARM) && !(defined __CROSSWORKS_ARM)
+#ifdef __IAR_SYSTEMS_ICC__
 
-#include <reent.h>  // required for _write_r
+//
+// Since IAR EWARM V8 and EWRX V4, yfuns.h is considered as deprecated and LowLevelIOInterface.h
+// shall be used instead. To not break any compatibility with older compiler versions, we have a
+// version check in here.
+//
+#if ((defined __ICCARM__) && (__VER__ >= 8000000)) || ((defined __ICCRX__)  && (__VER__ >= 400))
+  #include <LowLevelIOInterface.h>
+#else
+  #include <yfuns.h>
+#endif
+
 #include "SEGGER_RTT.h"
-
-
-/*********************************************************************
-*
-*       Types
-*
-**********************************************************************
-*/
-//
-// If necessary define the _reent struct 
-// to match the one passed by the used standard library.
-//
-struct _reent;
+#pragma module_name = "?__write"
 
 /*********************************************************************
 *
@@ -77,8 +75,7 @@ struct _reent;
 *
 **********************************************************************
 */
-int _write(int file, char *ptr, int len);
-int _write_r(struct _reent *r, int file, const void *ptr, int len);
+size_t __write(int handle, const unsigned char * buffer, size_t size);
 
 /*********************************************************************
 *
@@ -86,38 +83,36 @@ int _write_r(struct _reent *r, int file, const void *ptr, int len);
 *
 **********************************************************************
 */
-
 /*********************************************************************
 *
-*       _write()
+*       __write()
 *
 * Function description
 *   Low-level write function.
-*   libc subroutines will use this system routine for output to all files,
-*   including stdout.
+*   Standard library subroutines will use this system routine
+*   for output to all files, including stdout.
 *   Write data via RTT.
 */
-int _write(int file, char *ptr, int len) {
-  (void) file;  /* Not used, avoid warning */
-  SEGGER_RTT_Write(0, ptr, len);
-  return len;
+size_t __write(int handle, const unsigned char * buffer, size_t size) {
+  (void) handle;  /* Not used, avoid warning */
+  SEGGER_RTT_Write(0, (const char*)buffer, size);
+  return size;
 }
 
 /*********************************************************************
 *
-*       _write_r()
+*       __write_buffered()
 *
 * Function description
-*   Low-level reentrant write function.
-*   libc subroutines will use this system routine for output to all files,
-*   including stdout.
+*   Low-level write function.
+*   Standard library subroutines will use this system routine
+*   for output to all files, including stdout.
 *   Write data via RTT.
 */
-int _write_r(struct _reent *r, int file, const void *ptr, int len) {
-  (void) file;  /* Not used, avoid warning */
-  (void) r;     /* Not used, avoid warning */
-  SEGGER_RTT_Write(0, ptr, len);
-  return len;
+size_t __write_buffered(int handle, const unsigned char * buffer, size_t size) {
+  (void) handle;  /* Not used, avoid warning */
+  SEGGER_RTT_Write(0, (const char*)buffer, size);
+  return size;
 }
 
 #endif

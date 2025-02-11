@@ -42,40 +42,52 @@
 *                                                                    *
 **********************************************************************
 *                                                                    *
-*       SystemView version: 3.10                                    *
+*       SystemView version: V3.12                                    *
 *                                                                    *
 **********************************************************************
----------------------------END-OF-HEADER------------------------------
-File    : SEGGER_RTT_Syscalls_IAR.c
-Purpose : Low-level functions for using printf() via RTT in IAR.
-          To use RTT for printf output, include this file in your
-          application and set the Library Configuration to Normal.
-Revision: $Rev: 16282 $
-----------------------------------------------------------------------
+-------------------------- END-OF-HEADER -----------------------------
+
+File    : SEGGER_SYSVIEW_Config_FreeRTOS.c
+Purpose : Sample setup configuration of SystemView with FreeRTOS.
+Revision: $Rev: 18540 $
 */
-#ifdef __IAR_SYSTEMS_ICC__
+#include "FreeRTOS.h"
+#include "SEGGER_SYSVIEW.h"
 
-//
-// Since IAR EWARM V8 and EWRX V4, yfuns.h is considered as deprecated and LowLevelIOInterface.h
-// shall be used instead. To not break any compatibility with older compiler versions, we have a
-// version check in here.
-//
-#if ((defined __ICCARM__) && (__VER__ >= 8000000)) || ((defined __ICCRX__)  && (__VER__ >= 400))
-  #include <LowLevelIOInterface.h>
-#else
-  #include <yfuns.h>
-#endif
-
-#include "SEGGER_RTT.h"
-#pragma module_name = "?__write"
+extern const SEGGER_SYSVIEW_OS_API SYSVIEW_X_OS_TraceAPI;
 
 /*********************************************************************
 *
-*       Function prototypes
+*       Defines, configurable
 *
 **********************************************************************
 */
-size_t __write(int handle, const unsigned char * buffer, size_t size);
+// The application name to be displayed in SystemViewer
+#define SYSVIEW_APP_NAME        "FreeRTOS Demo Application"
+
+// The target device name
+#define SYSVIEW_DEVICE_NAME     "Cortex-M4"
+
+// Frequency of the timestamp. Must match SEGGER_SYSVIEW_GET_TIMESTAMP in SEGGER_SYSVIEW_Conf.h
+#define SYSVIEW_TIMESTAMP_FREQ  (configCPU_CLOCK_HZ)
+
+// System Frequency. SystemcoreClock is used in most CMSIS compatible projects.
+#define SYSVIEW_CPU_FREQ        configCPU_CLOCK_HZ
+
+// The lowest RAM address used for IDs (pointers)
+#define SYSVIEW_RAM_BASE        (0x10000000)
+
+/********************************************************************* 
+*
+*       _cbSendSystemDesc()
+*
+*  Function description
+*    Sends SystemView description strings.
+*/
+static void _cbSendSystemDesc(void) {
+  SEGGER_SYSVIEW_SendSysDesc("N="SYSVIEW_APP_NAME",D="SYSVIEW_DEVICE_NAME",O=FreeRTOS");
+  SEGGER_SYSVIEW_SendSysDesc("I#15=SysTick");
+}
 
 /*********************************************************************
 *
@@ -83,37 +95,10 @@ size_t __write(int handle, const unsigned char * buffer, size_t size);
 *
 **********************************************************************
 */
-/*********************************************************************
-*
-*       __write()
-*
-* Function description
-*   Low-level write function.
-*   Standard library subroutines will use this system routine
-*   for output to all files, including stdout.
-*   Write data via RTT.
-*/
-size_t __write(int handle, const unsigned char * buffer, size_t size) {
-  (void) handle;  /* Not used, avoid warning */
-  SEGGER_RTT_Write(0, (const char*)buffer, size);
-  return size;
+void SEGGER_SYSVIEW_Conf(void) {
+  SEGGER_SYSVIEW_Init(SYSVIEW_TIMESTAMP_FREQ, SYSVIEW_CPU_FREQ, 
+                      &SYSVIEW_X_OS_TraceAPI, _cbSendSystemDesc);
+  SEGGER_SYSVIEW_SetRAMBase(SYSVIEW_RAM_BASE);
 }
 
-/*********************************************************************
-*
-*       __write_buffered()
-*
-* Function description
-*   Low-level write function.
-*   Standard library subroutines will use this system routine
-*   for output to all files, including stdout.
-*   Write data via RTT.
-*/
-size_t __write_buffered(int handle, const unsigned char * buffer, size_t size) {
-  (void) handle;  /* Not used, avoid warning */
-  SEGGER_RTT_Write(0, (const char*)buffer, size);
-  return size;
-}
-
-#endif
-/****** End Of File *************************************************/
+/*************************** End of file ****************************/

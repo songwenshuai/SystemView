@@ -42,12 +42,12 @@
 *                                                                    *
 **********************************************************************
 *                                                                    *
-*       SystemView version: 3.10                                    *
+*       SystemView version: V3.12                                    *
 *                                                                    *
 **********************************************************************
 -------------------------- END-OF-HEADER -----------------------------
 
-File    : SEGGER_SYSVIEW_Config_embOS.c
+File    : SEGGER_SYSVIEW_Config_embOS_Win32.c
 Purpose : Sample setup configuration of SystemView with embOS.
 Revision: $Rev: 15024 $
 */
@@ -55,6 +55,7 @@ Revision: $Rev: 15024 $
 #include "SEGGER_SYSVIEW.h"
 #include "SEGGER_SYSVIEW_Conf.h"
 #include "SEGGER_SYSVIEW_embOS.h"
+#include "SEGGER_SYSVIEW_Win32.h"
 #include "SEGGER_RTT.h"
 
 #define WIN32_LEAN_AND_MEAN
@@ -154,16 +155,13 @@ typedef _SYS_THREAD_PROC_EX_TYPE _SYS_THREAD_PROC_EX(void* pPara);
 static const U8          _abHelloMsg[SYSVIEW_COMM_TARGET_HELLO_SIZE] = { 'S', 'E', 'G', 'G', 'E', 'R', ' ', 'S', 'y', 's', 't', 'e', 'm', 'V', 'i', 'e', 'w', ' ', 'V', '0' + SEGGER_SYSVIEW_MAJOR, '.', '0' + (SEGGER_SYSVIEW_MINOR / 10), '0' + (SEGGER_SYSVIEW_MINOR % 10), '.', '0' + (SEGGER_SYSVIEW_REV / 10), '0' + (SEGGER_SYSVIEW_REV % 10), '\0', 0, 0, 0, 0, 0 };
 static volatile int      _CloseRequested;            // Indicator for threads to terminate themselves
 static volatile int      _SysViewCommThreadRunning;  // Indicator for status of the "SysView communication" thread
-                         
-static int               _int0   = 0;
+
 static int               _int1   = 1;
-static unsigned long     _ulong0 = 0;
-static unsigned long     _ulong1 = 1;
-                         
+
 static U64               _TSFreq;
 static U32               _TSDiv;
 
-static CRITICAL_SECTION  _csDI;
+static CRITICAL_SECTION  _csLockString;
 static char              _sISRNames[MAX_ISRNAMES_LENGTH];
 
 /*********************************************************************
@@ -203,6 +201,9 @@ static _SYS_HANDLE _SYS_CreateThreadEx(_SYS_THREAD_PROC_EX* pfThreadProc, void* 
     CreateFlags = CREATE_SUSPENDED;
   }
   hThread = (_SYS_HANDLE)CreateThread(NULL, 0, pfThreadProc, pPara, CreateFlags, &ThreadId);
+  if (sName != NULL) {
+    OS_SIM_SetThreadName(ThreadId, sName);
+  }
   if (hThread) {
     if (pThreadId) {
       *pThreadId = ThreadId;
@@ -892,16 +893,15 @@ static void _SetupComm(void) {
 void SEGGER_SYSVIEW_Conf(void) {
   LARGE_INTEGER TSFreq;
 
-  InitializeCriticalSection(&_csDI);
   //
   // Get the performace counter frequency and scale it down to be < 1 GHz.
   // (We can only handle cycles >= 1ns)
   //
   QueryPerformanceFrequency(&TSFreq);
   _TSDiv = 1;
-  if (TSFreq.QuadPart > 1000000000ULL) {
-    _TSDiv = (U32)(TSFreq.QuadPart / 1000000000ULL);
-    if (TSFreq.QuadPart % 1000000000ULL) {
+  if (TSFreq.QuadPart > 1000000000LL) {
+    _TSDiv = (U32)(TSFreq.QuadPart / 1000000000LL);
+    if (TSFreq.QuadPart % 1000000000LL) {
       _TSDiv++;
     }
     _TSFreq = TSFreq.QuadPart;
@@ -961,9 +961,17 @@ U32 SEGGER_SYSVIEW_X_GetInterruptId(void) {
 *    Must be called from an ISR after SEGGER_SYSVIEW_Conf() only.
 *    It uses the thread ID as an unique ID for SystemView.
 */
-void SEGGER_SYSVIEW_X_SetISRName(char* sName) {
+void SEGGER_SYSVIEW_X_SetISRName(const char* sName) {
+  static int CriticalSectionInitialized = 0;
   char s[100];
-    
+
+  //
+  // Make sure the used critical section is initialized.
+  //
+  if (CriticalSectionInitialized == 0) {
+    InitializeCriticalSection(&_csLockString);
+    CriticalSectionInitialized = 1;
+  }
   //
   // Check whether the string fits in the string buffer.
   //
@@ -971,21 +979,26 @@ void SEGGER_SYSVIEW_X_SetISRName(char* sName) {
     //
     // If this is the first entry we don't need the comma.
     //
+    EnterCriticalSection(&_csLockString);
     if (strlen(_sISRNames) == 0) {
-      sprintf(s, "I#%u=%s", GetCurrentThreadId(), sName);
+      sprintf(s, "I#%u=%s", (unsigned int)GetCurrentThreadId(), sName);
     } else {
-      sprintf(s, ",I#%u=%s", GetCurrentThreadId(), sName);
+      sprintf(s, ",I#%u=%s", (unsigned int)GetCurrentThreadId(), sName);
     }
     //
     // Add new ISR name to the ISR name string and inform SystemView (if enough space is left in the string buffer).
     //
-    EnterCriticalSection(&_csDI);
     if ((strlen(_sISRNames) + strlen(s) + 1) < MAX_ISRNAMES_LENGTH) {
       strcat(_sISRNames, s);
-      SEGGER_SYSVIEW_SendSysDesc(_sISRNames);
-    }    
-    LeaveCriticalSection(&_csDI);
-  }  
+      //
+      // Send new description if SystemView is started.
+      //
+      if (SEGGER_SYSVIEW_IsStarted() > 0) {
+        SEGGER_SYSVIEW_SendSysDesc(_sISRNames);
+      }
+    }
+    LeaveCriticalSection(&_csLockString);
+  }
 }
 
 /*************************** End of file ****************************/

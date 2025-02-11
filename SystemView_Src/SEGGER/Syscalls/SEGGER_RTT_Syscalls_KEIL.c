@@ -42,14 +42,14 @@
 *                                                                    *
 **********************************************************************
 *                                                                    *
-*       SystemView version: 3.10                                    *
+*       SystemView version: V3.12                                    *
 *                                                                    *
 **********************************************************************
 ---------------------------END-OF-HEADER------------------------------
 File    : RTT_Syscalls_KEIL.c
 Purpose : Retargeting module for KEIL MDK-CM3.
           Low-level functions for using printf() via RTT
-Revision: $Rev: 16265 $
+Revision: $Rev: 17697 $
 ----------------------------------------------------------------------
 */
 #ifdef __CC_ARM
@@ -92,9 +92,11 @@ Revision: $Rev: 16265 $
 *
 **********************************************************************
 */
+#if __ARMCC_VERSION < 5000000
 //const char __stdin_name[]  = "STDIN";
 const char __stdout_name[] = "STDOUT";
 const char __stderr_name[] = "STDERR";
+#endif
 
 /*********************************************************************
 *
@@ -188,7 +190,8 @@ int _sys_write(FILEHANDLE hFile, const unsigned char * pBuffer, unsigned NumByte
 
   (void)Mode;
   if (hFile == STDOUT) {
-    return NumBytes - SEGGER_RTT_Write(0, (const char*)pBuffer, NumBytes);
+    SEGGER_RTT_Write(0, (const char*)pBuffer, NumBytes);
+		return 0;
   }
   return r;
 }
@@ -363,6 +366,25 @@ void _sys_exit(int ReturnCode) {
   (void)ReturnCode;
   while (1);  // Not implemented
 }
+
+#if __ARMCC_VERSION >= 5000000
+/*********************************************************************
+*
+*       stdout_putchar
+*
+*  Function description:
+*    Put a character to the stdout
+*
+*  Parameters:
+*    ch    - Character to output
+*  
+*
+*/
+int stdout_putchar(int ch) {
+  (void)ch;
+  return ch;  // Not implemented
+}
+#endif
 
 #endif
 /*************************** End of file ****************************/

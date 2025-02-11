@@ -42,19 +42,39 @@
 *                                                                    *
 **********************************************************************
 *                                                                    *
-*       SystemView version: 3.10                                    *
+*       SystemView version: V3.12                                    *
 *                                                                    *
 **********************************************************************
 -------------------------- END-OF-HEADER -----------------------------
 
-File    : SEGGER_SYSVIEW_Config_FreeRTOS.c
-Purpose : Sample setup configuration of SystemView with FreeRTOS.
-Revision: $Rev: 9599 $
+File    : SEGGER_SYSVIEW_Config_embOS_nRF51822.c
+Purpose : Sample setup configuration of SystemView with embOS
+          on Nordic Semi nRF51 devices 
+          which do neither have a cycle counter nor a SysTick.
+Revision: $Rev: 12706 $
 */
-#include "FreeRTOS.h"
+#include "RTOS.h"
 #include "SEGGER_SYSVIEW.h"
+#include "SEGGER_SYSVIEW_Conf.h"
+#include "SEGGER_SYSVIEW_embOS.h"
+#include "nrf.h"
 
-extern const SEGGER_SYSVIEW_OS_API SYSVIEW_X_OS_TraceAPI;
+//
+// SEGGER_SYSVIEW_TickCnt must be incremented in the SysTick
+// handler before any SYSVIEW event is generated.
+//
+// Example in embOS RTOSInit.c:
+//
+// void SysTick_Handler(void) {
+// #if (OS_PROFILE != 0)
+//   SEGGER_SYSVIEW_TickCnt++;  // Increment SEGGER_SYSVIEW_TickCnt before calling OS_INT_EnterNestable().
+// #endif
+//   OS_INT_EnterNestable();
+//   OS_TICK_Handle();
+//   OS_INT_LeaveNestable();
+// }
+//
+unsigned int SEGGER_SYSVIEW_TickCnt;
 
 /*********************************************************************
 *
@@ -63,21 +83,48 @@ extern const SEGGER_SYSVIEW_OS_API SYSVIEW_X_OS_TraceAPI;
 **********************************************************************
 */
 // The application name to be displayed in SystemViewer
-#define SYSVIEW_APP_NAME        "FreeRTOS Demo Application"
+#ifndef   SYSVIEW_APP_NAME
+  #define SYSVIEW_APP_NAME        "embOS start project"
+#endif
 
 // The target device name
-#define SYSVIEW_DEVICE_NAME     "Cortex-M4"
+#ifndef   SYSVIEW_DEVICE_NAME
+  #define SYSVIEW_DEVICE_NAME     "nRF51"
+#endif
 
-// Frequency of the timestamp. Must match SEGGER_SYSVIEW_GET_TIMESTAMP in SEGGER_SYSVIEW_Conf.h
-#define SYSVIEW_TIMESTAMP_FREQ  (configCPU_CLOCK_HZ)
+// Frequency of the timestamp. Must match SEGGER_SYSVIEW_Conf.h
+#ifndef   SYSVIEW_TIMESTAMP_FREQ
+  #define SYSVIEW_TIMESTAMP_FREQ  (SystemCoreClock)
+#endif
 
 // System Frequency. SystemcoreClock is used in most CMSIS compatible projects.
-#define SYSVIEW_CPU_FREQ        configCPU_CLOCK_HZ
+#ifndef   SYSVIEW_CPU_FREQ
+  #define SYSVIEW_CPU_FREQ        (SystemCoreClock)
+#endif
 
 // The lowest RAM address used for IDs (pointers)
-#define SYSVIEW_RAM_BASE        (0x10000000)
+#ifndef   SYSVIEW_RAM_BASE
+  #define SYSVIEW_RAM_BASE        (0x20000000)
+#endif
 
-/********************************************************************* 
+// Define as 1 to immediately start recording after initialization to catch system initialization.
+#ifndef   SYSVIEW_START_ON_INIT
+  #define SYSVIEW_START_ON_INIT   0
+#endif
+
+//#ifndef   SYSVIEW_SYSDESC0
+//  #define SYSVIEW_SYSDESC0      ""
+//#endif
+
+//#ifndef   SYSVIEW_SYSDESC1
+//  #define SYSVIEW_SYSDESC1      ""
+//#endif
+
+//#ifndef   SYSVIEW_SYSDESC2
+//  #define SYSVIEW_SYSDESC2      ""
+//#endif
+
+/*********************************************************************
 *
 *       _cbSendSystemDesc()
 *
@@ -85,8 +132,16 @@ extern const SEGGER_SYSVIEW_OS_API SYSVIEW_X_OS_TraceAPI;
 *    Sends SystemView description strings.
 */
 static void _cbSendSystemDesc(void) {
-  SEGGER_SYSVIEW_SendSysDesc("N="SYSVIEW_APP_NAME",D="SYSVIEW_DEVICE_NAME",O=FreeRTOS");
-  SEGGER_SYSVIEW_SendSysDesc("I#15=SysTick");
+  SEGGER_SYSVIEW_SendSysDesc("N=" SYSVIEW_APP_NAME ",O=embOS,D=" SYSVIEW_DEVICE_NAME );
+#ifdef SYSVIEW_SYSDESC0
+  SEGGER_SYSVIEW_SendSysDesc(SYSVIEW_SYSDESC0);
+#endif
+#ifdef SYSVIEW_SYSDESC1
+  SEGGER_SYSVIEW_SendSysDesc(SYSVIEW_SYSDESC1);
+#endif
+#ifdef SYSVIEW_SYSDESC2
+  SEGGER_SYSVIEW_SendSysDesc(SYSVIEW_SYSDESC2);
+#endif
 }
 
 /*********************************************************************
@@ -96,9 +151,49 @@ static void _cbSendSystemDesc(void) {
 **********************************************************************
 */
 void SEGGER_SYSVIEW_Conf(void) {
-  SEGGER_SYSVIEW_Init(SYSVIEW_TIMESTAMP_FREQ, SYSVIEW_CPU_FREQ, 
+  SEGGER_SYSVIEW_Init(SYSVIEW_TIMESTAMP_FREQ, SYSVIEW_CPU_FREQ,
                       &SYSVIEW_X_OS_TraceAPI, _cbSendSystemDesc);
   SEGGER_SYSVIEW_SetRAMBase(SYSVIEW_RAM_BASE);
+  OS_TRACE_SetAPI(&embOS_TraceAPI_SYSVIEW);  // Configure embOS to use SYSVIEW.
+#if SYSVIEW_START_ON_INIT
+  SEGGER_SYSVIEW_Start();                    // Start recording to catch system initialization.
+#endif
+}
+
+/*********************************************************************
+*
+*       SEGGER_SYSVIEW_X_GetTimestamp()
+*
+* Function description
+*   Returns the current timestamp in cycles using the system tick
+*   count and the system timer counter.
+*   All parameters of the system timer have to be known and are set via
+*   configuration defines on top of the file.
+*
+* Return value
+*   The current timestamp.
+*
+* Additional information
+*   SEGGER_SYSVIEW_X_GetTimestamp is always called when interrupts are
+*   disabled. Therefore locking here is not required.
+*/
+U32 SEGGER_SYSVIEW_X_GetTimestamp(void) {
+  U32 TickCount;
+  U32 Cycles;
+  U32 CyclesPerTick;
+
+  CyclesPerTick = OS_INFO_GetTimerFreq() / OS_SysTimer_Settings.Config.IntFreq;  // Int frequency and tick frequency are expected to be equal
+  TickCount     = SEGGER_SYSVIEW_TickCnt;
+  //
+  // Get the cycles of the current system tick.
+  //
+  NRF_TIMER0->TASKS_CAPTURE[3] = 1;
+  Cycles = NRF_TIMER0->CC[3] - NRF_TIMER0->CC[0];
+  //
+  // Get the system tick count.
+  //
+  Cycles += TickCount * CyclesPerTick;
+  return Cycles;
 }
 
 /*************************** End of file ****************************/

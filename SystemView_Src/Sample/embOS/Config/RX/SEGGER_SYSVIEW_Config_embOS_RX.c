@@ -42,32 +42,40 @@
 *                                                                    *
 **********************************************************************
 *                                                                    *
-*       SystemView version: 3.10                                    *
+*       SystemView version: V3.12                                    *
 *                                                                    *
 **********************************************************************
 -------------------------- END-OF-HEADER -----------------------------
 
-File    : SEGGER_SYSVIEW_Config_NoOS_RX.c
-Purpose : Sample setup configuration of SystemView on Renesas RX 
-          systems without an operating system.
-Revision: $Rev: 9599 $
+File    : SEGGER_SYSVIEW_Config_embOS_RX.c
+Purpose : Sample setup configuration of SystemView with embOS
+          on Renesas RX systems.
+Revision: $Rev: 18540 $              
+
+Additional information:
+  SEGGER_SYSVIEW_TickCnt has to be defined in the module which handles
+  the system tick and must be incremented in the SysTick_Handler.
 */
 #include "RTOS.h"
 #include "SEGGER_SYSVIEW.h"
 #include "SEGGER_SYSVIEW_embOS.h"
 
 //
-// SystemcoreClock can be used in most CMSIS compatible projects.
-// In non-CMSIS projects define SYSVIEW_CPU_FREQ directly.
+// SEGGER_SYSVIEW_TickCnt must be incremented in the SysTick
+// handler before any SYSVIEW event is generated.
 //
-extern unsigned int SystemCoreClock;
-
-/*********************************************************************
-*
-*       Defines, fixed
-*
-**********************************************************************
-*/
+// Example in embOS RTOSInit.c:
+//
+// void SysTick_Handler (void) {
+// #if (OS_PROFILE != 0)
+//   SEGGER_SYSVIEW_TickCnt++;        // Increment SEGGER_SYSVIEW_TickCnt before calling OS_INT_EnterNestable().
+// #endif
+//   OS_INT_EnterNestable();
+//   OS_TICK_Handle();
+//   OS_INT_LeaveNestable();
+// }
+//
+unsigned int SEGGER_SYSVIEW_TickCnt;
 
 /*********************************************************************
 *
@@ -77,17 +85,17 @@ extern unsigned int SystemCoreClock;
 */
 // The application name to be displayed in SystemViewer
 #ifndef   SYSVIEW_APP_NAME
-  #define SYSVIEW_APP_NAME          "Demo Application"
+  #define SYSVIEW_APP_NAME        "embOS start project"
 #endif
 
 // The target device name
 #ifndef   SYSVIEW_DEVICE_NAME
-  #define SYSVIEW_DEVICE_NAME       "RX64M"
+  #define SYSVIEW_DEVICE_NAME     "Renesas RX"
 #endif
 
-// System Frequency. SystemcoreClock is used in most CMSIS compatible projects.
+// Frequency of the timestamp. Must match SEGGER_SYSVIEW_Conf.h
 #ifndef   SYSVIEW_CPU_FREQ
-  #define SYSVIEW_CPU_FREQ        (SystemCoreClock)
+  #define SYSVIEW_CPU_FREQ        (96000000u)
 #endif
 
 // Frequency of the timestamp. Must match SEGGER_SYSVIEW_Conf.h and RTOSInit.c
@@ -97,7 +105,12 @@ extern unsigned int SystemCoreClock;
 
 // The lowest RAM address used for IDs (pointers)
 #ifndef   SYSVIEW_RAM_BASE
-  #define SYSVIEW_RAM_BASE        (0)
+  #define SYSVIEW_RAM_BASE        (0x00000000)
+#endif
+
+// Define as 1 to immediately start recording after initialization to catch system initialization.
+#ifndef   SYSVIEW_START_ON_INIT
+  #define SYSVIEW_START_ON_INIT 0
 #endif
 
 #ifndef   SYSVIEW_SYSDESC0
@@ -112,15 +125,18 @@ extern unsigned int SystemCoreClock;
 //  #define SYSVIEW_SYSDESC2      "I#11=IntPrio11,I#12=IntPrio12,I#13=IntPrio13,I#14=IntPrio14,I#15=IntPrio15"
 //#endif
 
-// System Timer configuration
+/*********************************************************************
+*
+*       Defines, fixed
+*
+**********************************************************************
+*/
 #define IRR_BASE_ADDR        (0x00087000u)
 #define CMT0_VECT            28u
 #define OS_TIMER_VECT        CMT0_VECT
 #define TIMER_PRESCALE       (8u)
 #define CMT0_BASE_ADDR       (0x00088000u)
 #define CMT0_CMCNT           (*(volatile U16*) (CMT0_BASE_ADDR + 0x04u))
-
-extern unsigned SEGGER_SYSVIEW_TickCnt;  // Tick Counter value incremented in the tick handler.
 
 /*********************************************************************
 *
@@ -130,7 +146,7 @@ extern unsigned SEGGER_SYSVIEW_TickCnt;  // Tick Counter value incremented in th
 *    Sends SystemView description strings.
 */
 static void _cbSendSystemDesc(void) {
-  SEGGER_SYSVIEW_SendSysDesc("N="SYSVIEW_APP_NAME",D="SYSVIEW_DEVICE_NAME);
+  SEGGER_SYSVIEW_SendSysDesc("N=" SYSVIEW_APP_NAME ",O=embOS,D=" SYSVIEW_DEVICE_NAME );
 #ifdef SYSVIEW_SYSDESC0
   SEGGER_SYSVIEW_SendSysDesc(SYSVIEW_SYSDESC0);
 #endif
@@ -150,8 +166,12 @@ static void _cbSendSystemDesc(void) {
 */
 void SEGGER_SYSVIEW_Conf(void) {
   SEGGER_SYSVIEW_Init(SYSVIEW_TIMESTAMP_FREQ, SYSVIEW_CPU_FREQ,
-                      0, _cbSendSystemDesc);
+                      &SYSVIEW_X_OS_TraceAPI, _cbSendSystemDesc);
   SEGGER_SYSVIEW_SetRAMBase(SYSVIEW_RAM_BASE);
+  OS_TRACE_SetAPI(&embOS_TraceAPI_SYSVIEW);  // Configure embOS to use SYSVIEW.
+#if SYSVIEW_START_ON_INIT
+  SEGGER_SYSVIEW_Start();                    // Start recording to catch system initialization.
+#endif
 }
 
 /*********************************************************************
@@ -159,7 +179,7 @@ void SEGGER_SYSVIEW_Conf(void) {
 *       SEGGER_SYSVIEW_X_GetTimestamp()
 *
 * Function description
-*   Returns the current timestamp in ticks using the system tick
+*   Returns the current timestamp in cycles using the system tick
 *   count and the SysTick counter.
 *   All parameters of the SysTick have to be known and are set via
 *   configuration defines on top of the file.
@@ -169,7 +189,7 @@ void SEGGER_SYSVIEW_Conf(void) {
 *
 * Additional information
 *   SEGGER_SYSVIEW_X_GetTimestamp is always called when interrupts are
-*   disabled. 
+*   disabled.
 *   Therefore locking here is not required and OS_GetTime_Cycles() may
 *   be called.
 */
@@ -198,6 +218,9 @@ U32 SEGGER_SYSVIEW_X_GetTimestamp(void) {
 */
 U32 SEGGER_SYSVIEW_X_GetInterruptId(void) {
   U32 IntId;
+#ifdef __RX  // Renesas CCRX
+  IntId = (get_psw() & 0x0F000000) >> 24u;
+#else
  __asm volatile ("mvfc    PSW, %0           \t\n" // Load current PSW
                  "and     #0x0F000000, %0   \t\n" // Clear all except IPL ([27:24])
                  "shlr    #24, %0           \t\n" // Shift IPL to [3:0]
@@ -205,6 +228,7 @@ U32 SEGGER_SYSVIEW_X_GetInterruptId(void) {
                  :                                // Input
                  :                                // Clobbered list
                 );
+#endif
   return IntId;
 }
 
