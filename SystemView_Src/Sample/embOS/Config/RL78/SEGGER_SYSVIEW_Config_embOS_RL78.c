@@ -42,85 +42,33 @@
 *                                                                    *
 **********************************************************************
 *                                                                    *
-*       SystemView version: V3.12                                    *
+*       SystemView version: 3.20                                    *
 *                                                                    *
 **********************************************************************
 -------------------------- END-OF-HEADER -----------------------------
 
 File    : SEGGER_SYSVIEW_Config_embOS_RL78.c
 Purpose : Sample setup configuration of SystemView with embOS.
-Revision: $Rev: 18585 $
+Revision: $Rev: 21298 $
+
+Additional information:
+  SEGGER_SYSVIEW_TickCnt must be incremented in the SysTick
+  handler before any SYSVIEW event is generated.
+ 
+  Example in embOS RTOSInit.c:
+ 
+  void SysTick_Handler(void) {
+  #if (OS_PROFILE != 0)
+    SEGGER_SYSVIEW_TickCnt++;  // Increment SEGGER_SYSVIEW_TickCnt before calling OS_INT_EnterNestable().
+  #endif
+    OS_INT_EnterNestable();
+    OS_TICK_Handle();
+    OS_INT_LeaveNestable();
+  }
 */
 #include "RTOS.h"
 #include "SEGGER_SYSVIEW.h"
 #include "SEGGER_SYSVIEW_embOS.h"
-
-//
-// SEGGER_SYSVIEW_TickCnt has to be defined in the module which
-// handles the System Tick and must be incremented in the System Tick
-// handler before any SYSVIEW event is generated.
-//
-// Example in embOS RTOSInit.c:
-//
-// unsigned int SEGGER_SYSVIEW_TickCnt; // <<-- Define SEGGER_SYSVIEW_TickCnt.
-// void SysTick_Handler(void) {
-// #if OS_PROFILE
-//   SEGGER_SYSVIEW_TickCnt++;          // <<-- Increment SEGGER_SYSVIEW_TickCnt before calling OS_EnterNestableInterrupt.
-// #endif
-//   OS_EnterNestableInterrupt();
-//   OS_TICK_Handle();
-//   OS_LeaveNestableInterrupt();
-// }
-//
-unsigned int SEGGER_SYSVIEW_TickCnt;
-
-/*********************************************************************
-*
-*       Defines, configurable
-*
-**********************************************************************
-*/
-// The application name to be displayed in SystemViewer
-#ifndef   SYSVIEW_APP_NAME
-  #define SYSVIEW_APP_NAME        "embOS start project"
-#endif
-
-// The target device name
-#ifndef   SYSVIEW_DEVICE_NAME
-  #define SYSVIEW_DEVICE_NAME     "RL78G14"
-#endif
-
-// Frequency of the timestamp. Must match SEGGER_SYSVIEW_Conf.h
-#ifndef   SYSVIEW_TIMESTAMP_FREQ
-  #define SYSVIEW_TIMESTAMP_FREQ  (32000000uL)
-#endif
-
-// System Frequency. SystemcoreClock is used in most CMSIS compatible projects.
-#ifndef   SYSVIEW_CPU_FREQ
-  #define SYSVIEW_CPU_FREQ        (32000000uL)
-#endif
-
-// The lowest RAM address used for IDs (pointers)
-#ifndef   SYSVIEW_RAM_BASE
-  #define SYSVIEW_RAM_BASE        (0x00000000)
-#endif
-
-// Define as 1 to immediately start recording after initialization to catch system initialization.
-#ifndef   SYSVIEW_START_ON_INIT
-  #define SYSVIEW_START_ON_INIT 0
-#endif
-
-//#ifndef   SYSVIEW_SYSDESC0
-//  #define SYSVIEW_SYSDESC0        ""
-//#endif
-
-//#ifndef   SYSVIEW_SYSDESC1
-//  #define SYSVIEW_SYSDESC1      ""
-//#endif
-
-//#ifndef   SYSVIEW_SYSDESC2
-//  #define SYSVIEW_SYSDESC2      ""
-//#endif
 
 /*********************************************************************
 *
@@ -134,21 +82,27 @@ unsigned int SEGGER_SYSVIEW_TickCnt;
 
 /*********************************************************************
 *
+*       Local functions
+*
+**********************************************************************
+*/
+/*********************************************************************
+*
 *       _cbSendSystemDesc()
 *
 *  Function description
 *    Sends SystemView description strings.
 */
 static void _cbSendSystemDesc(void) {
-  SEGGER_SYSVIEW_SendSysDesc("N=" SYSVIEW_APP_NAME ",O=embOS,D=" SYSVIEW_DEVICE_NAME );
-#ifdef SYSVIEW_SYSDESC0
-  SEGGER_SYSVIEW_SendSysDesc(SYSVIEW_SYSDESC0);
+  SEGGER_SYSVIEW_SendSysDesc("N=" SEGGER_SYSVIEW_APP_NAME ",O=embOS,D=" SEGGER_SYSVIEW_DEVICE_NAME );
+#ifdef SEGGER_SYSVIEW_SYSDESC0
+  SEGGER_SYSVIEW_SendSysDesc(SEGGER_SYSVIEW_SYSDESC0);
 #endif
-#ifdef SYSVIEW_SYSDESC1
-  SEGGER_SYSVIEW_SendSysDesc(SYSVIEW_SYSDESC1);
+#ifdef SEGGER_SYSVIEW_SYSDESC1
+  SEGGER_SYSVIEW_SendSysDesc(SEGGER_SYSVIEW_SYSDESC1);
 #endif
-#ifdef SYSVIEW_SYSDESC2
-  SEGGER_SYSVIEW_SendSysDesc(SYSVIEW_SYSDESC2);
+#ifdef SEGGER_SYSVIEW_SYSDESC2
+  SEGGER_SYSVIEW_SendSysDesc(SEGGER_SYSVIEW_SYSDESC2);
 #endif
 }
 
@@ -158,13 +112,23 @@ static void _cbSendSystemDesc(void) {
 *
 **********************************************************************
 */
+/*********************************************************************
+*
+*       SEGGER_SYSVIEW_Conf()
+*
+* Function description
+*   Configure and initialize SystemView and register it with embOS.
+*
+* Additional information
+*   If enabled, SEGGER_SYSVIEW_Conf() will also immediately start
+*   recording events with SystemView.
+*/
 void SEGGER_SYSVIEW_Conf(void) {
-  SEGGER_SYSVIEW_Init(SYSVIEW_TIMESTAMP_FREQ, SYSVIEW_CPU_FREQ,
+  SEGGER_SYSVIEW_Init(SEGGER_SYSVIEW_TIMESTAMP_FREQ, SEGGER_SYSVIEW_CPU_FREQ,
                       &SYSVIEW_X_OS_TraceAPI, _cbSendSystemDesc);
-  SEGGER_SYSVIEW_SetRAMBase(SYSVIEW_RAM_BASE);
-  OS_SetTraceAPI(&embOS_TraceAPI_SYSVIEW);    // Configure embOS to use SYSVIEW.
-#if SYSVIEW_START_ON_INIT
-  SEGGER_SYSVIEW_Start();                     // Start recording to catch system initialization.
+  OS_TRACE_SetAPI(&embOS_TraceAPI_SYSVIEW);  // Configure embOS to use SYSVIEW.
+#if SEGGER_SYSVIEW_START_ON_INIT
+  SEGGER_SYSVIEW_Start();                    // Start recording to catch system initialization.
 #endif
 }
 

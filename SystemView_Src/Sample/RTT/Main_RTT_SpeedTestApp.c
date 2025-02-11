@@ -45,40 +45,61 @@
 *       SystemView version: 3.20                                    *
 *                                                                    *
 **********************************************************************
--------------------------- END-OF-HEADER -----------------------------
-File    : SEGGER_SYSVIEW_Win32.h
-Purpose : System visualization API.
-Revision: $Rev: 16723 $
+--------- END-OF-HEADER --------------------------------------------
+File    : Main_RTT_SpeedTestApp.c
+Purpose : Sample program for measuring RTT performance.
 */
 
-#ifndef SEGGER_SYSVIEW_WIN32_H
-#define SEGGER_SYSVIEW_WIN32_H
+#include "RTOS.h"
+#include "BSP.h"
 
-/*********************************************************************
-*
-*       #include Section
-*
-**********************************************************************
-*/
+#include "SEGGER_RTT.h"
+#include <stdio.h>
 
-#include "SEGGER_SYSVIEW.h"
+OS_STACKPTR int StackHP[128], StackLP[128];          /* Task stacks */
+OS_TASK TCBHP, TCBLP;                        /* Task-control-blocks */
 
-/*********************************************************************
-*
-*       Prototypes
-*
-**********************************************************************
-*/
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-void SEGGER_SYSVIEW_X_SetISRName(const char* sName);
-
-#ifdef __cplusplus
+static void HPTask(void) {
+  while (1) {
+    //
+    // Measure time needed for RTT output
+    // Perform dummy write with 0 characters, so we know the overhead of toggling LEDs and RTT in general
+    //
+// Set BP here. Then start sampling on scope
+    BSP_ClrLED(0);
+    SEGGER_RTT_Write(0, 0, 0);
+    BSP_SetLED(0);
+    BSP_ClrLED(0);
+    SEGGER_RTT_Write(0, "01234567890123456789012345678901234567890123456789012345678901234567890123456789\r\n", 82);
+    BSP_SetLED(0);
+// Set BP here. Then stop sampling on scope
+    OS_Delay(200);
+  }
 }
-#endif
 
-#endif
+static void LPTask(void) {
+  while (1) {
+    BSP_ToggleLED(1);
+    OS_Delay (500);
+  }
+}
 
-/*************************** End of file ****************************/
+/*********************************************************************
+*
+*       main
+*
+*********************************************************************/
+
+int main(void) {
+  OS_IncDI();                      /* Initially disable interrupts  */
+  OS_InitKern();                   /* Initialize OS                 */
+  OS_InitHW();                     /* Initialize Hardware for OS    */
+  BSP_Init();                      /* Initialize LED ports          */
+  BSP_SetLED(0);
+  /* You need to create at least one task before calling OS_Start() */
+  OS_CREATETASK(&TCBHP, "HP Task", HPTask, 100, StackHP);
+  OS_CREATETASK(&TCBLP, "LP Task", LPTask,  50, StackLP);
+  OS_Start();                      /* Start multitasking            */
+  return 0;
+}
+

@@ -47,11 +47,10 @@
 **********************************************************************
 -------------------------- END-OF-HEADER -----------------------------
 
-File    : SEGGER_SYSVIEW_Config_embOS_CM0.c
+File    : SEGGER_SYSVIEW_Config_embOS_Zynq7000.c
 Purpose : Sample setup configuration of SystemView with embOS
-          on Cortex-M0/Cortex-M0+/Cortex-M1 systems which do not
-          have a cycle counter.
-Revision: $Rev: 21298 $
+          on Xilinx Zynq 7010 devices.
+Revision: $Rev: 12316 $
 
 Additional information:
   SEGGER_SYSVIEW_TickCnt must be incremented in the SysTick
@@ -67,6 +66,9 @@ Additional information:
     OS_TICK_Handle();
     OS_INT_LeaveNestable();
   }
+  
+  SEGGER_SYSVIEW_InterruptId has to be set in the IRQ handler
+  to identify the active interrupt.
 */
 #include "RTOS.h"
 #include "SEGGER_SYSVIEW.h"
@@ -78,10 +80,6 @@ Additional information:
 *
 **********************************************************************
 */
-#define SCB_ICSR  (*(volatile U32*) (0xE000ED04uL))  // Interrupt Control State Register
-#define SCB_ICSR_PENDSTSET_MASK     (1UL << 26)      // SysTick pending bit
-#define SYST_RVR  (*(volatile U32*) (0xE000E014uL))  // SysTick Reload Value Register
-#define SYST_CVR  (*(volatile U32*) (0xE000E018uL))  // SysTick Current Value Register
 
 /*********************************************************************
 *
@@ -153,29 +151,18 @@ void SEGGER_SYSVIEW_Conf(void) {
 *   disabled. Therefore locking here is not required.
 */
 U32 SEGGER_SYSVIEW_X_GetTimestamp(void) {
-  U32 TickCount;
   U32 Cycles;
-  U32 CyclesPerTick;
-  //
-  // Get the cycles of the current system tick.
-  // SysTick is down-counting, subtract the current value from the number of cycles per tick.
-  //
-  CyclesPerTick = SYST_RVR + 1;
-  Cycles = (CyclesPerTick - SYST_CVR);
-  //
-  // Get the system tick count.
-  //
-  TickCount = SEGGER_SYSVIEW_TickCnt;
-  //
-  // If a SysTick interrupt is pending, re-read timer and adjust result
-  //
-  if ((SCB_ICSR & SCB_ICSR_PENDSTSET_MASK) != 0) {
-    Cycles = (CyclesPerTick - SYST_CVR);
-    TickCount++;
-  }
-  Cycles += TickCount * CyclesPerTick;
-
+  
+  Cycles = RTOSINIT__SYSVIEWGetTimerCycles();
   return Cycles;
+}
+
+/*********************************************************************
+*
+*       SEGGER_SYSVIEW_X_GetInterruptId()
+*/
+U32 SEGGER_SYSVIEW_X_GetInterruptId(void) {
+  return SEGGER_SYSVIEW_InterruptId;
 }
 
 /*************************** End of file ****************************/

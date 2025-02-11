@@ -42,13 +42,13 @@
 *                                                                    *
 **********************************************************************
 *                                                                    *
-*       SystemView version: V3.12                                    *
+*       SystemView version: 3.20                                    *
 *                                                                    *
 **********************************************************************
 -------------------------- END-OF-HEADER -----------------------------
 File    : SEGGER_SYSVIEW.h
 Purpose : System visualization API.
-Revision: $Rev: 17331 $
+Revision: $Rev: 21292 $
 */
 
 #ifndef SEGGER_SYSVIEW_H
@@ -62,6 +62,7 @@ Revision: $Rev: 17331 $
 */
 
 #include "SEGGER.h"
+#include "SEGGER_SYSVIEW_ConfDefaults.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -203,6 +204,29 @@ struct SEGGER_SYSVIEW_MODULE_STRUCT {
 };
 
 typedef void (SEGGER_SYSVIEW_SEND_SYS_DESC_FUNC)(void);
+
+
+/*********************************************************************
+*
+*       Global data
+*
+**********************************************************************
+*/
+
+#ifdef   EXTERN
+  #undef EXTERN
+#endif
+
+#ifndef SEGGER_SYSVIEW_C       // Defined in SEGGER_SYSVIEW.c which includes this header beside other C-files
+  #define EXTERN extern
+#else
+  #define EXTERN
+#endif
+
+EXTERN unsigned int SEGGER_SYSVIEW_TickCnt;
+EXTERN unsigned int SEGGER_SYSVIEW_InterruptId;
+
+#undef EXTERN
 
 /*********************************************************************
 *

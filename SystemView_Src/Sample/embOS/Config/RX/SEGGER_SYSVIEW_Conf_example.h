@@ -46,39 +46,59 @@
 *                                                                    *
 **********************************************************************
 -------------------------- END-OF-HEADER -----------------------------
-File    : SEGGER_SYSVIEW_Win32.h
-Purpose : System visualization API.
-Revision: $Rev: 16723 $
+
+File    : SEGGER_SYSVIEW_Conf.h
+Purpose : SEGGER SystemView configuration file.
+          Set defines which deviate from the defaults (see SEGGER_SYSVIEW_ConfDefaults.h) here.          
+Revision: $Rev: 17066 $
+
+Additional information:
+  Required defines which must be set are:
+    SEGGER_SYSVIEW_GET_TIMESTAMP
+    SEGGER_SYSVIEW_GET_INTERRUPT_ID
+  For known compilers and cores, these might be set to good defaults
+  in SEGGER_SYSVIEW_ConfDefaults.h.
+  
+  SystemView needs a (nestable) locking mechanism.
+  If not defined, the RTT locking mechanism is used,
+  which then needs to be properly configured.
 */
 
-#ifndef SEGGER_SYSVIEW_WIN32_H
-#define SEGGER_SYSVIEW_WIN32_H
+#ifndef SEGGER_SYSVIEW_CONF_H
+#define SEGGER_SYSVIEW_CONF_H
 
 /*********************************************************************
 *
-*       #include Section
+*       Defines, configurable
 *
 **********************************************************************
 */
 
-#include "SEGGER_SYSVIEW.h"
+// The application name to be displayed in SystemViewer
+#define SEGGER_SYSVIEW_APP_NAME        "embOS start project"
 
-/*********************************************************************
-*
-*       Prototypes
-*
-**********************************************************************
-*/
-#ifdef __cplusplus
-extern "C" {
-#endif
+// The target device name
+#define SEGGER_SYSVIEW_DEVICE_NAME     "RX"
 
-void SEGGER_SYSVIEW_X_SetISRName(const char* sName);
+// System Frequency
+#define SEGGER_SYSVIEW_CPU_FREQ        (96000000u)
 
-#ifdef __cplusplus
-}
-#endif
+// Frequency of the timestamp
+#define SEGGER_SYSVIEW_TIMESTAMP_FREQ  (SEGGER_SYSVIEW_CPU_FREQ/2u/8u) // Assume system timer runs at 1/16th of the CPU frequency
 
-#endif
+// Lowest Id reported by the Application.
+#define SEGGER_SYSVIEW_ID_BASE         (0x00000000)
+
+#define SEGGER_SYSVIEW_SYSDESC0        "I#0=IntPrio0,I#1=IntPrio1,I#2=IntPrio2,I#3=IntPrio3,I#4=IntPrio4"
+//#define SEGGER_SYSVIEW_SYSDESC1        "I#5=IntPrio5,I#6=IntPrio6,I#7=IntPrio7,I#8=IntPrio8,I#9=IntPrio9,I#10=IntPrio10"
+//#define SEGGER_SYSVIEW_SYSDESC2        "I#11=IntPrio11,I#12=IntPrio12,I#13=IntPrio13,I#14=IntPrio14,I#15=IntPrio15"
+
+// Retrieve a system timestamp via user-defined function
+#define SEGGER_SYSVIEW_GET_TIMESTAMP() SEGGER_SYSVIEW_X_GetTimestamp()
+
+// Get the currently active interrupt Id from the user-provided function.
+#define SEGGER_SYSVIEW_GET_INTERRUPT_ID()   SEGGER_SYSVIEW_X_GetInterruptId()
+
+#endif  // SEGGER_SYSVIEW_CONF_H
 
 /*************************** End of file ****************************/

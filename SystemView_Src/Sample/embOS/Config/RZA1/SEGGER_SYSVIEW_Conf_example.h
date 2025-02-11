@@ -47,135 +47,78 @@
 **********************************************************************
 -------------------------- END-OF-HEADER -----------------------------
 
-File    : SEGGER_SYSVIEW_Config_embOS_CM0.c
-Purpose : Sample setup configuration of SystemView with embOS
-          on Cortex-M0/Cortex-M0+/Cortex-M1 systems which do not
-          have a cycle counter.
-Revision: $Rev: 21298 $
+File    : SEGGER_SYSVIEW_Conf.h
+Purpose : SEGGER SystemView configuration file.
+          Set defines which deviate from the defaults (see SEGGER_SYSVIEW_ConfDefaults.h) here.          
+Revision: $Rev: 17066 $
 
 Additional information:
-  SEGGER_SYSVIEW_TickCnt must be incremented in the SysTick
-  handler before any SYSVIEW event is generated.
- 
-  Example in embOS RTOSInit.c:
- 
-  void SysTick_Handler(void) {
-  #if (OS_PROFILE != 0)
-    SEGGER_SYSVIEW_TickCnt++;  // Increment SEGGER_SYSVIEW_TickCnt before calling OS_INT_EnterNestable().
-  #endif
-    OS_INT_EnterNestable();
-    OS_TICK_Handle();
-    OS_INT_LeaveNestable();
-  }
+  Required defines which must be set are:
+    SEGGER_SYSVIEW_GET_TIMESTAMP
+    SEGGER_SYSVIEW_GET_INTERRUPT_ID
+  For known compilers and cores, these might be set to good defaults
+  in SEGGER_SYSVIEW_ConfDefaults.h.
+  
+  SystemView needs a (nestable) locking mechanism.
+  If not defined, the RTT locking mechanism is used,
+  which then needs to be properly configured.
 */
-#include "RTOS.h"
-#include "SEGGER_SYSVIEW.h"
-#include "SEGGER_SYSVIEW_embOS.h"
+
+#ifndef SEGGER_SYSVIEW_CONF_H
+#define SEGGER_SYSVIEW_CONF_H
 
 /*********************************************************************
 *
-*       Defines, fixed
+*       Defines, configurable
 *
 **********************************************************************
 */
-#define SCB_ICSR  (*(volatile U32*) (0xE000ED04uL))  // Interrupt Control State Register
-#define SCB_ICSR_PENDSTSET_MASK     (1UL << 26)      // SysTick pending bit
-#define SYST_RVR  (*(volatile U32*) (0xE000E014uL))  // SysTick Reload Value Register
-#define SYST_CVR  (*(volatile U32*) (0xE000E018uL))  // SysTick Current Value Register
 
 /*********************************************************************
 *
-*       Local functions
+*       Defines, configurable
 *
 **********************************************************************
 */
-/*********************************************************************
-*
-*       _cbSendSystemDesc()
-*
-*  Function description
-*    Sends SystemView description strings.
-*/
-static void _cbSendSystemDesc(void) {
-  SEGGER_SYSVIEW_SendSysDesc("N=" SEGGER_SYSVIEW_APP_NAME ",O=embOS,D=" SEGGER_SYSVIEW_DEVICE_NAME );
-#ifdef SEGGER_SYSVIEW_SYSDESC0
-  SEGGER_SYSVIEW_SendSysDesc(SEGGER_SYSVIEW_SYSDESC0);
+#ifndef   OS_FSYS
+  #define OS_FSYS                  (399900000u)
 #endif
-#ifdef SEGGER_SYSVIEW_SYSDESC1
-  SEGGER_SYSVIEW_SendSysDesc(SEGGER_SYSVIEW_SYSDESC1);
-#endif
-#ifdef SEGGER_SYSVIEW_SYSDESC2
-  SEGGER_SYSVIEW_SendSysDesc(SEGGER_SYSVIEW_SYSDESC2);
-#endif
-}
 
-/*********************************************************************
-*
-*       Global functions
-*
-**********************************************************************
-*/
-/*********************************************************************
-*
-*       SEGGER_SYSVIEW_Conf()
-*
-* Function description
-*   Configure and initialize SystemView and register it with embOS.
-*
-* Additional information
-*   If enabled, SEGGER_SYSVIEW_Conf() will also immediately start
-*   recording events with SystemView.
-*/
-void SEGGER_SYSVIEW_Conf(void) {
-  SEGGER_SYSVIEW_Init(SEGGER_SYSVIEW_TIMESTAMP_FREQ, SEGGER_SYSVIEW_CPU_FREQ,
-                      &SYSVIEW_X_OS_TraceAPI, _cbSendSystemDesc);
-  OS_TRACE_SetAPI(&embOS_TraceAPI_SYSVIEW);  // Configure embOS to use SYSVIEW.
-#if SEGGER_SYSVIEW_START_ON_INIT
-  SEGGER_SYSVIEW_Start();                    // Start recording to catch system initialization.
+#ifndef   OS_PCLK_TIMER
+  #define OS_PCLK_TIMER            (OS_FSYS / 12)
 #endif
-}
 
-/*********************************************************************
-*
-*       SEGGER_SYSVIEW_X_GetTimestamp()
-*
-* Function description
-*   Returns the current timestamp in cycles using the system tick
-*   count and the SysTick counter.
-*   All parameters of the SysTick have to be known and are set via
-*   configuration defines on top of the file.
-*
-* Return value
-*   The current timestamp.
-*
-* Additional information
-*   SEGGER_SYSVIEW_X_GetTimestamp is always called when interrupts are
-*   disabled. Therefore locking here is not required.
-*/
-U32 SEGGER_SYSVIEW_X_GetTimestamp(void) {
-  U32 TickCount;
-  U32 Cycles;
-  U32 CyclesPerTick;
-  //
-  // Get the cycles of the current system tick.
-  // SysTick is down-counting, subtract the current value from the number of cycles per tick.
-  //
-  CyclesPerTick = SYST_RVR + 1;
-  Cycles = (CyclesPerTick - SYST_CVR);
-  //
-  // Get the system tick count.
-  //
-  TickCount = SEGGER_SYSVIEW_TickCnt;
-  //
-  // If a SysTick interrupt is pending, re-read timer and adjust result
-  //
-  if ((SCB_ICSR & SCB_ICSR_PENDSTSET_MASK) != 0) {
-    Cycles = (CyclesPerTick - SYST_CVR);
-    TickCount++;
-  }
-  Cycles += TickCount * CyclesPerTick;
+#ifndef   OS_TICK_FREQ
+  #define OS_TICK_FREQ             (1000)
+#endif
 
-  return Cycles;
-}
+#ifndef   OS_TIMER_RELOAD
+  #define OS_TIMER_RELOAD          (OS_PCLK_TIMER / OS_TICK_FREQ)
+#endif
+
+// The application name to be displayed in SystemViewer
+#define SEGGER_SYSVIEW_APP_NAME        "embOS start project"
+
+// The target device name
+#define SEGGER_SYSVIEW_DEVICE_NAME     "R7S721001"
+
+// Frequency of the timestamp
+#define SEGGER_SYSVIEW_TIMESTAMP_FREQ  (OS_PCLK_TIMER)
+
+// System Frequency. SystemcoreClock is used in most CMSIS compatible projects.
+#define SEGGER_SYSVIEW_CPU_FREQ        (OS_FSYS)
+
+// Lowest Id reported by the Application.
+#define SEGGER_SYSVIEW_ID_BASE         (0x60000000)
+
+#define SEGGER_SYSVIEW_SYSDESC0        "I#134=OS_ISR_Tick"
+
+// Retrieve a system timestamp via user-defined function
+#define SEGGER_SYSVIEW_GET_TIMESTAMP() SEGGER_SYSVIEW_X_GetTimestamp()
+
+// Get the currently active interrupt Id from the user-provided function.
+#define SEGGER_SYSVIEW_GET_INTERRUPT_ID()   SEGGER_SYSVIEW_X_GetInterruptId()
+
+#endif  // SEGGER_SYSVIEW_CONF_H
 
 /*************************** End of file ****************************/

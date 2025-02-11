@@ -45,40 +45,35 @@
 *       SystemView version: 3.20                                    *
 *                                                                    *
 **********************************************************************
--------------------------- END-OF-HEADER -----------------------------
-File    : SEGGER_SYSVIEW_Win32.h
-Purpose : System visualization API.
-Revision: $Rev: 16723 $
+--------- END-OF-HEADER --------------------------------------------
+File    : Main_RTT_MenuApp.c
+Purpose : Sample application to demonstrate RTT bi-directional functionality
 */
 
-#ifndef SEGGER_SYSVIEW_WIN32_H
-#define SEGGER_SYSVIEW_WIN32_H
+#define MAIN_C
+
+#include <stdio.h>
+
+#include "SEGGER_RTT.h"
+
+volatile int _Cnt;
+volatile int _Delay;
+
+static char r;
 
 /*********************************************************************
 *
-*       #include Section
-*
-**********************************************************************
+*       main
 */
+void main(void) {
 
-#include "SEGGER_SYSVIEW.h"
-
-/*********************************************************************
-*
-*       Prototypes
-*
-**********************************************************************
-*/
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-void SEGGER_SYSVIEW_X_SetISRName(const char* sName);
-
-#ifdef __cplusplus
+  SEGGER_RTT_WriteString(0, "SEGGER Real-Time-Terminal Sample\r\n");
+  SEGGER_RTT_ConfigUpBuffer(0, NULL, NULL, 0, SEGGER_RTT_MODE_NO_BLOCK_SKIP);
+  do {
+    r = SEGGER_RTT_WaitKey();
+    SEGGER_RTT_Write(0, &r, 1);
+    r++;
+  } while (1);
 }
-#endif
-
-#endif
 
 /*************************** End of file ****************************/

@@ -95,59 +95,27 @@ Additional Information
 *
 **********************************************************************
 */
-/*********************************************************************
-*
-*       SYSVIEW_COMM_TASK_PRIO
-*  Priority of the communication task. 
-*  Typically low to keep SystemVeiw minimally intrusive.
-*  Higher when there are overflows due to too long blocking time.
-*
-*/
 #ifndef   SYSVIEW_COMM_TASK_PRIO
-  #define SYSVIEW_COMM_TASK_PRIO        1
+  #define SYSVIEW_COMM_TASK_PRIO        1         // Priority of the communication task
 #endif
 
-/*********************************************************************
-*
-*       SYSVIEW_COMM_SEND_THRESHOLD
-*  Threshold for the SystemView RTT Buffer level, 
-*  after which the data is sent to SystemView App.
-*
-*/
 #ifndef   SYSVIEW_COMM_SEND_THRESHOLD
-  #define SYSVIEW_COMM_SEND_THRESHOLD   512
+  #define SYSVIEW_COMM_SEND_THRESHOLD   512       // Minimum number of bytes to read and send from the RTT Buffer.
 #endif
 
-/*********************************************************************
-*
-*       SYSVIEW_COMM_IDLE_DELAY
-*  Maximum delay after which available data from the SystemView RTT
-*  Buffer is sent to SystemView App.
-*
-*/
 #ifndef   SYSVIEW_COMM_IDLE_DELAY
-  #define SYSVIEW_COMM_IDLE_DELAY       100
+  #define SYSVIEW_COMM_IDLE_DELAY       100       // Delay if no data had to be sent.
 #endif
 
-/*********************************************************************
-*
-*       SYSVIEW_COMM_POLL_INTERVAL
-*  Polling interval to check for send threshold or idle delay timeout.
-*
-*/
 #ifndef   SYSVIEW_COMM_POLL_INTERVAL
-  #define SYSVIEW_COMM_POLL_INTERVAL    2
+  #define SYSVIEW_COMM_POLL_INTERVAL    2         // Interval to check for buffer level.
 #endif
 
-/*********************************************************************
-*
-*       SYSVIEW_COMM_SERVER_PORT
-*  Communication port on which SystemView App can connect.
-*
-*/
 #ifndef   SYSVIEW_COMM_SERVER_PORT
   #define SYSVIEW_COMM_SERVER_PORT      19111
 #endif
+
+#define _NO_NOTIFY
 
 /*********************************************************************
 *
@@ -155,8 +123,8 @@ Additional Information
 *
 **********************************************************************
 */
-#define SYSVIEW_COMM_APP_HELLO_SIZE     32
-#define SYSVIEW_COMM_TARGET_HELLO_SIZE  32
+#define SYSVIEW_COMM_SERVER_HELLO_SIZE  4
+#define SYSVIEW_COMM_TARGET_HELLO_SIZE  4
 
 /*********************************************************************
 *
@@ -173,10 +141,13 @@ static OS_TASK                  _SysViewCommTCB;
 *
 **********************************************************************
 */
-// "Hello" message expected by SystemView App: SEGGER SystemView VM.mm.rr
-static const U8                 _abHelloMsg[SYSVIEW_COMM_TARGET_HELLO_SIZE] = { 'S', 'E', 'G', 'G', 'E', 'R', ' ', 'S', 'y', 's', 't', 'e', 'm', 'V', 'i', 'e', 'w', ' ', 'V', '0' + SEGGER_SYSVIEW_MAJOR, '.', '0' + (SEGGER_SYSVIEW_MINOR / 10), '0' + (SEGGER_SYSVIEW_MINOR % 10), '.', '0' + (SEGGER_SYSVIEW_REV / 10), '0' + (SEGGER_SYSVIEW_REV % 10), '\0', 0, 0, 0, 0, 0 };
 static int                      _ChannelID;
+static const U8                 _abHelloMsg[SYSVIEW_COMM_TARGET_HELLO_SIZE] = { 'S', 'V', (SEGGER_SYSVIEW_VERSION / 10000), (SEGGER_SYSVIEW_VERSION / 1000) % 10 };  // "Hello" message expected by SysView: [ 'S', 'V', <PROTOCOL_MAJOR>, <PROTOCOL_MINOR> ]
 static char                     _acBuf[SYSVIEW_COMM_SEND_THRESHOLD * 2];
+
+#ifndef _NO_NOTIFY
+static unsigned                 _NumBytesRecorded;
+#endif
 
 /*********************************************************************
 *
@@ -196,6 +167,7 @@ static void _Delay(int Ticks) {
   OS_TASK_Delay(Ticks);
 }
 
+#ifdef _NO_NOTIFY
 /*********************************************************************
 *
 *       _WaitPolling
@@ -215,6 +187,37 @@ static void _WaitPolling(int Timeout) {
     Timeout -= SYSVIEW_COMM_POLL_INTERVAL;
   } while (Timeout > 0);
 }
+#else
+/*********************************************************************
+*
+*       _WaitNotify
+*
+*  Function description
+*    Wait to be notified or the timeout runs out.
+*
+*/
+static void _WaitNotify(int Timeout) {
+  OS_TASKEVENT_GetTimed(1, Timeout);
+}
+
+/*********************************************************************
+*
+*       _Notify
+*
+*  Function description
+*    Notify the communication task.
+*
+*/
+static void _Notify(void) {
+  //
+  // There might be SystemView Events before the communication task is created.
+  // Only notify task when it has been created
+  //
+  if (OS_TASK_IsTask(&_SysViewCommTCB)) {
+    OS_TASKEVENT_Set(&_SysViewCommTCB, 1);
+  }
+}
+#endif
 
 /*********************************************************************
 *
@@ -337,6 +340,7 @@ static void _SysViewCommTask(void) {
   char acRecv[16];
   //
   _ChannelID = SEGGER_SYSVIEW_GetChannelID();
+  hSockSV = SOCKET_ERROR;
   //
   // Wait for IP Stack to be initialized.
   //
@@ -367,8 +371,8 @@ static void _SysViewCommTask(void) {
     // Successful connection? => Start systemview session
     // First, receive <Hello> message from SysView and send back own <Hello> message
     //
-    r = recv(hSockSV, acRecv, SYSVIEW_COMM_APP_HELLO_SIZE, 0);
-    if (r != SYSVIEW_COMM_APP_HELLO_SIZE) {      // Failed to receive Hello message from SystemView App
+    r = recv(hSockSV, acRecv, SYSVIEW_COMM_SERVER_HELLO_SIZE, 0);
+    if (r != SYSVIEW_COMM_SERVER_HELLO_SIZE) {      // Failed to receive Hello message from SystemView App
       closesocket(hSockSV);
       hSockSV = SOCKET_ERROR;
     }
@@ -381,7 +385,12 @@ static void _SysViewCommTask(void) {
     // After a succesful connection, poll RTT buffer for data
     //
     while (hSockSV != SOCKET_ERROR) {
+#ifdef _NO_NOTIFY
       _WaitPolling(SYSVIEW_COMM_IDLE_DELAY);      // Wait until there is "enough" data in the buffer to be sent.
+#else
+      _WaitNotify(SYSVIEW_COMM_IDLE_DELAY);       // Wait for event to be signaled when there is "enough" data in the buffer to be sent.
+      _NumBytesRecorded = 0;                      // Reset counter when we are going to send current RTT Buffer
+#endif
       //
       // Check for data to be received from SystemView App
       //
@@ -417,6 +426,7 @@ static void _SysViewCommTask(void) {
     //
     if (hSockSV != SOCKET_ERROR) {
       closesocket(hSockSV);
+      hSockSV = SOCKET_ERROR;
     }
   } while (1);
 }
@@ -441,5 +451,29 @@ void SEGGER_SYSVIEW_X_StartComm(void) {
   //
   OS_TASK_CREATE(&_SysViewCommTCB, "SysView Comm", SYSVIEW_COMM_TASK_PRIO, _SysViewCommTask, _SysViewCommStack);
 }
+
+#ifndef _NO_NOTIFY
+/*********************************************************************
+*
+*       SEGGER_SYSVIEW_X_OnEventRecorded()
+*
+*  Function description
+*    Macro callback to be called when an event has been stored in the
+*    SystemView RTT Buffer.
+*
+*  Parameters
+*    NumBytes:    Number of bytes stored in the buffer.
+*/
+void SEGGER_SYSVIEW_X_OnEventRecorded(unsigned NumBytes) {
+  //
+  // Notify SystemView Communication Task when the send threshold is reached.
+  //
+  _NumBytesRecorded += NumBytes;
+  if (_NumBytesRecorded >= SYSVIEW_COMM_SEND_THRESHOLD) {
+    _NumBytesRecorded = 0;
+    _Notify();
+  }
+}
+#endif
 
 /*************************** End of file ****************************/
