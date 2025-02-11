@@ -3,7 +3,7 @@
 *                        The Embedded Experts                        *
 **********************************************************************
 *                                                                    *
-*       (c) 2015 - 2017  SEGGER Microcontroller GmbH & Co. KG        *
+*            (c) 1995 - 2019 SEGGER Microcontroller GmbH             *
 *                                                                    *
 *       www.segger.com     Support: support@segger.com               *
 *                                                                    *
@@ -52,14 +52,14 @@
 *                                                                    *
 **********************************************************************
 *                                                                    *
-*       SystemView version: V2.52d                                    *
+*       SystemView version: V2.52e                                    *
 *                                                                    *
 **********************************************************************
 -------------------------- END-OF-HEADER -----------------------------
 
 File    : SEGGER_SYSVIEW.c
 Purpose : System visualization API implementation.
-Revision: $Rev: 12706 $
+Revision: $Rev: 13432 $
 
 Additional information:
   Packet format:
@@ -593,8 +593,9 @@ static void _SendSyncInfo(void) {
   SEGGER_SYSVIEW_RecordSystime();
   SEGGER_SYSVIEW_SendTaskList();
   if (_NumModules > 0) {
+    int n;
     SEGGER_SYSVIEW_SendNumModules();
-    for (int n = 0; n < _NumModules; n++) {
+    for (n = 0; n < _NumModules; n++) {
       SEGGER_SYSVIEW_SendModule(n);
     }
     SEGGER_SYSVIEW_SendModuleDescription();
@@ -2845,6 +2846,7 @@ void SEGGER_SYSVIEW_DisableEvents(U32 DisableMask) {
 *    > 0: Recording started.
 */
 int SEGGER_SYSVIEW_IsStarted(void) {
+#if (SEGGER_SYSVIEW_POST_MORTEM_MODE != 1)
   //
   // Check if host is sending data which needs to be processed.
   //
@@ -2855,6 +2857,7 @@ int SEGGER_SYSVIEW_IsStarted(void) {
       _SYSVIEW_Globals.RecursionCnt = 0;
     }
   }
+#endif
   return _SYSVIEW_Globals.EnableState;
 }
 

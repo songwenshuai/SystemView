@@ -3,7 +3,7 @@
 *                        The Embedded Experts                        *
 **********************************************************************
 *                                                                    *
-*       (c) 2015 - 2017  SEGGER Microcontroller GmbH & Co. KG        *
+*            (c) 1995 - 2019 SEGGER Microcontroller GmbH             *
 *                                                                    *
 *       www.segger.com     Support: support@segger.com               *
 *                                                                    *
@@ -52,7 +52,7 @@
 *                                                                    *
 **********************************************************************
 *                                                                    *
-*       SystemView version: V2.52d                                    *
+*       SystemView version: V2.52e                                    *
 *                                                                    *
 **********************************************************************
 * ---------------

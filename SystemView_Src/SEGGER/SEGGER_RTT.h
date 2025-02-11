@@ -3,7 +3,7 @@
 *                        The Embedded Experts                        *
 **********************************************************************
 *                                                                    *
-*       (c) 2015 - 2017  SEGGER Microcontroller GmbH & Co. KG        *
+*            (c) 1995 - 2019 SEGGER Microcontroller GmbH             *
 *                                                                    *
 *       www.segger.com     Support: support@segger.com               *
 *                                                                    *
@@ -52,7 +52,7 @@
 *                                                                    *
 **********************************************************************
 *                                                                    *
-*       SystemView version: V2.52d                                    *
+*       SystemView version: V2.52e                                    *
 *                                                                    *
 **********************************************************************
 ---------------------------END-OF-HEADER------------------------------
@@ -60,7 +60,7 @@ File    : SEGGER_RTT.h
 Purpose : Implementation of SEGGER real-time transfer which allows
           real-time communication on targets which support debugger 
           memory accesses while the CPU is running.
-Revision: $Rev: 12706 $
+Revision: $Rev: 13432 $
 ----------------------------------------------------------------------
 */
 
@@ -68,6 +68,26 @@ Revision: $Rev: 12706 $
 #define SEGGER_RTT_H
 
 #include "SEGGER_RTT_Conf.h"
+
+
+
+/*********************************************************************
+*
+*       Defines, defaults
+*
+**********************************************************************
+*/
+#ifndef RTT_USE_ASM
+  #if ((defined __SES_ARM) || (defined __CROSSWORKS_ARM) || (defined __GNUC__) || (defined __clang__)) && (defined(__ARM_ARCH_7M__) || defined(__ARM_ARCH_7EM__) || defined(__ARM_ARCH_8M_MAIN__))
+    #define RTT_USE_ASM                           (1)
+  #else
+    #define RTT_USE_ASM                           (0)
+  #endif
+#endif
+
+#ifndef SEGGER_RTT_ASM  // defined when SEGGER_RTT.h is included from assembly file
+#include <stdlib.h>
+#include <stdarg.h>
 
 /*********************************************************************
 *
@@ -158,6 +178,7 @@ int          SEGGER_RTT_WaitKey                 (void);
 unsigned     SEGGER_RTT_Write                   (unsigned BufferIndex, const void* pBuffer, unsigned NumBytes);
 unsigned     SEGGER_RTT_WriteNoLock             (unsigned BufferIndex, const void* pBuffer, unsigned NumBytes);
 unsigned     SEGGER_RTT_WriteSkipNoLock         (unsigned BufferIndex, const void* pBuffer, unsigned NumBytes);
+unsigned     SEGGER_RTT_ASM_WriteSkipNoLock     (unsigned BufferIndex, const void* pBuffer, unsigned NumBytes);
 unsigned     SEGGER_RTT_WriteString             (unsigned BufferIndex, const char* s);
 void         SEGGER_RTT_WriteWithOverwriteNoLock(unsigned BufferIndex, const void* pBuffer, unsigned NumBytes);
 unsigned     SEGGER_RTT_PutChar                 (unsigned BufferIndex, char c);
@@ -167,6 +188,10 @@ unsigned     SEGGER_RTT_PutCharSkipNoLock       (unsigned BufferIndex, char c);
 // Function macro for performance optimization
 //
 #define      SEGGER_RTT_HASDATA(n)       (_SEGGER_RTT.aDown[n].WrOff - _SEGGER_RTT.aDown[n].RdOff)
+
+#if RTT_USE_ASM
+  #define SEGGER_RTT_WriteSkipNoLock  SEGGER_RTT_ASM_WriteSkipNoLock
+#endif
 
 /*********************************************************************
 *
@@ -184,9 +209,13 @@ int     SEGGER_RTT_TerminalOut        (char TerminalId, const char* s);
 **********************************************************************
 */
 int SEGGER_RTT_printf(unsigned BufferIndex, const char * sFormat, ...);
+int SEGGER_RTT_vprintf(unsigned BufferIndex, const char * sFormat, va_list * pParamList);
+
 #ifdef __cplusplus
   }
 #endif
+
+#endif // ifndef(SEGGER_RTT_ASM)
 
 /*********************************************************************
 *

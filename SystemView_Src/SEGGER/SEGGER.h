@@ -3,7 +3,7 @@
 *                        The Embedded Experts                        *
 **********************************************************************
 *                                                                    *
-*       (c) 2015 - 2017  SEGGER Microcontroller GmbH & Co. KG        *
+*            (c) 1995 - 2019 SEGGER Microcontroller GmbH             *
 *                                                                    *
 *       www.segger.com     Support: support@segger.com               *
 *                                                                    *
@@ -52,12 +52,13 @@
 *                                                                    *
 **********************************************************************
 *                                                                    *
-*       SystemView version: V2.52d                                    *
+*       SystemView version: V2.52e                                    *
 *                                                                    *
 **********************************************************************
 ----------------------------------------------------------------------
 File    : SEGGER.h
 Purpose : Global types etc & general purpose utility functions
+Revision: $Rev: 6695 $
 ---------------------------END-OF-HEADER------------------------------
 */
 
@@ -65,7 +66,7 @@ Purpose : Global types etc & general purpose utility functions
 #define SEGGER_H
 
 #include <stdarg.h>
-#include "Global.h"         // Type definitions: U8, U16, U32, I8, I16, I32
+#include "GLOBAL.h"         // Type definitions: U8, U16, U32, I8, I16, I32
 
 #if defined(__cplusplus)
 extern "C" {     /* Make sure we have C-declarations in C++ programs */
@@ -198,12 +199,8 @@ void SEGGER_memxor    (void* pDest, const void* pSrc, unsigned NumBytes);
 //
 // String functions.
 //
-int      SEGGER_atoi      (const char* s);
-int      SEGGER_isalnum   (int c);
-int      SEGGER_isalpha   (int c);
-unsigned SEGGER_strlen    (const char* s);
-int      SEGGER_tolower   (int c);
-int      SEGGER_strcasecmp(const char* sText1, const char* sText2);
+int      SEGGER_atoi  (const char* s);
+unsigned SEGGER_strlen(const char* s);
 
 //
 // Buffer/printf related.
