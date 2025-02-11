@@ -1,9 +1,9 @@
 /*********************************************************************
-*                SEGGER Microcontroller GmbH & Co. KG                *
+*                    SEGGER Microcontroller GmbH                     *
 *                        The Embedded Experts                        *
 **********************************************************************
 *                                                                    *
-*       (c) 2015 - 2017  SEGGER Microcontroller GmbH & Co. KG        *
+*            (c) 1995 - 2018 SEGGER Microcontroller GmbH             *
 *                                                                    *
 *       www.segger.com     Support: support@segger.com               *
 *                                                                    *
@@ -31,7 +31,7 @@
 *   disclaimer in the documentation and/or other materials provided  *
 *   with the distribution.                                           *
 *                                                                    *
-* o Neither the name of SEGGER Microcontroller GmbH & Co. KG         *
+* o Neither the name of SEGGER Microcontroller GmbH         *
 *   nor the names of its contributors may be used to endorse or      *
 *   promote products derived from this software without specific     *
 *   prior written permission.                                        *
@@ -52,14 +52,14 @@
 *                                                                    *
 **********************************************************************
 *                                                                    *
-*       SystemView version: V2.52a                                    *
+*       SystemView version: V2.52b                                    *
 *                                                                    *
 **********************************************************************
 -------------------------- END-OF-HEADER -----------------------------
 
 File    : SEGGER_SYSVIEW_Config_embOS.c
 Purpose : Sample setup configuration of SystemView with embOS.
-Revision: $Rev: 7745 $
+Revision: $Rev: 9599 $
 */
 #include "RTOS.h"
 #include "SEGGER_SYSVIEW.h"
@@ -121,14 +121,14 @@ extern unsigned int SEGGER_SYSVIEW_TickCnt;
   #define SYSVIEW_RAM_BASE        (0x00000000)
 #endif
 
-#ifndef   SYSVIEW_SYSDESC0
-  #define SYSVIEW_SYSDESC0        "I#15=SysTick"
+// Define as 1 to immediately start recording after initialization to catch system initialization.
+#ifndef   SYSVIEW_START_ON_INIT
+  #define SYSVIEW_START_ON_INIT 0
 #endif
 
-// Define as 1 if the Cortex-M cycle counter is used as SystemView timestamp. Must match SEGGER_SYSVIEW_Conf.h
-#ifndef   USE_CYCCNT_TIMESTAMP
-  #define USE_CYCCNT_TIMESTAMP    0
-#endif
+//#ifndef   SYSVIEW_SYSDESC0
+//  #define SYSVIEW_SYSDESC0        ""
+//#endif
 
 //#ifndef   SYSVIEW_SYSDESC1
 //  #define SYSVIEW_SYSDESC1      ""
@@ -175,21 +175,13 @@ static void _cbSendSystemDesc(void) {
 **********************************************************************
 */
 void SEGGER_SYSVIEW_Conf(void) {
-#if USE_CYCCNT_TIMESTAMP
-  //
-  //  The cycle counter must be activated in order
-  //  to use time related functions.
-  //
-  if ((DWT_CTRL & NOCYCCNT_BIT) == 0) {       // Cycle counter supported?
-    if ((DWT_CTRL & CYCCNTENA_BIT) == 0) {    // Cycle counter not enabled?
-      DWT_CTRL |= CYCCNTENA_BIT;              // Enable Cycle counter
-    }
-  }
-#endif
   SEGGER_SYSVIEW_Init(SYSVIEW_TIMESTAMP_FREQ, SYSVIEW_CPU_FREQ,
                       &SYSVIEW_X_OS_TraceAPI, _cbSendSystemDesc);
   SEGGER_SYSVIEW_SetRAMBase(SYSVIEW_RAM_BASE);
   OS_SetTraceAPI(&embOS_TraceAPI_SYSVIEW);    // Configure embOS to use SYSVIEW.
+#if SYSVIEW_START_ON_INIT
+  SEGGER_SYSVIEW_Start();                     // Start recording to catch system initialization.
+#endif
 }
 
 /*********************************************************************

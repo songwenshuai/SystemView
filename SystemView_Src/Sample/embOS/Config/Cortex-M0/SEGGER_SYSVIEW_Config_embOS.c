@@ -1,9 +1,9 @@
 /*********************************************************************
-*                SEGGER Microcontroller GmbH & Co. KG                *
+*                    SEGGER Microcontroller GmbH                     *
 *                        The Embedded Experts                        *
 **********************************************************************
 *                                                                    *
-*       (c) 2015 - 2017  SEGGER Microcontroller GmbH & Co. KG        *
+*            (c) 1995 - 2018 SEGGER Microcontroller GmbH             *
 *                                                                    *
 *       www.segger.com     Support: support@segger.com               *
 *                                                                    *
@@ -31,7 +31,7 @@
 *   disclaimer in the documentation and/or other materials provided  *
 *   with the distribution.                                           *
 *                                                                    *
-* o Neither the name of SEGGER Microcontroller GmbH & Co. KG         *
+* o Neither the name of SEGGER Microcontroller GmbH         *
 *   nor the names of its contributors may be used to endorse or      *
 *   promote products derived from this software without specific     *
 *   prior written permission.                                        *
@@ -52,7 +52,7 @@
 *                                                                    *
 **********************************************************************
 *                                                                    *
-*       SystemView version: V2.52a                                    *
+*       SystemView version: V2.52b                                    *
 *                                                                    *
 **********************************************************************
 -------------------------- END-OF-HEADER -----------------------------
@@ -61,7 +61,7 @@ File    : SEGGER_SYSVIEW_Config_embOS_CM0.c
 Purpose : Sample setup configuration of SystemView with embOS
           on Cortex-M0/Cortex-M0+/Cortex-M1 systems which do not 
           have a cycle counter.
-Revision: $Rev: 7750 $
+Revision: $Rev: 9599 $
               
 Additional information:
   SEGGER_SYSVIEW_TickCnt has to be defined in the module which handles
@@ -140,6 +140,11 @@ extern unsigned int SEGGER_SYSVIEW_TickCnt;
   #define SYSVIEW_RAM_BASE        (0x20000000)
 #endif
 
+// Define as 1 to immediately start recording after initialization to catch system initialization.
+#ifndef   SYSVIEW_START_ON_INIT
+  #define SYSVIEW_START_ON_INIT 0
+#endif
+
 #ifndef   SYSVIEW_SYSDESC0
   #define SYSVIEW_SYSDESC0        "I#15=SysTick"
 #endif
@@ -183,6 +188,9 @@ void SEGGER_SYSVIEW_Conf(void) {
                       &SYSVIEW_X_OS_TraceAPI, _cbSendSystemDesc);
   SEGGER_SYSVIEW_SetRAMBase(SYSVIEW_RAM_BASE);
   OS_SetTraceAPI(&embOS_TraceAPI_SYSVIEW);    // Configure embOS to use SYSVIEW.
+#if SYSVIEW_START_ON_INIT
+  SEGGER_SYSVIEW_Start();                     // Start recording to catch system initialization.
+#endif
 }
 
 /*********************************************************************
