@@ -52,14 +52,14 @@
 *                                                                    *
 **********************************************************************
 *                                                                    *
-*       SystemView version: V2.40c                                    *
+*       SystemView version: V2.40d                                    *
 *                                                                    *
 **********************************************************************
 -------------------------- END-OF-HEADER -----------------------------
 
 File    : SEGGER_SYSVIEW_embOS.c
 Purpose : Interface between embOS and System View.
-Revision: $Rev: 5643 $
+Revision: $Rev: 5663 $
 */
 
 #include "RTOS.h"
@@ -151,18 +151,18 @@ static void _cbOnTaskCreate(unsigned int TaskId) {
 
 #if (OS_VERSION < 43200)  // Work around different embOS Trace API function types prior to V4.32
 static void _cbOnTaskStartExec(unsigned int TaskId) {
-  SEGGER_SYSVIEW_OnTaskStartReady((OS_U32)TaskId);
+  SEGGER_SYSVIEW_OnTaskStartExec((OS_U32)TaskId);
 }
 #else
-#define _cbOnTaskStartExec  SEGGER_SYSVIEW_OnTaskStartReady
+#define _cbOnTaskStartExec  SEGGER_SYSVIEW_OnTaskStartExec
 #endif
 
 #if (OS_VERSION < 43200)  // Work around different embOS Trace API function types prior to V4.32
 static void _cbOnTaskStartReady(unsigned int TaskId) {
-  SEGGER_SYSVIEW_OnTaskStartExec((OS_U32)TaskId);
+  SEGGER_SYSVIEW_OnTaskStartReady((OS_U32)TaskId);
 }
 #else
-#define _cbOnTaskStartReady SEGGER_SYSVIEW_OnTaskStartExec
+#define _cbOnTaskStartReady SEGGER_SYSVIEW_OnTaskStartReady
 #endif
 
 #if (OS_VERSION < 43200)  // Work around different embOS Trace API function types prior to V4.32
