@@ -1,9 +1,9 @@
 /*********************************************************************
-*                    SEGGER Microcontroller GmbH                     *
+*                SEGGER Microcontroller GmbH & Co. KG                *
 *                        The Embedded Experts                        *
 **********************************************************************
 *                                                                    *
-*            (c) 1995 - 2018 SEGGER Microcontroller GmbH             *
+*       (c) 2015 - 2017  SEGGER Microcontroller GmbH & Co. KG        *
 *                                                                    *
 *       www.segger.com     Support: support@segger.com               *
 *                                                                    *
@@ -31,7 +31,7 @@
 *   disclaimer in the documentation and/or other materials provided  *
 *   with the distribution.                                           *
 *                                                                    *
-* o Neither the name of SEGGER Microcontroller GmbH         *
+* o Neither the name of SEGGER Microcontroller GmbH & Co. KG         *
 *   nor the names of its contributors may be used to endorse or      *
 *   promote products derived from this software without specific     *
 *   prior written permission.                                        *
@@ -52,20 +52,20 @@
 *                                                                    *
 **********************************************************************
 *                                                                    *
-*       SystemView version: V2.52b                                    *
+*       SystemView version: V2.52c                                    *
 *                                                                    *
 **********************************************************************
 -------------------------- END-OF-HEADER -----------------------------
 
 File    : SEGGER_SYSVIEW_embOS.c
 Purpose : Interface between embOS and System View.
-Revision: $Rev: 9599 $
+Revision: $Rev: 12706 $
 */
 
 #include "RTOS.h"
 #include "SEGGER_SYSVIEW.h"
 #include "SEGGER_RTT.h"
-#include "SEGGER_SYSVIEW_embOS.h"
+#include "SEGGER_SYSVIEW_embOS.h" 
 
 #if (OS_VERSION < 41201)
   #error "SystemView is only supported in embOS V4.12a and later."
@@ -73,7 +73,7 @@ Revision: $Rev: 9599 $
 
 static void _cbSendTaskInfo(const OS_TASK* pTask) {
   SEGGER_SYSVIEW_TASKINFO Info;
-
+ 
   OS_EnterRegion();         // No scheduling to make sure the task list does not change while we are transmitting it
   memset(&Info, 0, sizeof(Info));     // Fill all elements with 0 to allow extending the structure in future version without breaking the code
   Info.TaskID = (U32)pTask;
@@ -100,7 +100,7 @@ static void _cbSendTaskInfo(const OS_TASK* pTask) {
 */
 static void _cbSendTaskList(void) {
   OS_TASK*    pTask;
-
+ 
   OS_EnterRegion();         // No scheduling to make sure the task list does not change while we are transmitting it
   for (pTask = OS_Global.pTask; pTask; pTask = pTask->pNext) {
     _cbSendTaskInfo(pTask);
@@ -116,8 +116,8 @@ static void _cbSendTaskList(void) {
   OS_LeaveRegion();         // No scheduling to make sure the task list does not change while we are transmitting it
 }
 
-static void _cbRecordU32(unsigned int Id, OS_U32 Para0) {
-  SEGGER_SYSVIEW_RecordU32  (Id, Para0);
+static void _cbRecordU32(unsigned int Id, OS_U32 Para0) { 
+  SEGGER_SYSVIEW_RecordU32  (Id, Para0); 
 }
 static void _cbRecordU32x2(unsigned int Id, OS_U32 Para0, OS_U32 Para1) {
   SEGGER_SYSVIEW_RecordU32x2(Id, Para0, Para1);
@@ -223,7 +223,7 @@ _ShrinkId,                                    //  OS_U32  (*pfPtrToId)          
 _RecordEnterTimer,                            //  void    (*pfRecordEnterTimer)         (OS_U32 TimerID);
 _RecordExitTimer,                             //  void    (*pfRecordExitTimer)          (void);
 #endif
-#if (OS_VERSION >= 42400)  // Tracing end of call supported since embOS V4.24
+#if (OS_VERSION >= 42400)   // Tracing end of call supported since embOS V4.24
 SEGGER_SYSVIEW_RecordEndCall,                 //  void    (*pfRecordEndCall)            (unsigned int Id);
 _RecordEndCallU32,                            //  void    (*pfRecordEndCallReturnValue) (unsigned int Id, OS_U32 ReturnValue);
 _cbOnTaskTerminate,                           //  void    (*pfRecordTaskTerminate)      (OS_U32 TaskId);

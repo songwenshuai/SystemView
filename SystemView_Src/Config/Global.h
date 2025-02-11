@@ -1,9 +1,9 @@
 /*********************************************************************
-*                    SEGGER Microcontroller GmbH                     *
+*                SEGGER Microcontroller GmbH & Co. KG                *
 *                        The Embedded Experts                        *
 **********************************************************************
 *                                                                    *
-*            (c) 1995 - 2018 SEGGER Microcontroller GmbH             *
+*       (c) 2015 - 2017  SEGGER Microcontroller GmbH & Co. KG        *
 *                                                                    *
 *       www.segger.com     Support: support@segger.com               *
 *                                                                    *
@@ -31,7 +31,7 @@
 *   disclaimer in the documentation and/or other materials provided  *
 *   with the distribution.                                           *
 *                                                                    *
-* o Neither the name of SEGGER Microcontroller GmbH         *
+* o Neither the name of SEGGER Microcontroller GmbH & Co. KG         *
 *   nor the names of its contributors may be used to endorse or      *
 *   promote products derived from this software without specific     *
 *   prior written permission.                                        *
@@ -52,70 +52,50 @@
 *                                                                    *
 **********************************************************************
 *                                                                    *
-*       SystemView version: V2.52b                                    *
+*       SystemView version: V2.52c                                    *
 *                                                                    *
 **********************************************************************
 ----------------------------------------------------------------------
-File    : GLOBAL.h
-Purpose : Global types etc.
+File    : Global.h
+Purpose : Global types
+          In case your application already has a Global.h, you should
+          merge the files. In order to use Segger code, the types
+          U8, U16, U32, I8, I16, I32 need to be defined in Global.h;
+          additional definitions do not hurt.
 ---------------------------END-OF-HEADER------------------------------
 */
 
 #ifndef GLOBAL_H            // Guard against multiple inclusion
 #define GLOBAL_H
 
-#include <string.h>         // For memset
-#include "TYPES.h"          // Defines standard data types
+#define U8    unsigned char
+#define U16   unsigned short
+#define U32   unsigned long
+#define I8    signed char
+#define I16   signed short
+#define I32   signed long
 
-/*********************************************************************
-*
-*       Defines, function replacements
-*
-**********************************************************************
-*/
-
-#ifdef WIN32
-  #if _MSC_VER > 1300
-    #define IS_MSC2010  1
+#ifdef _WIN32
+  //
+  // Microsoft VC6 compiler related
+  //
+  #define U64   unsigned __int64
+  #define U128  unsigned __int128
+  #define I64   __int64
+  #define I128  __int128
+  #if _MSC_VER <= 1200
+    #define U64_C(x) x##UI64
   #else
-    #define IS_MSC2010  0
+    #define U64_C(x) x##ULL
   #endif
-#else
-  #define IS_MSC2010  0
+#else 
+  //
+  // C99 compliant compiler
+  //
+  #define U64   unsigned long long
+  #define I64   signed long long
+  #define U64_C(x) x##ULL
 #endif
-
-#ifndef   COUNTOF
-  #define COUNTOF(a)    (sizeof(a)/sizeof(a[0]))
-#endif
-
-#ifndef   ZEROFILL
-  #define ZEROFILL(Obj) memset(&Obj, 0, sizeof(Obj))
-#endif
-
-#ifndef   LIMIT
-  #define LIMIT(a,b)    if (a > b) a = b;
-#endif
-
-#ifndef   MIN
-  #define MIN(a, b)     (((a) < (b)) ? (a) : (b))
-#endif
-
-#ifndef   MAX
-  #define MAX(a, b)     (((a) > (b)) ? (a) : (b))
-#endif
-
-#ifndef   ABS
-  #define ABS(a)        (((a) < 0) ? -(a) : (a))
-#endif
-
-/*********************************************************************
-*
-*       Types, internal
-*
-**********************************************************************
-*/
-
-typedef enum {IS_NOINIT, IS_RUNNING, IS_EXIT} INIT_STATE;
 
 #endif                      // Avoid multiple inclusion
 

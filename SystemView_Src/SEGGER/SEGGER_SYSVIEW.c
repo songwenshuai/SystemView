@@ -1,9 +1,9 @@
 /*********************************************************************
-*                    SEGGER Microcontroller GmbH                     *
+*                SEGGER Microcontroller GmbH & Co. KG                *
 *                        The Embedded Experts                        *
 **********************************************************************
 *                                                                    *
-*            (c) 1995 - 2018 SEGGER Microcontroller GmbH             *
+*       (c) 2015 - 2017  SEGGER Microcontroller GmbH & Co. KG        *
 *                                                                    *
 *       www.segger.com     Support: support@segger.com               *
 *                                                                    *
@@ -31,7 +31,7 @@
 *   disclaimer in the documentation and/or other materials provided  *
 *   with the distribution.                                           *
 *                                                                    *
-* o Neither the name of SEGGER Microcontroller GmbH         *
+* o Neither the name of SEGGER Microcontroller GmbH & Co. KG         *
 *   nor the names of its contributors may be used to endorse or      *
 *   promote products derived from this software without specific     *
 *   prior written permission.                                        *
@@ -52,14 +52,14 @@
 *                                                                    *
 **********************************************************************
 *                                                                    *
-*       SystemView version: V2.52b                                    *
+*       SystemView version: V2.52c                                    *
 *                                                                    *
 **********************************************************************
 -------------------------- END-OF-HEADER -----------------------------
 
 File    : SEGGER_SYSVIEW.c
 Purpose : System visualization API implementation.
-Revision: $Rev: 12280 $
+Revision: $Rev: 12706 $
 
 Additional information:
   Packet format:
@@ -2831,6 +2831,31 @@ void SEGGER_SYSVIEW_EnableEvents(U32 EnableMask) {
 */
 void SEGGER_SYSVIEW_DisableEvents(U32 DisableMask) {
   _SYSVIEW_Globals.DisabledEvents |= DisableMask;
+}
+
+/*********************************************************************
+*
+*       SEGGER_SYSVIEW_IsStarted()
+*
+*  Function description
+*    Handle incoming packets if any and check if recording is started.
+*
+*  Return value
+*      0: Recording not started.
+*    > 0: Recording started.
+*/
+int SEGGER_SYSVIEW_IsStarted(void) {
+  //
+  // Check if host is sending data which needs to be processed.
+  //
+  if (SEGGER_RTT_HASDATA(CHANNEL_ID_DOWN)) {
+    if (_SYSVIEW_Globals.RecursionCnt == 0) {   // Avoid uncontrolled nesting. This way, this routine can call itself once, but no more often than that.
+      _SYSVIEW_Globals.RecursionCnt = 1;
+      _HandleIncomingPacket();
+      _SYSVIEW_Globals.RecursionCnt = 0;
+    }
+  }
+  return _SYSVIEW_Globals.EnableState;
 }
 
 
