@@ -3,7 +3,7 @@
 *                        The Embedded Experts                        *
 **********************************************************************
 *                                                                    *
-*            (c) 1995 - 2021 SEGGER Microcontroller GmbH             *
+*            (c) 1995 - 2023 SEGGER Microcontroller GmbH             *
 *                                                                    *
 *       www.segger.com     Support: support@segger.com               *
 *                                                                    *
@@ -42,14 +42,14 @@
 *                                                                    *
 **********************************************************************
 *                                                                    *
-*       SystemView version: 3.42                                    *
+*       SystemView version: 3.50                                    *
 *                                                                    *
 **********************************************************************
 -------------------------- END-OF-HEADER -----------------------------
 
 File    : SEGGER_SYSVIEW.c
 Purpose : System visualization API implementation.
-Revision: $Rev: 28341 $
+Revision: $Rev: 28768 $
 
 Additional information:
   Packet format:
@@ -435,8 +435,8 @@ static U8* _EncodeData(U8* pPayload, const char* pSrc, unsigned int NumBytes) {
     *pPayload++ = (U8)NumBytes;
   } else {
     *pPayload++ = 255;
-    *pPayload++ = (NumBytes & 255);
     *pPayload++ = ((NumBytes >> 8) & 255);
+    *pPayload++ = (NumBytes & 255);
   }
   while (n < NumBytes) {
     *pPayload++ = *p++;
@@ -468,38 +468,38 @@ static U8* _EncodeData(U8* pPayload, const char* pSrc, unsigned int NumBytes) {
 *    No more than 1 + Limit bytes will be encoded to the payload.
 */
 static U8 *_EncodeStr(U8 *pPayload, const char *pText, unsigned int Limit) {
-  unsigned int n;
-  unsigned int Len;
+  U8* pLen;
+  const char* sStart;
+
+  sStart = pText; // Remember start of string.
   //
-  // Compute string len
+  // Save space to store count byte(s).
   //
-  Len = 0;
-  if (pText != NULL) {
-    while(*(pText + Len) != 0) {
-      Len++;
-    }
-    if (Len > Limit) {
-      Len = Limit;
-    }
+  pLen = pPayload++;
+#if (SEGGER_SYSVIEW_MAX_STRING_LEN >= 255)  // Length always encodes in 3 bytes
+  pPayload += 2;
+#endif
+  //
+  // Limit string to maximum length and copy into payload buffer.
+  //
+  if (Limit > SEGGER_SYSVIEW_MAX_STRING_LEN) {
+    Limit = SEGGER_SYSVIEW_MAX_STRING_LEN;
   }
-  //
-  // Write Len
-  //
-  if (Len < 255)  {
-    *pPayload++ = (U8)Len;
-  } else {
-    *pPayload++ = 255;
-    *pPayload++ = (Len & 255);
-    *pPayload++ = ((Len >> 8) & 255);
-  }
-  //
-  // copy string
-  //
-  n = 0;
-  while (n < Len) {
+  while ((Limit-- > 0) && (*pText != '\0')) {
     *pPayload++ = *pText++;
-    n++;
   }
+  //
+  // Save string length to buffer.
+  //
+#if (SEGGER_SYSVIEW_MAX_STRING_LEN >= 255)  // Length always encodes in 3 bytes
+  Limit = (unsigned int)(pText - sStart);
+  *pLen++ = (U8)255;
+  *pLen++ = (U8)((Limit >> 8) & 255);
+  *pLen++ = (U8)(Limit & 255);
+#else   // Length always encodes in 1 byte
+  *pLen = (U8)(pText - sStart);
+#endif
+  //
   return pPayload;
 }
 
@@ -686,7 +686,6 @@ static void _SendSyncInfo(void) {
     for (n = 0; n < _NumModules; n++) {
       SEGGER_SYSVIEW_SendModule(n);
     }
-    SEGGER_SYSVIEW_SendModuleDescription();
   }
 }
 #endif  // (SEGGER_SYSVIEW_POST_MORTEM_MODE == 1)
@@ -1314,6 +1313,20 @@ static void _VPrintTarget(const char* sFormat, U32 Options, va_list* pParamList)
         v = va_arg(*pParamList, int);
         _PrintUnsigned(&BufferDesc, (unsigned int)v, 16u, NumDigits, FieldWidth, FormatFlags);
         break;
+      case 's':
+        const char* s = va_arg(*pParamList, const char*);
+        if (s == NULL) {
+          s = "(null)";
+        }
+        do {
+          c = *s;
+          s++;
+          if (c == '\0') {
+            break;
+          }
+         _StoreChar(&BufferDesc, c);
+        } while (BufferDesc.Cnt < SEGGER_SYSVIEW_MAX_STRING_LEN);
+        break;
       case 'p':
         v = va_arg(*pParamList, int);
         _PrintUnsigned(&BufferDesc, (unsigned int)v, 16u, 8u, 8u, 0u);
@@ -1361,7 +1374,7 @@ static void _VPrintTarget(const char* sFormat, U32 Options, va_list* pParamList)
 *
 *  Function description
 *    Initializes the SYSVIEW module.
-*    Must be called before the SystemView Application connects to 
+*    Must be called before the SystemView Application connects to
 *    the system.
 *
 *  Parameters
@@ -2445,7 +2458,7 @@ void SEGGER_SYSVIEW_NameResource(U32 ResourceId, const char* sName) {
 *
 *  Additional information
 *    SystemView can track allocations across multiple heaps.
-* 
+*
 *    HeapSize must be a multiple of the natural alignment unit of the
 *    target.  This size is subject to compression, controlled by the
 *    specific setting of SEGGER_SYSVIEW_ID_SHIFT.
@@ -2492,7 +2505,7 @@ void SEGGER_SYSVIEW_HeapDefine(void* pHeap, void *pBase, unsigned int HeapSize, 
 *    of a double or a long long.  pUserData is, therefore, compressed by
 *    shrinking as IDs are compressed, controlled by the specific setting
 *    of SEGGER_SYSVIEW_ID_SHIFT.
-* 
+*
 *    In the same way, UserDataLen must reflect the size of the allocated
 *    block, not the allocation size requested by the application.  This
 *    size is also subject to compression, controlled by the specific setting
@@ -2541,7 +2554,7 @@ void SEGGER_SYSVIEW_HeapAlloc(void *pHeap, void* pUserData, unsigned int UserDat
 *    of a double or a long long.  pUserData is, therefore, compressed by
 *    shrinking as IDs are compressed, controlled by the specific setting
 *    of SEGGER_SYSVIEW_ID_SHIFT.
-* 
+*
 *    In the same way, UserDataLen must reflect the size of the allocated
 *    block, not the allocation size requested by the application.  This
 *    size is also subject to compression, controlled by the specific setting
@@ -2802,9 +2815,6 @@ void SEGGER_SYSVIEW_RegisterModule(SEGGER_SYSVIEW_MODULE* pModule) {
     _NumModules++;
   }
   SEGGER_SYSVIEW_SendModule(0);
-  if (pModule->pfSendModuleDesc) {
-    pModule->pfSendModuleDesc();
-  }
   SEGGER_SYSVIEW_UNLOCK();
 }
 
@@ -2888,6 +2898,9 @@ void SEGGER_SYSVIEW_SendModule(U8 ModuleId) {
       _SendPacket(pPayloadStart, pPayload, SYSVIEW_EVTID_MODULEDESC);
       RECORD_END();
     }
+    if (pModule && pModule->pfSendModuleDesc) {
+      pModule->pfSendModuleDesc();
+    }
   }
 }
 
@@ -2970,6 +2983,39 @@ void SEGGER_SYSVIEW_PrintfHostEx(const char* s, U32 Options, ...) {
 
 /*********************************************************************
 *
+*       SEGGER_SYSVIEW_VPrintfHostEx()
+*
+*  Function description
+*    Print a string which is formatted on the host by the SystemView Application
+*    with Additional information.
+*
+*  Parameters
+*    s          - String to be formatted.
+*    Options    - Options for the string. i.e. Log level.
+*    pParamList - Pointer to the list of arguments for the format string
+*
+*  Additional information
+*    All format arguments are treated as 32-bit scalar values.
+*/
+void SEGGER_SYSVIEW_VPrintfHostEx(const char* s, U32 Options, va_list *pParamList) {
+#if SEGGER_SYSVIEW_PRINTF_IMPLICIT_FORMAT
+  int r;
+  va_list ParamListCopy;
+  va_copy(ParamListCopy, *pParamList);
+
+  r = _VPrintHost(s, Options, pParamList);
+
+  if (r == -1) {
+    _VPrintTarget(s, Options, &ParamListCopy);
+  }
+  va_end(ParamListCopy);
+#else
+  _VPrintHost(s, Options, pParamList);
+#endif
+}
+
+/*********************************************************************
+*
 *       SEGGER_SYSVIEW_PrintfHost()
 *
 *  Function description
@@ -2999,6 +3045,37 @@ void SEGGER_SYSVIEW_PrintfHost(const char* s, ...) {
   va_start(ParamList, s);
   _VPrintHost(s, SEGGER_SYSVIEW_LOG, &ParamList);
   va_end(ParamList);
+#endif
+}
+
+/*********************************************************************
+*
+*       SEGGER_SYSVIEW_VPrintfHost()
+*
+*  Function description
+*    Print a string which is formatted on the host by the SystemView Application.
+*
+*  Parameters
+*    s          - String to be formatted.
+*    pParamList - Pointer to the list of arguments for the format string
+*
+*  Additional information
+*    All format arguments are treated as 32-bit scalar values.
+*/
+void SEGGER_SYSVIEW_VPrintfHost(const char* s, va_list *pParamList) {
+#if SEGGER_SYSVIEW_PRINTF_IMPLICIT_FORMAT
+  int r;
+  va_list ParamListCopy;
+  va_copy(ParamListCopy, *pParamList);
+
+  r = _VPrintHost(s, SEGGER_SYSVIEW_LOG, pParamList);
+
+  if (r == -1) {
+    _VPrintTarget(s, SEGGER_SYSVIEW_LOG, &ParamListCopy);
+  }
+  va_end(ParamListCopy);
+#else
+  _VPrintHost(s, SEGGER_SYSVIEW_LOG, pParamList);
 #endif
 }
 
@@ -3039,6 +3116,38 @@ void SEGGER_SYSVIEW_WarnfHost(const char* s, ...) {
 
 /*********************************************************************
 *
+*       SEGGER_SYSVIEW_VWarnfHost()
+*
+*  Function description
+*    Print a warning string which is formatted on the host by
+*    the SystemView Application.
+*
+*  Parameters
+*    s          - String to be formatted.
+*    pParamList - Pointer to the list of arguments for the format string
+*
+*  Additional information
+*    All format arguments are treated as 32-bit scalar values.
+*/
+void SEGGER_SYSVIEW_VWarnfHost(const char* s, va_list *pParamList) {
+#if SEGGER_SYSVIEW_PRINTF_IMPLICIT_FORMAT
+  int r;
+  va_list ParamListCopy;
+  va_copy(ParamListCopy, *pParamList);
+
+  r = _VPrintHost(s, SEGGER_SYSVIEW_WARNING, pParamList);
+
+  if (r == -1) {
+    _VPrintTarget(s, SEGGER_SYSVIEW_WARNING, &ParamListCopy);
+  }
+  va_end(ParamListCopy);
+#else
+  _VPrintHost(s, SEGGER_SYSVIEW_WARNING, pParamList);
+#endif
+}
+
+/*********************************************************************
+*
 *       SEGGER_SYSVIEW_ErrorfHost()
 *
 *  Function description
@@ -3074,6 +3183,38 @@ void SEGGER_SYSVIEW_ErrorfHost(const char* s, ...) {
 
 /*********************************************************************
 *
+*       SEGGER_SYSVIEW_VErrorfHost()
+*
+*  Function description
+*    Print a warning string which is formatted on the host by
+*    the SystemView Application.
+*
+*  Parameters
+*    s          - String to be formatted.
+*    pParamList - Pointer to the list of arguments for the format string
+*
+*  Additional information
+*    All format arguments are treated as 32-bit scalar values.
+*/
+void SEGGER_SYSVIEW_VErrorfHost(const char* s, va_list *pParamList) {
+#if SEGGER_SYSVIEW_PRINTF_IMPLICIT_FORMAT
+  int r;
+  va_list ParamListCopy;
+  va_copy(ParamListCopy, *pParamList);
+
+  r = _VPrintHost(s, SEGGER_SYSVIEW_ERROR, pParamList);
+
+  if (r == -1) {
+    _VPrintTarget(s, SEGGER_SYSVIEW_ERROR, &ParamListCopy);
+  }
+  va_end(ParamListCopy);
+#else
+  _VPrintHost(s, SEGGER_SYSVIEW_ERROR, pParamList);
+#endif
+}
+
+/*********************************************************************
+*
 *       SEGGER_SYSVIEW_PrintfTargetEx()
 *
 *  Function description
@@ -3090,6 +3231,23 @@ void SEGGER_SYSVIEW_PrintfTargetEx(const char* s, U32 Options, ...) {
   va_start(ParamList, Options);
   _VPrintTarget(s, Options, &ParamList);
   va_end(ParamList);
+}
+
+/*********************************************************************
+*
+*       SEGGER_SYSVIEW_VPrintfTargetEx()
+*
+*  Function description
+*    Print a string which is formatted on the target before sent to
+*    the host with Additional information.
+*
+*  Parameters
+*    s          - String to be formatted.
+*    Options    - Options for the string. i.e. Log level.
+*    pParamList - Pointer to the list of arguments for the format string
+*/
+void SEGGER_SYSVIEW_VPrintfTargetEx(const char* s, U32 Options, va_list *pParamList) {
+  _VPrintTarget(s, Options, pParamList);
 }
 
 /*********************************************************************
@@ -3113,6 +3271,22 @@ void SEGGER_SYSVIEW_PrintfTarget(const char* s, ...) {
 
 /*********************************************************************
 *
+*       SEGGER_SYSVIEW_VPrintfTarget()
+*
+*  Function description
+*    Print a string which is formatted on the target before sent to
+*    the host.
+*
+*  Parameters
+*    s          - String to be formatted.
+*    pParamList - Pointer to the list of arguments for the format string
+*/
+void SEGGER_SYSVIEW_VPrintfTarget(const char* s, va_list* pParamList) {
+  _VPrintTarget(s, SEGGER_SYSVIEW_LOG, pParamList);
+}
+
+/*********************************************************************
+*
 *       SEGGER_SYSVIEW_WarnfTarget()
 *
 *  Function description
@@ -3132,6 +3306,22 @@ void SEGGER_SYSVIEW_WarnfTarget(const char* s, ...) {
 
 /*********************************************************************
 *
+*       SEGGER_SYSVIEW_VWarnfTarget()
+*
+*  Function description
+*    Print a warning string which is formatted on the target before
+*    sent to the host.
+*
+*  Parameters
+*    s          - String to be formatted.
+*    pParamList - Pointer to the list of arguments for the format string
+*/
+void SEGGER_SYSVIEW_VWarnfTarget(const char* s, va_list* pParamList) {
+  _VPrintTarget(s, SEGGER_SYSVIEW_WARNING, pParamList);
+}
+
+/*********************************************************************
+*
 *       SEGGER_SYSVIEW_ErrorfTarget()
 *
 *  Function description
@@ -3147,6 +3337,22 @@ void SEGGER_SYSVIEW_ErrorfTarget(const char* s, ...) {
   va_start(ParamList, s);
   _VPrintTarget(s, SEGGER_SYSVIEW_ERROR, &ParamList);
   va_end(ParamList);
+}
+
+/*********************************************************************
+*
+*       SEGGER_SYSVIEW_VErrorfTarget()
+*
+*  Function description
+*    Print an error string which is formatted on the target before
+*    sent to the host.
+*
+*  Parameters
+*    s          - String to be formatted.
+*    pParamList - Pointer to the list of arguments for the format string
+*/
+void SEGGER_SYSVIEW_VErrorfTarget(const char* s, va_list* pParamList) {
+  _VPrintTarget(s, SEGGER_SYSVIEW_ERROR, pParamList);
 }
 #endif // SEGGER_SYSVIEW_EXCLUDE_PRINTF
 

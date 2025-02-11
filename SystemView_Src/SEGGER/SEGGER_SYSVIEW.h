@@ -3,7 +3,7 @@
 *                        The Embedded Experts                        *
 **********************************************************************
 *                                                                    *
-*            (c) 1995 - 2021 SEGGER Microcontroller GmbH             *
+*            (c) 1995 - 2023 SEGGER Microcontroller GmbH             *
 *                                                                    *
 *       www.segger.com     Support: support@segger.com               *
 *                                                                    *
@@ -42,13 +42,13 @@
 *                                                                    *
 **********************************************************************
 *                                                                    *
-*       SystemView version: 3.42                                    *
+*       SystemView version: 3.50                                    *
 *                                                                    *
 **********************************************************************
 -------------------------- END-OF-HEADER -----------------------------
 File    : SEGGER_SYSVIEW.h
 Purpose : System visualization API.
-Revision: $Rev: 28237 $
+Revision: $Rev: 28768 $
 */
 
 #ifndef SEGGER_SYSVIEW_H
@@ -332,13 +332,21 @@ void SEGGER_SYSVIEW_SendNumModules                (void);
 */
 #ifndef SEGGER_SYSVIEW_EXCLUDE_PRINTF // Define in project to avoid warnings about variable parameter list
 void SEGGER_SYSVIEW_PrintfHostEx                  (const char* s, U32 Options, ...);
+void SEGGER_SYSVIEW_VPrintfHostEx                 (const char* s, U32 Options, va_list* pParamList);
 void SEGGER_SYSVIEW_PrintfTargetEx                (const char* s, U32 Options, ...);
+void SEGGER_SYSVIEW_VPrintfTargetEx               (const char* s, U32 Options, va_list* pParamList);
 void SEGGER_SYSVIEW_PrintfHost                    (const char* s, ...);
+void SEGGER_SYSVIEW_VPrintfHost                   (const char* s, va_list* pParamList);
 void SEGGER_SYSVIEW_PrintfTarget                  (const char* s, ...);
+void SEGGER_SYSVIEW_VPrintfTarget                 (const char* s, va_list* pParamList);
 void SEGGER_SYSVIEW_WarnfHost                     (const char* s, ...);
+void SEGGER_SYSVIEW_VWarnfHost                    (const char* s, va_list* pParamList);
 void SEGGER_SYSVIEW_WarnfTarget                   (const char* s, ...);
+void SEGGER_SYSVIEW_VWarnfTarget                  (const char* s, va_list* pParamList);
 void SEGGER_SYSVIEW_ErrorfHost                    (const char* s, ...);
+void SEGGER_SYSVIEW_VErrorfHost                   (const char* s, va_list* pParamList);
 void SEGGER_SYSVIEW_ErrorfTarget                  (const char* s, ...);
+void SEGGER_SYSVIEW_VErrorfTarget                 (const char* s, va_list* pParamList);
 #endif
 
 void SEGGER_SYSVIEW_Print                         (const char* s);
