@@ -3,7 +3,7 @@
 *                        The Embedded Experts                        *
 **********************************************************************
 *                                                                    *
-*            (c) 1995 - 2019 SEGGER Microcontroller GmbH             *
+*            (c) 1995 - 2021 SEGGER Microcontroller GmbH             *
 *                                                                    *
 *       www.segger.com     Support: support@segger.com               *
 *                                                                    *
@@ -42,14 +42,14 @@
 *                                                                    *
 **********************************************************************
 *                                                                    *
-*       SystemView version: 3.20                                    *
+*       SystemView version: 3.30                                    *
 *                                                                    *
 **********************************************************************
 -------------------------- END-OF-HEADER -----------------------------
 
 File    : SEGGER_SYSVIEW.c
 Purpose : System visualization API implementation.
-Revision: $Rev: 21281 $
+Revision: $Rev: 22278 $
 
 Additional information:
   Packet format:
@@ -499,11 +499,13 @@ static U8 *_EncodeStr(U8 *pPayload, const char *pText, unsigned int Limit) {
   // Compute string len
   //
   Len = 0;
-  while(*(pText + Len) != 0) {
-    Len++;
-  }
-  if (Len > Limit) {
-    Len = Limit;
+  if (pText != NULL) {
+    while(*(pText + Len) != 0) {
+      Len++;
+    }
+    if (Len > Limit) {
+      Len = Limit;
+    }
   }
   //
   // Write Len
