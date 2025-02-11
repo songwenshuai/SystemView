@@ -42,7 +42,7 @@
 *                                                                    *
 **********************************************************************
 *                                                                    *
-*       SystemView version: 3.58                                    *
+*       SystemView version: 3.60                                    *
 *                                                                    *
 **********************************************************************
 -------------------------- END-OF-HEADER -----------------------------
@@ -1429,12 +1429,6 @@ static void _VPrintTarget(const char* sFormat, U32 Options, va_list* pParamList)
 *    The channel is configured with the macro SEGGER_SYSVIEW_RTT_CHANNEL.
 */
 void SEGGER_SYSVIEW_Init(U32 SysFreq, U32 CPUFreq, const SEGGER_SYSVIEW_OS_API *pOSAPI, SEGGER_SYSVIEW_SEND_SYS_DESC_FUNC pfSendSysDesc) {
-#ifdef SEGGER_RTT_SECTION
-  //
-  // Explicitly initialize the RTT Control Block if it is in its dedicated section.
-  //
-  SEGGER_RTT_Init();
-#endif
 #if (SEGGER_SYSVIEW_POST_MORTEM_MODE == 1)
 #if SEGGER_SYSVIEW_RTT_CHANNEL > 0
   SEGGER_RTT_ConfigUpBuffer(SEGGER_SYSVIEW_RTT_CHANNEL, "SysView", &_UpBuffer[0],   sizeof(_UpBuffer),   SEGGER_RTT_MODE_NO_BLOCK_SKIP);
