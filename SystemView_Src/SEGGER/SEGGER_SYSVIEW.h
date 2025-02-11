@@ -3,7 +3,7 @@
 *                        The Embedded Experts                        *
 **********************************************************************
 *                                                                    *
-*            (c) 1995 - 2023 SEGGER Microcontroller GmbH             *
+*            (c) 1995 - 2024 SEGGER Microcontroller GmbH             *
 *                                                                    *
 *       www.segger.com     Support: support@segger.com               *
 *                                                                    *
@@ -42,7 +42,7 @@
 *                                                                    *
 **********************************************************************
 *                                                                    *
-*       SystemView version: 3.52a                                    *
+*       SystemView version: 3.54                                    *
 *                                                                    *
 **********************************************************************
 -------------------------- END-OF-HEADER -----------------------------
@@ -195,7 +195,15 @@ typedef struct {
   U32          Prio;
   U32          StackBase;
   U32          StackSize;
+  U32          StackUsage;
 } SEGGER_SYSVIEW_TASKINFO;
+
+typedef struct {
+  U32          TaskID;
+  U32          StackBase;
+  U32          StackSize;
+  U32          StackUsage;
+} SEGGER_SYSVIEW_STACKINFO;
 
 typedef struct SEGGER_SYSVIEW_MODULE_STRUCT SEGGER_SYSVIEW_MODULE;
 
@@ -240,8 +248,8 @@ EXTERN unsigned int SEGGER_SYSVIEW_InterruptId;
 */
 
 typedef struct {
-  U64  (*pfGetTime)      (void);
-  void (*pfSendTaskList) (void);
+  U64  (*pfGetTime)       (void);
+  void (*pfSendTaskList)  (void);
 } SEGGER_SYSVIEW_OS_API;
 
 /*********************************************************************
@@ -255,6 +263,7 @@ void SEGGER_SYSVIEW_Stop                          (void);
 void SEGGER_SYSVIEW_GetSysDesc                    (void);
 void SEGGER_SYSVIEW_SendTaskList                  (void);
 void SEGGER_SYSVIEW_SendTaskInfo                  (const SEGGER_SYSVIEW_TASKINFO* pInfo);
+void SEGGER_SYSVIEW_SendStackInfo                 (const SEGGER_SYSVIEW_STACKINFO* pInfo);
 void SEGGER_SYSVIEW_SendSysDesc                   (const char* sSysDesc);
 int  SEGGER_SYSVIEW_IsStarted                     (void);
 int  SEGGER_SYSVIEW_GetChannelID                  (void);

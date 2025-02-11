@@ -3,7 +3,7 @@
 *                        The Embedded Experts                        *
 **********************************************************************
 *                                                                    *
-*            (c) 1995 - 2023 SEGGER Microcontroller GmbH             *
+*            (c) 1995 - 2024 SEGGER Microcontroller GmbH             *
 *                                                                    *
 *       www.segger.com     Support: support@segger.com               *
 *                                                                    *
@@ -42,7 +42,7 @@
 *                                                                    *
 **********************************************************************
 *                                                                    *
-*       SystemView version: 3.52a                                    *
+*       SystemView version: 3.54                                    *
 *                                                                    *
 **********************************************************************
 -------------------------- END-OF-HEADER -----------------------------
@@ -1955,7 +1955,33 @@ void SEGGER_SYSVIEW_SendTaskInfo(const SEGGER_SYSVIEW_TASKINFO *pInfo) {
   ENCODE_U32(pPayload, SHRINK_ID(pInfo->TaskID));
   ENCODE_U32(pPayload, pInfo->StackBase);
   ENCODE_U32(pPayload, pInfo->StackSize);
-  ENCODE_U32(pPayload, 0); // Stack End, future use
+  ENCODE_U32(pPayload, pInfo->StackUsage);
+  _SendPacket(pPayloadStart, pPayload, SYSVIEW_EVTID_STACK_INFO);
+  RECORD_END();
+}
+
+/*********************************************************************
+*
+*       SEGGER_SYSVIEW_SendStackInfo()
+*
+*  Function description
+*    Send a Stack Info Packet, containing TaskId for identification,
+*    stack base, stack size and stack usage. 
+*    
+*
+*  Parameters
+*    pInfo - Pointer to stack information to send.
+*/
+void SEGGER_SYSVIEW_SendStackInfo(const SEGGER_SYSVIEW_STACKINFO *pInfo) {
+  U8* pPayload;
+  U8* pPayloadStart;
+  RECORD_START(SEGGER_SYSVIEW_INFO_SIZE + 4 * SEGGER_SYSVIEW_QUANTA_U32);
+  //
+  pPayload = pPayloadStart;
+  ENCODE_U32(pPayload, SHRINK_ID(pInfo->TaskID));
+  ENCODE_U32(pPayload, pInfo->StackBase);
+  ENCODE_U32(pPayload, pInfo->StackSize);
+  ENCODE_U32(pPayload, pInfo->StackUsage);
   _SendPacket(pPayloadStart, pPayload, SYSVIEW_EVTID_STACK_INFO);
   RECORD_END();
 }
