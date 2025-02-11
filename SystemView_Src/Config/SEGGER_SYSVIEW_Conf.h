@@ -52,14 +52,14 @@
 *                                                                    *
 **********************************************************************
 *                                                                    *
-*       SystemView version: V2.40e                                    *
+*       SystemView version: V2.42                                    *
 *                                                                    *
 **********************************************************************
 -------------------------- END-OF-HEADER -----------------------------
 
 File    : SEGGER_SYSVIEW_Conf.h
 Purpose : SEGGER SystemView configuration.
-Revision: $Rev: 5626 $
+Revision: $Rev: 5927 $
 */
 
 #ifndef SEGGER_SYSVIEW_CONF_H
@@ -156,7 +156,11 @@ Revision: $Rev: 5626 $
 #if SEGGER_SYSVIEW_CORE == SEGGER_SYSVIEW_CORE_CM3
   #define SEGGER_SYSVIEW_GET_INTERRUPT_ID()   ((*(U32 *)(0xE000ED04)) & 0x1FF)  // Get the currently active interrupt Id. (i.e. read Cortex-M ICSR[8:0] = active vector)
 #elif SEGGER_SYSVIEW_CORE == SEGGER_SYSVIEW_CORE_CM0
-  #define SEGGER_SYSVIEW_GET_INTERRUPT_ID()   ((*(U32 *)(0xE000ED04)) & 0x3F)   // Get the currently active interrupt Id. (i.e. read Cortex-M ICSR[5:0] = active vector)
+  #if defined(__ICCARM__)
+    #define SEGGER_SYSVIEW_GET_INTERRUPT_ID()   (__get_IPSR())                  // Workaround for IAR, which might do a byte-access to 0xE000ED04. Read IPSR instead.
+  #else
+    #define SEGGER_SYSVIEW_GET_INTERRUPT_ID()   ((*(U32 *)(0xE000ED04)) & 0x3F) // Get the currently active interrupt Id. (i.e. read Cortex-M ICSR[5:0] = active vector)
+  #endif
 #else
   #define SEGGER_SYSVIEW_GET_INTERRUPT_ID()   SEGGER_SYSVIEW_X_GetInterruptId() // Get the currently active interrupt Id from the user-provided function.
 #endif

@@ -52,14 +52,14 @@
 *                                                                    *
 **********************************************************************
 *                                                                    *
-*       SystemView version: V2.40e                                    *
+*       SystemView version: V2.42                                    *
 *                                                                    *
 **********************************************************************
 -------------------------- END-OF-HEADER -----------------------------
 
 File    : SEGGER_SYSVIEW.c
 Purpose : System visualization API implementation.
-Revision: $Rev: 5626 $
+Revision: $Rev: 5927 $
 
 Additional information:
   Packet format:
@@ -267,7 +267,7 @@ static const U8 _abSync[10] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
     static char _UpBuffer  [SEGGER_SYSVIEW_RTT_BUFFER_SIZE];
     #pragma location=SEGGER_SYSVIEW_SECTION
     static char _DownBuffer[8];  // Small, fixed-size buffer, for back-channel comms
-  #elif (defined __CC_ARM__)
+  #elif (defined __CC_ARM)
     __attribute__ ((section (SEGGER_SYSVIEW_SECTION), zero_init)) static char _UpBuffer  [SEGGER_SYSVIEW_RTT_BUFFER_SIZE];
     #if (SEGGER_SYSVIEW_POST_MORTEM_MODE != 1)
     __attribute__ ((section (SEGGER_SYSVIEW_SECTION), zero_init)) static char _DownBuffer[8];  // Small, fixed-size buffer, for back-channel comms

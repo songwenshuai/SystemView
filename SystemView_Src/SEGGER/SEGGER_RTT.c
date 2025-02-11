@@ -52,7 +52,7 @@
 *                                                                    *
 **********************************************************************
 *                                                                    *
-*       SystemView version: V2.40e                                    *
+*       SystemView version: V2.42                                    *
 *                                                                    *
 **********************************************************************
 ---------------------------END-OF-HEADER------------------------------
@@ -60,7 +60,7 @@ File    : SEGGER_RTT.c
 Purpose : Implementation of SEGGER real-time transfer (RTT) which
           allows real-time communication on targets which support
           debugger memory accesses while the CPU is running.
-Revision: $Rev: 5626 $
+Revision: $Rev: 5927 $
 
 Additional information:
           Type "int" is assumed to be 32-bits in size
@@ -175,7 +175,7 @@ Additional information:
     #define PRAGMA(A) _Pragma(#A)
 #define SEGGER_RTT_ALIGN(Var, Alignment) RTT_PRAGMA(data_alignment=Alignment) \
                                   Var
-  #elif (defined __CC_ARM__)
+  #elif (defined __CC_ARM)
     #define SEGGER_RTT_ALIGN(Var, Alignment) Var __attribute__ ((aligned (Alignment)))
   #else
     #error "Alignment not supported for this compiler."
@@ -190,7 +190,7 @@ Additional information:
   #elif (defined __ICCARM__) || (defined __ICCRX__)
 #define SEGGER_RTT_PUT_SECTION(Var, Section) RTT_PRAGMA(location=Section) \
                                         Var
-  #elif (defined __CC_ARM__)
+  #elif (defined __CC_ARM)
     #define SEGGER_RTT_PUT_SECTION(Var, Section) __attribute__ ((section (Section), zero_init))  Var
   #else
     #error "Section placement not supported for this compiler."
