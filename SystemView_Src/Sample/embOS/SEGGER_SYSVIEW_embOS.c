@@ -42,7 +42,7 @@
 *                                                                    *
 **********************************************************************
 *                                                                    *
-*       SystemView version: 3.56b                                    *
+*       SystemView version: 3.58                                    *
 *                                                                    *
 **********************************************************************
 -------------------------- END-OF-HEADER -----------------------------
@@ -60,6 +60,14 @@ Revision: $Rev: 25329 $
 #if (OS_VERSION < 41201)
   #error "SystemView is only supported in embOS V4.12a and later."
 #endif
+
+/*********************************************************************
+*
+*       Static data
+*
+**********************************************************************
+*/
+static const char* sDefaultTaskName = "n/a";
 
 /*********************************************************************
 *
@@ -81,11 +89,12 @@ static void _cbSendTaskInfo(const OS_TASK* pTask) {
   OS_EnterRegion();                // No scheduling to make sure the task list does not change while we are transmitting it
   memset(&Info, 0, sizeof(Info));  // Fill all elements with 0 to allow extending the structure in future version without breaking the code
   Info.TaskID = (U32)pTask;
-#if OS_TRACKNAME
   Info.sName = OS_GetTaskName(pTask);
-#endif
+  if (Info.sName == NULL) {
+    Info.sName = sDefaultTaskName;
+  }
   Info.Prio = pTask->Priority;
-#if OS_CHECKSTACK
+#if (OS_CHECKSTACK != 0)
   Info.StackBase = (U32)OS_GetStackBase(pTask);
   Info.StackSize = pTask->StackSize;
 #endif

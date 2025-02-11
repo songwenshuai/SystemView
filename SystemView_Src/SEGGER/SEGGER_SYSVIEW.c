@@ -42,7 +42,7 @@
 *                                                                    *
 **********************************************************************
 *                                                                    *
-*       SystemView version: 3.56b                                    *
+*       SystemView version: 3.58                                    *
 *                                                                    *
 **********************************************************************
 -------------------------- END-OF-HEADER -----------------------------
@@ -372,7 +372,7 @@ static U8                     _NumModules;
                                    U8* pSysviewPointer;                             \
                                    U32 SysViewData;                                 \
                                    pSysviewPointer = pDest;                         \
-                                   SysViewData = Value;                             \
+                                   SysViewData = (U32)Value;                        \
                                    while(SysViewData > 0x7F) {                      \
                                      *pSysviewPointer++ = (U8)(SysViewData | 0x80); \
                                      SysViewData >>= 7;                             \
@@ -655,7 +655,7 @@ static int _TrySendOverflowPacket(void) {
   // Compute time stamp delta and append it to packet.
   //
   TimeStamp  = SEGGER_SYSVIEW_GET_TIMESTAMP();
-  Delta = TimeStamp - _SYSVIEW_Globals.LastTxTimeStamp;
+  Delta = (I32)(TimeStamp - _SYSVIEW_Globals.LastTxTimeStamp);
   MAKE_DELTA_32BIT(Delta);
   ENCODE_U32(pPayload, Delta);
   //
