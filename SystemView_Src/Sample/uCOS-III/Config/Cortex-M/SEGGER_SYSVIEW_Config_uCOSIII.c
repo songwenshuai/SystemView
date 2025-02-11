@@ -52,20 +52,21 @@
 *                                                                    *
 **********************************************************************
 *                                                                    *
-*       SystemView version: V2.50                                    *
+*       SystemView version: V2.52                                    *
 *                                                                    *
 **********************************************************************
 -------------------------- END-OF-HEADER -----------------------------
 
-File    : SEGGER_SYSVIEW_Config_NoOS.c
-Purpose : Sample setup configuration of SystemView without an OS.
-Revision: $Rev: 3734 $
+File    : SEGGER_SYSVIEW_Config_uCOSIII.c
+Purpose : Sample setup configuration of SystemView with Micrium
+          uC/OS-III.
+Revision: $Rev: 7745 $
 */
 #include "SEGGER_SYSVIEW.h"
+#include "os.h"
+#include "bsp_clock.h"
 
-// SystemcoreClock can be used in most CMSIS compatible projects.
-// In non-CMSIS projects define SYSVIEW_CPU_FREQ.
-extern unsigned int SystemCoreClock;
+extern const SEGGER_SYSVIEW_OS_API SYSVIEW_X_OS_TraceAPI;
 
 /*********************************************************************
 *
@@ -74,21 +75,23 @@ extern unsigned int SystemCoreClock;
 **********************************************************************
 */
 // The application name to be displayed in SystemViewer
-#define SYSVIEW_APP_NAME        "Demo Application"
+#define SYSVIEW_APP_NAME        "ARM Cortex-M Demo"
 
 // The target device name
-#define SYSVIEW_DEVICE_NAME     "Cortex-M4"
+#define SYSVIEW_DEVICE_NAME     "Cortex-M Device"
 
-// Frequency of the timestamp. Must match SEGGER_SYSVIEW_Conf.h
-#define SYSVIEW_TIMESTAMP_FREQ  (SystemCoreClock)
+
+
+// Frequency of the timestamp. Must match SEGGER_SYSVIEW_GET_TIMESTAMP in SEGGER_SYSVIEW_Conf.h
+#define SYSVIEW_TIMESTAMP_FREQ  (BSP_ClkFreqGet(BSP_CLK_ID_SYSCLK))
 
 // System Frequency. SystemcoreClock is used in most CMSIS compatible projects.
-#define SYSVIEW_CPU_FREQ        (SystemCoreClock)
+#define SYSVIEW_CPU_FREQ        (BSP_ClkFreqGet(BSP_CLK_ID_SYSCLK))
 
 // The lowest RAM address used for IDs (pointers)
-#define SYSVIEW_RAM_BASE        (0x10000000)
+#define SYSVIEW_RAM_BASE        (0x20000000)
 
-/********************************************************************* 
+/*********************************************************************
 *
 *       _cbSendSystemDesc()
 *
@@ -96,8 +99,10 @@ extern unsigned int SystemCoreClock;
 *    Sends SystemView description strings.
 */
 static void _cbSendSystemDesc(void) {
-  SEGGER_SYSVIEW_SendSysDesc("N="SYSVIEW_APP_NAME",D="SYSVIEW_DEVICE_NAME);
+  SEGGER_SYSVIEW_SendSysDesc("N="SYSVIEW_APP_NAME",D="SYSVIEW_DEVICE_NAME",O=uCOS-III");
   SEGGER_SYSVIEW_SendSysDesc("I#15=SysTick");
+  //
+  SYSVIEW_SendResourceList();
 }
 
 /*********************************************************************
@@ -107,8 +112,8 @@ static void _cbSendSystemDesc(void) {
 **********************************************************************
 */
 void SEGGER_SYSVIEW_Conf(void) {
-  SEGGER_SYSVIEW_Init(SYSVIEW_TIMESTAMP_FREQ, SYSVIEW_CPU_FREQ, 
-                      0, _cbSendSystemDesc);
+  SEGGER_SYSVIEW_Init(SYSVIEW_TIMESTAMP_FREQ, SYSVIEW_CPU_FREQ,
+                      &SYSVIEW_X_OS_TraceAPI, _cbSendSystemDesc);
   SEGGER_SYSVIEW_SetRAMBase(SYSVIEW_RAM_BASE);
 }
 

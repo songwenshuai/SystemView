@@ -52,14 +52,14 @@
 *                                                                    *
 **********************************************************************
 *                                                                    *
-*       SystemView version: V2.50                                    *
+*       SystemView version: V2.52                                    *
 *                                                                    *
 **********************************************************************
 -------------------------- END-OF-HEADER -----------------------------
 
 File    : SEGGER_SYSVIEW_embOS.h
 Purpose : Interface between embOS and System View.
-Revision: $Rev: 3734 $
+Revision: $Rev: 7745 $
 */
 
 #ifndef SYSVIEW_EMBOS_H

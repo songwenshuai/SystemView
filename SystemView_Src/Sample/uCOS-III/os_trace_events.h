@@ -52,14 +52,14 @@
 *                                                                    *
 **********************************************************************
 *                                                                    *
-*       SystemView version: V2.50                                    *
+*       SystemView version: V2.52                                    *
 *                                                                    *
 **********************************************************************
 -------------------------- END-OF-HEADER -----------------------------
 
 File    : os_trace.h
 Purpose : Interface header for Micrium uC/OS-III and SystemView.
-Revision: $Rev: 3809 $
+Revision: $Rev: 7745 $
 */
 #include "SEGGER_SYSVIEW.h"
 #include "os.h"

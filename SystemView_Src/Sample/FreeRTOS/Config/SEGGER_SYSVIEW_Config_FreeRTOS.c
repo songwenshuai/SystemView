@@ -55,48 +55,60 @@
 *       SystemView version: V2.52                                    *
 *                                                                    *
 **********************************************************************
-----------------------------------------------------------------------
-File    : Global.h
-Purpose : Global types
-          In case your application already has a Global.h, you should
-          merge the files. In order to use Segger code, the types
-          U8, U16, U32, I8, I16, I32 need to be defined in Global.h;
-          additional definitions do not hurt.
----------------------------END-OF-HEADER------------------------------
+-------------------------- END-OF-HEADER -----------------------------
+
+File    : SEGGER_SYSVIEW_Config_FreeRTOS.c
+Purpose : Sample setup configuration of SystemView with FreeRTOS.
+Revision: $Rev: 7745 $
 */
+#include "FreeRTOS.h"
+#include "SEGGER_SYSVIEW.h"
 
-#ifndef GLOBAL_H            // Guard against multiple inclusion
-#define GLOBAL_H
+extern const SEGGER_SYSVIEW_OS_API SYSVIEW_X_OS_TraceAPI;
 
-#define U8    unsigned char
-#define U16   unsigned short
-#define U32   unsigned long
-#define I8    signed char
-#define I16   signed short
-#define I32   signed long
+/*********************************************************************
+*
+*       Defines, configurable
+*
+**********************************************************************
+*/
+// The application name to be displayed in SystemViewer
+#define SYSVIEW_APP_NAME        "FreeRTOS Demo Application"
 
-#ifdef _WIN32
-  //
-  // Microsoft VC6 compiler related
-  //
-  #define U64   unsigned __int64
-  #define U128  unsigned __int128
-  #define I64   __int64
-  #define I128  __int128
-  #if _MSC_VER <= 1200
-    #define U64_C(x) x##UI64
-  #else
-    #define U64_C(x) x##ULL
-  #endif
-#else 
-  //
-  // C99 compliant compiler
-  //
-  #define U64   unsigned long long
-  #define I64   signed long long
-  #define U64_C(x) x##ULL
-#endif
+// The target device name
+#define SYSVIEW_DEVICE_NAME     "Cortex-M4"
 
-#endif                      // Avoid multiple inclusion
+// Frequency of the timestamp. Must match SEGGER_SYSVIEW_GET_TIMESTAMP in SEGGER_SYSVIEW_Conf.h
+#define SYSVIEW_TIMESTAMP_FREQ  (configCPU_CLOCK_HZ)
+
+// System Frequency. SystemcoreClock is used in most CMSIS compatible projects.
+#define SYSVIEW_CPU_FREQ        configCPU_CLOCK_HZ
+
+// The lowest RAM address used for IDs (pointers)
+#define SYSVIEW_RAM_BASE        (0x10000000)
+
+/********************************************************************* 
+*
+*       _cbSendSystemDesc()
+*
+*  Function description
+*    Sends SystemView description strings.
+*/
+static void _cbSendSystemDesc(void) {
+  SEGGER_SYSVIEW_SendSysDesc("N="SYSVIEW_APP_NAME",D="SYSVIEW_DEVICE_NAME",O=FreeRTOS");
+  SEGGER_SYSVIEW_SendSysDesc("I#15=SysTick");
+}
+
+/*********************************************************************
+*
+*       Global functions
+*
+**********************************************************************
+*/
+void SEGGER_SYSVIEW_Conf(void) {
+  SEGGER_SYSVIEW_Init(SYSVIEW_TIMESTAMP_FREQ, SYSVIEW_CPU_FREQ, 
+                      &SYSVIEW_X_OS_TraceAPI, _cbSendSystemDesc);
+  SEGGER_SYSVIEW_SetRAMBase(SYSVIEW_RAM_BASE);
+}
 
 /*************************** End of file ****************************/
