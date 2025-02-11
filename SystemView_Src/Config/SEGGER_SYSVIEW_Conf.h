@@ -52,14 +52,14 @@
 *                                                                    *
 **********************************************************************
 *                                                                    *
-*       SystemView version: V2.42                                    *
+*       SystemView version: V2.50                                    *
 *                                                                    *
 **********************************************************************
 -------------------------- END-OF-HEADER -----------------------------
 
 File    : SEGGER_SYSVIEW_Conf.h
 Purpose : SEGGER SystemView configuration.
-Revision: $Rev: 5927 $
+Revision: $Rev: 6249 $
 */
 
 #ifndef SEGGER_SYSVIEW_CONF_H
