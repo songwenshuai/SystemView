@@ -41,10 +41,6 @@
 * DAMAGE.                                                            *
 *                                                                    *
 **********************************************************************
-*                                                                    *
-*       SystemView version: 3.60                                    *
-*                                                                    *
-**********************************************************************
 -------------------------- END-OF-HEADER -----------------------------
 
 File    : SEGGER_SYSVIEW_FreeRTOS.c
@@ -103,8 +99,15 @@ static void _cbSendTaskList(void) {
 */
 static U64 _cbGetTime(void) {
   U64 Time;
-
+#if SYSVIEW_PORT_PROVIDES_CONTEXT_CHECK
+  if (xPortIsInsideInterrupt() == pdTRUE) {
+    Time = xTaskGetTickCountFromISR();
+  } else {
+    Time = xTaskGetTickCount();
+  }
+#else
   Time = xTaskGetTickCountFromISR();
+#endif
   Time *= portTICK_PERIOD_MS;
   Time *= 1000;
   return Time;

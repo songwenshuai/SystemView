@@ -1,55 +1,18 @@
 /*********************************************************************
-*                    SEGGER Microcontroller GmbH                     *
+*                   (c) SEGGER Microcontroller GmbH                  *
 *                        The Embedded Experts                        *
+*                           www.segger.com                           *
 **********************************************************************
 *                                                                    *
-*            (c) 1995 - 2024 SEGGER Microcontroller GmbH             *
-*                                                                    *
-*       www.segger.com     Support: support@segger.com               *
-*                                                                    *
-**********************************************************************
-*                                                                    *
-*       SEGGER SystemView * Real-time application analysis           *
+*         SEGGER SystemView  * Real-time application analysis        *
+*              https://github.com/SEGGERMicro/SystemView             *
 *                                                                    *
 **********************************************************************
-*                                                                    *
-* All rights reserved.                                               *
-*                                                                    *
-* SEGGER strongly recommends to not make any changes                 *
-* to or modify the source code of this software in order to stay     *
-* compatible with the SystemView and RTT protocol, and J-Link.       *
-*                                                                    *
-* Redistribution and use in source and binary forms, with or         *
-* without modification, are permitted provided that the following    *
-* condition is met:                                                  *
-*                                                                    *
-* o Redistributions of source code must retain the above copyright   *
-*   notice, this condition and the following disclaimer.             *
-*                                                                    *
-* THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND             *
-* CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES,        *
-* INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF           *
-* MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE           *
-* DISCLAIMED. IN NO EVENT SHALL SEGGER Microcontroller BE LIABLE FOR *
-* ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR           *
-* CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT  *
-* OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;    *
-* OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF      *
-* LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT          *
-* (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE  *
-* USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH   *
-* DAMAGE.                                                            *
-*                                                                    *
-**********************************************************************
-*                                                                    *
-*       SystemView version: 3.60                                    *
-*                                                                    *
-**********************************************************************
--------------------------- END-OF-HEADER -----------------------------
-File    : SEGGER_SYSVIEW_ConfDefaults.h
-Purpose : Defines defaults for configurable defines used in
-          SEGGER SystemView.
-Revision: $Rev: 26230 $
+
+---------------------------END-OF-HEADER------------------------------
+
+Purpose : Default configuration for SystemView Target Source.
+          Do not change this file! Use SEGGER_SYSVIEW_Conf.h instead.
 */
 
 #ifndef SEGGER_SYSVIEW_CONFDEFAULTS_H
@@ -63,7 +26,7 @@ Revision: $Rev: 26230 $
 */
 
 #include "SEGGER_SYSVIEW_Conf.h"
-#include "SEGGER_RTT_Conf.h"
+#include "SEGGER_RTT_ConfDefaults.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -88,17 +51,17 @@ extern "C" {
   #if (defined __SES_ARM) || (defined __CROSSWORKS_ARM) || (defined __SEGGER_CC__) || (defined __GNUC__) || (defined __clang__)
     #if (defined __ARM_ARCH_6M__) || (defined __ARM_ARCH_8M_BASE__)
       #define SEGGER_SYSVIEW_CORE SEGGER_SYSVIEW_CORE_CM0
-    #elif (defined(__ARM_ARCH_7M__) || defined(__ARM_ARCH_7EM__) || defined(__ARM_ARCH_8M_MAIN__))
+    #elif (defined(__ARM_ARCH_7M__) || defined(__ARM_ARCH_7EM__) || defined(__ARM_ARCH_8M_MAIN__) || defined(__ARM_ARCH_8_1M_MAIN__))
       #define SEGGER_SYSVIEW_CORE SEGGER_SYSVIEW_CORE_CM3
     #endif
   #elif defined(__ICCARM__)
     #if (defined (__ARM6M__)          && (__CORE__ == __ARM6M__))          \
      || (defined (__ARM8M_BASELINE__) && (__CORE__ == __ARM8M_BASELINE__))
       #define SEGGER_SYSVIEW_CORE SEGGER_SYSVIEW_CORE_CM0
-    #elif (defined (__ARM7EM__)         && (__CORE__ == __ARM7EM__))         \
-       || (defined (__ARM7M__)          && (__CORE__ == __ARM7M__))          \
-       || (defined (__ARM8M_MAINLINE__) && (__CORE__ == __ARM8M_MAINLINE__)) \
-       || (defined (__ARM8M_MAINLINE__) && (__CORE__ == __ARM8M_MAINLINE__))
+    #elif (defined (__ARM7EM__)           && (__CORE__ == __ARM7EM__))         \
+       || (defined (__ARM7M__)            && (__CORE__ == __ARM7M__))          \
+       || (defined (__ARM8M_MAINLINE__)   && (__CORE__ == __ARM8M_MAINLINE__)) \
+       || (defined (__ARM8_1M_MAINLINE__) && (__CORE__ == __ARM8_1M_MAINLINE__))
       #define SEGGER_SYSVIEW_CORE SEGGER_SYSVIEW_CORE_CM3
     #endif
   #elif defined(__CC_ARM)
