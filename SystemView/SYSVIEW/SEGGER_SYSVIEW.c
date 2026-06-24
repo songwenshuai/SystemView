@@ -213,7 +213,7 @@ typedef struct {
 *
 **********************************************************************
 */
-static void _SendPacket(U8* pStartPacket, U8* pEndPacket, unsigned int EventId);
+static int _SendPacket(U8* pStartPacket, U8* pEndPacket, unsigned int EventId);
 static int _SendPacket_Ex(SEGGER_SYSVIEW_CORE_CONTEXT* pInfo, U32 TimeStamp, U8* pStartPacket, U8* pEndPacket);
 
 /*********************************************************************
@@ -730,7 +730,7 @@ static void _SendSyncInfo(void) {
 *    EventId      - Id of the event to send.
 *
 */
-static void _SendPacket(U8* pStartPacket, U8* pEndPacket, unsigned int EventId) {
+static int _SendPacket(U8* pStartPacket, U8* pEndPacket, unsigned int EventId) {
   unsigned int  NumBytes;
   //
   // Check if event is disabled from being recorded.
@@ -740,7 +740,7 @@ static void _SendPacket(U8* pStartPacket, U8* pEndPacket, unsigned int EventId) 
 #if (SEGGER_SYSVIEW_POST_MORTEM_MODE != 1)
       _CheckDownBuffer(&_SYSVIEW_Globals.MainContext);
 #endif
-      return;
+      return 0;
     }
   }
   //
@@ -829,7 +829,7 @@ static void _SendPacket(U8* pStartPacket, U8* pEndPacket, unsigned int EventId) 
     }
 #endif
   }
-  (void)_SendPacket_Ex(&_SYSVIEW_Globals.MainContext, SEGGER_SYSVIEW_GET_TIMESTAMP(), pStartPacket, pEndPacket);
+  return _SendPacket_Ex(&_SYSVIEW_Globals.MainContext, SEGGER_SYSVIEW_GET_TIMESTAMP(), pStartPacket, pEndPacket);
 }
 
 /*********************************************************************
@@ -2239,6 +2239,7 @@ void SEGGER_SYSVIEW_SendStackInfo(const SEGGER_SYSVIEW_STACKINFO *pInfo) {
   ENCODE_U32(pPayload, pInfo->StackBase);
   ENCODE_U32(pPayload, pInfo->StackSize);
   ENCODE_U32(pPayload, pInfo->StackUsage);
+  _SendPacket(pPayloadStart, pPayload, SYSVIEW_EVTID_STACK_INFO);
 
   RECORD_END();
 }
@@ -3010,14 +3011,16 @@ void SEGGER_SYSVIEW_HeapFree(void* pHeap, void* pUserData) {
 *    ==0:  Buffer full, Message *NOT* sent.
 */
 int SEGGER_SYSVIEW_SendPacket(U8* pPacket, U8* pPayloadEnd, unsigned int EventId) {
+  int Status;
+
 #if (SEGGER_SYSVIEW_USE_STATIC_BUFFER == 1)
   SEGGER_SYSVIEW_LOCK();
 #endif
-  _SendPacket(pPacket + 4, pPayloadEnd, EventId);
+  Status = _SendPacket(pPacket + 4, pPayloadEnd, EventId);
 #if (SEGGER_SYSVIEW_USE_STATIC_BUFFER == 1)
   SEGGER_SYSVIEW_UNLOCK();
 #endif
-  return 0;
+  return Status;
 }
 
 /*********************************************************************
