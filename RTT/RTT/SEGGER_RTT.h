@@ -233,8 +233,15 @@ Purpose : Implementation of SEGGER real-time transfer which allows
 
 #ifndef RTT__DMB
   #if SEGGER_RTT_USE_SHARED_MEMORY
-    #if ((defined __GNUC__) || (defined __clang__))
+    #if defined(SEGGER_RTT_SHARED_MEMORY_BARRIER)
+      #define RTT__DMB() SEGGER_RTT_SHARED_MEMORY_BARRIER()
+    #elif ((defined __GNUC__) || (defined __clang__))
       #define RTT__DMB() __sync_synchronize()
+    #elif defined(__ICCARM__)
+      #include <intrinsics.h>
+      #define RTT__DMB() __DMB()
+    #elif defined(__CC_ARM)
+      #define RTT__DMB() do { __schedule_barrier(); __asm { DMB }; __schedule_barrier(); } while (0)
     #else
       #error "Don't know how to place shared-memory barrier"
     #endif
@@ -265,6 +272,7 @@ Purpose : Implementation of SEGGER real-time transfer which allows
 #ifndef SEGGER_RTT_ASM  // defined when SEGGER_RTT.h is included from assembly file
 #include <stdlib.h>
 #include <stdarg.h>
+#include <stddef.h>
 #include <stdint.h>
 
 /*********************************************************************
@@ -320,6 +328,7 @@ Purpose : Implementation of SEGGER real-time transfer which allows
 #define SEGGER_RTT__WR32(Address, Data)                  (*(volatile uint32_t*)(uintptr_t)(Address) = (uint32_t)(Data))
 #define SEGGER_RTT__ADDR(Address, Off)                   ((uintptr_t)(Address) + (uintptr_t)(Off))
 #define SEGGER_RTT__FIELD(pRing, Off)                    ((uintptr_t)(pRing) + (uintptr_t)(Off))
+#define SEGGER_RTT__STATIC_ASSERT(Name, Condition)       typedef char SEGGER_RTT__static_assert_##Name[(Condition) ? 1 : -1]
 
 /*********************************************************************
 *
@@ -370,6 +379,26 @@ typedef struct {
 #endif
 } SEGGER_RTT_CB;
 
+SEGGER_RTT__STATIC_ASSERT(buffer_up_size,          sizeof(SEGGER_RTT_BUFFER_UP) == SEGGER_RTT__BUFFER_SIZE);
+SEGGER_RTT__STATIC_ASSERT(buffer_up_name_off,      offsetof(SEGGER_RTT_BUFFER_UP, sName) == SEGGER_RTT__BUFFER_OFF_NAME);
+SEGGER_RTT__STATIC_ASSERT(buffer_up_buffer_off,    offsetof(SEGGER_RTT_BUFFER_UP, pBuffer) == SEGGER_RTT__BUFFER_OFF_P_BUFFER);
+SEGGER_RTT__STATIC_ASSERT(buffer_up_size_off,      offsetof(SEGGER_RTT_BUFFER_UP, SizeOfBuffer) == SEGGER_RTT__BUFFER_OFF_SIZE_OF_BUFFER);
+SEGGER_RTT__STATIC_ASSERT(buffer_up_wr_off,        offsetof(SEGGER_RTT_BUFFER_UP, WrOff) == SEGGER_RTT__BUFFER_OFF_WR_OFF);
+SEGGER_RTT__STATIC_ASSERT(buffer_up_rd_off,        offsetof(SEGGER_RTT_BUFFER_UP, RdOff) == SEGGER_RTT__BUFFER_OFF_RD_OFF);
+SEGGER_RTT__STATIC_ASSERT(buffer_up_flags_off,     offsetof(SEGGER_RTT_BUFFER_UP, Flags) == SEGGER_RTT__BUFFER_OFF_FLAGS);
+SEGGER_RTT__STATIC_ASSERT(buffer_down_size,        sizeof(SEGGER_RTT_BUFFER_DOWN) == SEGGER_RTT__BUFFER_SIZE);
+SEGGER_RTT__STATIC_ASSERT(buffer_down_name_off,    offsetof(SEGGER_RTT_BUFFER_DOWN, sName) == SEGGER_RTT__BUFFER_OFF_NAME);
+SEGGER_RTT__STATIC_ASSERT(buffer_down_buffer_off,  offsetof(SEGGER_RTT_BUFFER_DOWN, pBuffer) == SEGGER_RTT__BUFFER_OFF_P_BUFFER);
+SEGGER_RTT__STATIC_ASSERT(buffer_down_size_off,    offsetof(SEGGER_RTT_BUFFER_DOWN, SizeOfBuffer) == SEGGER_RTT__BUFFER_OFF_SIZE_OF_BUFFER);
+SEGGER_RTT__STATIC_ASSERT(buffer_down_wr_off,      offsetof(SEGGER_RTT_BUFFER_DOWN, WrOff) == SEGGER_RTT__BUFFER_OFF_WR_OFF);
+SEGGER_RTT__STATIC_ASSERT(buffer_down_rd_off,      offsetof(SEGGER_RTT_BUFFER_DOWN, RdOff) == SEGGER_RTT__BUFFER_OFF_RD_OFF);
+SEGGER_RTT__STATIC_ASSERT(buffer_down_flags_off,   offsetof(SEGGER_RTT_BUFFER_DOWN, Flags) == SEGGER_RTT__BUFFER_OFF_FLAGS);
+SEGGER_RTT__STATIC_ASSERT(cb_id_off,               offsetof(SEGGER_RTT_CB, acID) == SEGGER_RTT__CB_OFF_AC_ID);
+SEGGER_RTT__STATIC_ASSERT(cb_max_up_off,           offsetof(SEGGER_RTT_CB, MaxNumUpBuffers) == SEGGER_RTT__CB_OFF_MAX_NUM_UP_BUFFERS);
+SEGGER_RTT__STATIC_ASSERT(cb_max_down_off,         offsetof(SEGGER_RTT_CB, MaxNumDownBuffers) == SEGGER_RTT__CB_OFF_MAX_NUM_DOWN_BUFFERS);
+SEGGER_RTT__STATIC_ASSERT(cb_a_up_off,             offsetof(SEGGER_RTT_CB, aUp) == SEGGER_RTT__CB_OFF_A_UP);
+SEGGER_RTT__STATIC_ASSERT(cb_a_down_off,           offsetof(SEGGER_RTT_CB, aDown) == SEGGER_RTT__CB_OFF_A_DOWN);
+
 /*********************************************************************
 *
 *       Global data
@@ -393,6 +422,7 @@ typedef struct {
 int          SEGGER_RTT_AllocDownBuffer         (uintptr_t Address, const char* sName, void* pBuffer, unsigned BufferSize, unsigned Flags);
 int          SEGGER_RTT_AllocUpBuffer           (uintptr_t Address, const char* sName, void* pBuffer, unsigned BufferSize, unsigned Flags);
 int          SEGGER_RTT_CheckInit               (uintptr_t Address);
+int          SEGGER_RTT_CheckRegion             (uintptr_t Address, size_t Size);
 int          SEGGER_RTT_FindControlBlock        (uintptr_t* pAddress, size_t Size);
 int          SEGGER_RTT_ConfigUpBuffer          (uintptr_t Address, unsigned BufferIndex, const char* sName, void* pBuffer, unsigned BufferSize, unsigned Flags);
 int          SEGGER_RTT_ConfigDownBuffer        (uintptr_t Address, unsigned BufferIndex, const char* sName, void* pBuffer, unsigned BufferSize, unsigned Flags);
@@ -401,6 +431,7 @@ unsigned     SEGGER_RTT_HasData                 (uintptr_t Address, unsigned Buf
 int          SEGGER_RTT_HasKey                  (uintptr_t Address);
 unsigned     SEGGER_RTT_HasDataUp               (uintptr_t Address, unsigned BufferIndex);
 void         SEGGER_RTT_Init                    (uintptr_t Address);
+int          SEGGER_RTT_InitEx                  (uintptr_t Address, size_t Size);
 unsigned     SEGGER_RTT_Read                    (uintptr_t Address, unsigned BufferIndex,       void* pBuffer, unsigned BufferSize);
 unsigned     SEGGER_RTT_ReadNoLock              (uintptr_t Address, unsigned BufferIndex,       void* pData,   unsigned BufferSize);
 int          SEGGER_RTT_SetNameDownBuffer       (uintptr_t Address, unsigned BufferIndex, const char* sName);

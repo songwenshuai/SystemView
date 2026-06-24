@@ -133,6 +133,24 @@ Purpose : Default configuration for RTT.
 
 /*********************************************************************
 *
+*     SEGGER_RTT_CB_ADDRESS
+*
+*  Description
+*    Default shared-memory RTT control block base address.
+*
+*  Additional information
+*    Applications that use one shared RTT control block for all RTT
+*    users can define this once in SEGGER_RTT_Conf.h.  Specialized
+*    users, such as syscall retargeting or SystemView, may override
+*    their own address macros only if they intentionally use a different
+*    control block.
+*/
+#ifndef   SEGGER_RTT_CB_ADDRESS
+  #define SEGGER_RTT_CB_ADDRESS                       (0u)
+#endif
+
+/*********************************************************************
+*
 *     SEGGER_RTT_SYSCALL_CB_ADDRESS
 *
 *  Description
@@ -143,11 +161,28 @@ Purpose : Default configuration for RTT.
 *    The RTT API itself always receives the control block base address
 *    explicitly. Standard library syscall hooks do not have such a
 *    parameter, so applications which include RTT/Syscalls can configure
-*    the shared-memory control block used for stdout/stderr here.
+*    the shared-memory control block used for stdout/stderr here.  By
+*    default, this uses the common SEGGER_RTT_CB_ADDRESS.
 */
 #ifndef   SEGGER_RTT_SYSCALL_CB_ADDRESS
-  #define SEGGER_RTT_SYSCALL_CB_ADDRESS              (0u)
+  #define SEGGER_RTT_SYSCALL_CB_ADDRESS              SEGGER_RTT_CB_ADDRESS
 #endif
+
+/*********************************************************************
+*
+*     SEGGER_RTT_SHARED_MEMORY_BARRIER
+*
+*  Description
+*    Optional platform-specific full memory barrier used by shared-
+*    memory RTT.
+*
+*  Additional information
+*    Define this macro in SEGGER_RTT_Conf.h when the compiler/target is
+*    not covered by SEGGER_RTT.h.  The barrier must enforce ordering of
+*    control-block descriptor and ring-buffer payload accesses between
+*    cores.  It does not replace cache maintenance for cacheable shared
+*    memory.
+*/
 
 /*********************************************************************
 *

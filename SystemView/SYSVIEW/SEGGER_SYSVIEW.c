@@ -128,6 +128,9 @@ Additional information:
   #define CHANNEL_ID_DOWN _SYSVIEW_Globals.MainContext.DownChannel
 #endif
 
+#define RTT_CB_ADDRESS ((uintptr_t)SEGGER_SYSVIEW_RTT_CB_ADDRESS)
+#define RTT_NAME       ((const char*)(uintptr_t)SEGGER_SYSVIEW_RTT_NAME_ADDRESS)
+
 #if SEGGER_SYSVIEW_CPU_CACHE_LINE_SIZE
   #if (SEGGER_SYSVIEW_RTT_BUFFER_SIZE % SEGGER_SYSVIEW_CPU_CACHE_LINE_SIZE)
     #error "SEGGER_SYSVIEW_RTT_BUFFER_SIZE must be a multiple of SEGGER_SYSVIEW_CPU_CACHE_LINE_SIZE"
@@ -531,7 +534,7 @@ static void _HandleIncomingPacket(void) {
   U8  Cmd;
   unsigned int Status;
   //
-  Status = SEGGER_RTT_ReadNoLock(CHANNEL_ID_DOWN, &Cmd, 1);
+  Status = SEGGER_RTT_ReadNoLock(RTT_CB_ADDRESS, CHANNEL_ID_DOWN, &Cmd, 1);
   if (Status > 0) {
     switch (Cmd) {
     case SEGGER_SYSVIEW_COMMAND_ID_START:
@@ -556,7 +559,7 @@ static void _HandleIncomingPacket(void) {
       SEGGER_SYSVIEW_SendModuleDescription();
       break;
     case SEGGER_SYSVIEW_COMMAND_ID_GET_MODULE:
-      Status = SEGGER_RTT_ReadNoLock(CHANNEL_ID_DOWN, &Cmd, 1);
+      Status = SEGGER_RTT_ReadNoLock(RTT_CB_ADDRESS, CHANNEL_ID_DOWN, &Cmd, 1);
       if (Status > 0) {
         SEGGER_SYSVIEW_SendModule(Cmd);
       }
@@ -565,7 +568,7 @@ static void _HandleIncomingPacket(void) {
       break;
     default:
       if (Cmd >= 128) { // Unknown extended command. Dummy read its parameter.
-        SEGGER_RTT_ReadNoLock(CHANNEL_ID_DOWN, &Cmd, 1);
+        SEGGER_RTT_ReadNoLock(RTT_CB_ADDRESS, CHANNEL_ID_DOWN, &Cmd, 1);
       }
       break;
     }
@@ -589,7 +592,7 @@ static void _HandleIncomingPacket(void) {
 */
 static void _CheckDownBuffer(SEGGER_SYSVIEW_CORE_CONTEXT* pContext) {
   if (pContext == &_SYSVIEW_Globals.MainContext) {
-    if (SEGGER_RTT_HASDATA(CHANNEL_ID_DOWN)) {
+    if (SEGGER_RTT_HASDATA(RTT_CB_ADDRESS, CHANNEL_ID_DOWN)) {
       if (pContext->RecursionCnt == 0) {   // Avoid uncontrolled nesting. This way, this routine can call itself once, but no more often than that.
         pContext->RecursionCnt = 1;
         _HandleIncomingPacket();
@@ -643,7 +646,7 @@ static int _TrySendOverflowPacket(SEGGER_SYSVIEW_CORE_CONTEXT* pContext, U32 Tim
   //
   // Try to store packet in RTT buffer and update time stamp when this was successful
   //
-  Status = (int)SEGGER_RTT_WriteSkipNoLock(pContext->UpChannel, aPacket, (unsigned int)(pPayload - aPacket));
+  Status = (int)SEGGER_RTT_WriteSkipNoLock(RTT_CB_ADDRESS, pContext->UpChannel, aPacket, (unsigned int)(pPayload - aPacket));
   SEGGER_SYSVIEW_ON_EVENT_RECORDED(pPayload - aPacket);
   if (Status) {
     pContext->LastTxTimeStamp = TimeStamp;
@@ -677,7 +680,7 @@ static void _SendSyncInfo(void) {
   // Send module description
   // Send module information
   //
-  SEGGER_RTT_WriteWithOverwriteNoLock(CHANNEL_ID_UP, _abSync, 10);
+  SEGGER_RTT_WriteWithOverwriteNoLock(RTT_CB_ADDRESS, CHANNEL_ID_UP, _abSync, 10);
   SEGGER_SYSVIEW_ON_EVENT_RECORDED(10);
   SEGGER_SYSVIEW_RecordVoid(SYSVIEW_EVTID_TRACE_START);
   {
@@ -900,14 +903,14 @@ Send:
   //
   // Store packet in RTT buffer by overwriting old data.
   //
-  SEGGER_RTT_WriteWithOverwriteNoLock(pContext->UpChannel, pStartPacket, (unsigned int)(pEndPacket - pStartPacket));
+  SEGGER_RTT_WriteWithOverwriteNoLock(RTT_CB_ADDRESS, pContext->UpChannel, pStartPacket, (unsigned int)(pEndPacket - pStartPacket));
   SEGGER_SYSVIEW_ON_EVENT_RECORDED(pEndPacket - pStartPacket);
   pContext->LastTxTimeStamp = TimeStamp;
 #else
   //
   // Try to store packet in RTT buffer.
   //
-  Status = (int)SEGGER_RTT_WriteSkipNoLock(pContext->UpChannel, pStartPacket, (unsigned int)(pEndPacket - pStartPacket));
+  Status = (int)SEGGER_RTT_WriteSkipNoLock(RTT_CB_ADDRESS, pContext->UpChannel, pStartPacket, (unsigned int)(pEndPacket - pStartPacket));
   SEGGER_SYSVIEW_ON_EVENT_RECORDED(pEndPacket - pStartPacket);
   if (Status) {
     pContext->LastTxTimeStamp = TimeStamp;
@@ -1570,11 +1573,16 @@ void SEGGER_SYSVIEW_Init(U32 SysFreq, U32 CPUFreq, const SEGGER_SYSVIEW_OS_API *
 *    The channel is configured with the macro SEGGER_SYSVIEW_RTT_CHANNEL.
 */
 void SEGGER_SYSVIEW_Init_Ex(U32 SysFreq, U32 CPUFreq, const SEGGER_SYSVIEW_OS_API *pOSAPI, SEGGER_SYSVIEW_SEND_SYS_DESC_FUNC pfSendSysDesc, SEGGER_SYSVIEW_START_CALLBACK pfStartCallback, SEGGER_SYSVIEW_STOP_CALLBACK pfStopCallback) {
+#if SEGGER_SYSVIEW_RTT_CHANNEL == 0
+  int Channel;
+#endif
+
   #if (SEGGER_SYSVIEW_POST_MORTEM_MODE == 1)
 #if SEGGER_SYSVIEW_RTT_CHANNEL > 0
-  SEGGER_RTT_ConfigUpBuffer(SEGGER_SYSVIEW_RTT_CHANNEL, "SysView", &_UpBuffer[0],   sizeof(_UpBuffer),   SEGGER_RTT_MODE_NO_BLOCK_SKIP);
+  SEGGER_RTT_ConfigUpBuffer(RTT_CB_ADDRESS, SEGGER_SYSVIEW_RTT_CHANNEL, RTT_NAME, &_UpBuffer[0],   sizeof(_UpBuffer),   SEGGER_RTT_MODE_NO_BLOCK_SKIP);
 #else
-  _SYSVIEW_Globals.MainContext.UpChannel = (U8)SEGGER_RTT_AllocUpBuffer  ("SysView", &_UpBuffer[0],   sizeof(_UpBuffer),   SEGGER_RTT_MODE_NO_BLOCK_SKIP);
+  Channel = SEGGER_RTT_AllocUpBuffer(RTT_CB_ADDRESS, RTT_NAME, &_UpBuffer[0], sizeof(_UpBuffer), SEGGER_RTT_MODE_NO_BLOCK_SKIP);
+  _SYSVIEW_Globals.MainContext.UpChannel = (Channel < 0) ? 0u : (U8)Channel;
 #endif
   _SYSVIEW_Globals.MainContext.RAMBaseAddress   = SEGGER_SYSVIEW_ID_BASE;
   _SYSVIEW_Globals.MainContext.LastTxTimeStamp  = 0;
@@ -1588,13 +1596,16 @@ void SEGGER_SYSVIEW_Init_Ex(U32 SysFreq, U32 CPUFreq, const SEGGER_SYSVIEW_OS_AP
   _SYSVIEW_Globals.MainContext.PacketCount      = 0;
 #else // (SEGGER_SYSVIEW_POST_MORTEM_MODE == 1)
 #if SEGGER_SYSVIEW_RTT_CHANNEL > 0
-  SEGGER_RTT_ConfigUpBuffer   (SEGGER_SYSVIEW_RTT_CHANNEL, "SysView", &_UpBuffer[0],   sizeof(_UpBuffer),   SEGGER_RTT_MODE_NO_BLOCK_SKIP);
-  SEGGER_RTT_ConfigDownBuffer (SEGGER_SYSVIEW_RTT_CHANNEL, "SysView", &_DownBuffer[0], sizeof(_DownBuffer), SEGGER_RTT_MODE_NO_BLOCK_SKIP);
+  SEGGER_RTT_ConfigUpBuffer   (RTT_CB_ADDRESS, SEGGER_SYSVIEW_RTT_CHANNEL, RTT_NAME, &_UpBuffer[0],   sizeof(_UpBuffer),   SEGGER_RTT_MODE_NO_BLOCK_SKIP);
+  SEGGER_RTT_ConfigDownBuffer (RTT_CB_ADDRESS, SEGGER_SYSVIEW_RTT_CHANNEL, RTT_NAME, &_DownBuffer[0], sizeof(_DownBuffer), SEGGER_RTT_MODE_NO_BLOCK_SKIP);
   _SYSVIEW_Globals.MainContext.UpChannel = (U8)SEGGER_SYSVIEW_RTT_CHANNEL;
 #else
-  _SYSVIEW_Globals.MainContext.UpChannel = (U8)SEGGER_RTT_AllocUpBuffer  ("SysView", &_UpBuffer[0],   sizeof(_UpBuffer),   SEGGER_RTT_MODE_NO_BLOCK_SKIP);
+  Channel = SEGGER_RTT_AllocUpBuffer(RTT_CB_ADDRESS, RTT_NAME, &_UpBuffer[0], sizeof(_UpBuffer), SEGGER_RTT_MODE_NO_BLOCK_SKIP);
+  _SYSVIEW_Globals.MainContext.UpChannel = (Channel < 0) ? 0u : (U8)Channel;
   _SYSVIEW_Globals.MainContext.DownChannel = _SYSVIEW_Globals.MainContext.UpChannel;
-  SEGGER_RTT_ConfigDownBuffer (_SYSVIEW_Globals.MainContext.DownChannel, "SysView", &_DownBuffer[0], sizeof(_DownBuffer), SEGGER_RTT_MODE_NO_BLOCK_SKIP);
+  if (Channel >= 0) {
+    SEGGER_RTT_ConfigDownBuffer(RTT_CB_ADDRESS, _SYSVIEW_Globals.MainContext.DownChannel, RTT_NAME, &_DownBuffer[0], sizeof(_DownBuffer), SEGGER_RTT_MODE_NO_BLOCK_SKIP);
+  }
 #endif
   _SYSVIEW_Globals.MainContext.RAMBaseAddress   = SEGGER_SYSVIEW_ID_BASE;
   _SYSVIEW_Globals.MainContext.LastTxTimeStamp  = 0;
@@ -1624,8 +1635,13 @@ void SEGGER_SYSVIEW_Init_Ex(U32 SysFreq, U32 CPUFreq, const SEGGER_SYSVIEW_OS_AP
 *    SizeDownBuffer - Size of RTT down-buffer.
 */
 void SEGGER_SYSVIEW_InitAdditionalBuffer(SEGGER_SYSVIEW_CORE_CONTEXT* pContext, void* pUpBuffer, unsigned UpBufferSize, void* pDownBuffer, unsigned DownBufferSize) {
-  pContext->UpChannel = (U8)SEGGER_RTT_AllocUpBuffer("SysView", pUpBuffer, UpBufferSize, SEGGER_RTT_MODE_NO_BLOCK_SKIP);
-  SEGGER_RTT_ConfigDownBuffer(pContext->UpChannel, "SysView", pDownBuffer, DownBufferSize, SEGGER_RTT_MODE_NO_BLOCK_SKIP);
+  int Channel;
+
+  Channel = SEGGER_RTT_AllocUpBuffer(RTT_CB_ADDRESS, RTT_NAME, pUpBuffer, UpBufferSize, SEGGER_RTT_MODE_NO_BLOCK_SKIP);
+  pContext->UpChannel = (Channel < 0) ? 0u : (U8)Channel;
+  if (Channel >= 0) {
+    SEGGER_RTT_ConfigDownBuffer(RTT_CB_ADDRESS, pContext->UpChannel, RTT_NAME, pDownBuffer, DownBufferSize, SEGGER_RTT_MODE_NO_BLOCK_SKIP);
+  }
 }
 
 /*********************************************************************
@@ -2084,7 +2100,7 @@ void SEGGER_SYSVIEW_Start_Ex(SEGGER_SYSVIEW_CORE_CONTEXT* pContext, unsigned Tim
     }
 #else
     SEGGER_SYSVIEW_LOCK();
-    SEGGER_RTT_WriteSkipNoLock(pContext->UpChannel, _abSync, 10);
+    SEGGER_RTT_WriteSkipNoLock(RTT_CB_ADDRESS, pContext->UpChannel, _abSync, 10);
     SEGGER_SYSVIEW_UNLOCK();
     SEGGER_SYSVIEW_ON_EVENT_RECORDED(10);
     _SendStartEvent(pContext);
@@ -4279,7 +4295,7 @@ int SEGGER_SYSVIEW_IsStarted(void) {
   //
   // Check if host is sending data which needs to be processed.
   //
-  if (SEGGER_RTT_HASDATA(CHANNEL_ID_DOWN)) {
+  if (SEGGER_RTT_HASDATA(RTT_CB_ADDRESS, CHANNEL_ID_DOWN)) {
     if (_SYSVIEW_Globals.MainContext.RecursionCnt == 0) {   // Avoid uncontrolled nesting. This way, this routine can call itself once, but no more often than that.
       _SYSVIEW_Globals.MainContext.RecursionCnt = 1;
       _HandleIncomingPacket();

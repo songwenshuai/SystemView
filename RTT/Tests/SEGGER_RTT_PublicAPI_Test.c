@@ -435,10 +435,15 @@ static void _TestInitAndFind(void) {
   Address = _Base();
   TEST_ASSERT_EQ_I(-1, SEGGER_RTT_CheckInit(0u));
   TEST_ASSERT_EQ_I(-1, SEGGER_RTT_CheckInit(Address + 1u));
+  TEST_ASSERT_EQ_I(-1, SEGGER_RTT_InitEx(0u, TEST_MEM_SIZE));
+  TEST_ASSERT_EQ_I(-1, SEGGER_RTT_InitEx(Address + 1u, TEST_MEM_SIZE));
+  TEST_ASSERT_EQ_I(-1, SEGGER_RTT_InitEx(Address, SEGGER_RTT__REQUIRED_MEM_SIZE - 1u));
   TEST_ASSERT_EQ_I(-1, SEGGER_RTT_FindControlBlock(NULL, sizeof(_TestMem.ac)));
 
-  SEGGER_RTT_Init(Address);
+  TEST_ASSERT_EQ_I(0, SEGGER_RTT_InitEx(Address, TEST_MEM_SIZE));
   TEST_ASSERT_EQ_I(0, SEGGER_RTT_CheckInit(Address));
+  TEST_ASSERT_EQ_I(0, SEGGER_RTT_CheckRegion(Address, TEST_MEM_SIZE));
+  TEST_ASSERT_EQ_I(-1, SEGGER_RTT_CheckRegion(Address, SEGGER_RTT__REQUIRED_MEM_SIZE - 1u));
   Search = Address;
   TEST_ASSERT_EQ_I(0, SEGGER_RTT_FindControlBlock(&Search, sizeof(_TestMem.ac)));
   TEST_ASSERT(Search == Address);
@@ -453,6 +458,26 @@ static void _TestInitAndFind(void) {
   Search = _Base() + 1u;
   TEST_ASSERT_EQ_I(0, SEGGER_RTT_FindControlBlock(&Search, sizeof(_TestMem.ac) - 1u));
   TEST_ASSERT(Search == Address);
+
+  Address = _Reset();
+  SEGGER_RTT__WR32(SEGGER_RTT__FIELD(_UpRing(Address, 0u), SEGGER_RTT__BUFFER_OFF_P_BUFFER), TEST_MEM_SIZE - 4u);
+  SEGGER_RTT__WR32(SEGGER_RTT__FIELD(_UpRing(Address, 0u), SEGGER_RTT__BUFFER_OFF_SIZE_OF_BUFFER), 8u);
+  TEST_ASSERT_EQ_I(-1, SEGGER_RTT_CheckRegion(Address, TEST_MEM_SIZE));
+
+  Address = _Reset();
+  SEGGER_RTT__WR32(SEGGER_RTT__FIELD(_UpRing(Address, 0u), SEGGER_RTT__BUFFER_OFF_FLAGS), 3u);
+  TEST_ASSERT_EQ_I(-1, SEGGER_RTT_CheckRegion(Address, TEST_MEM_SIZE));
+
+  Address = _Reset();
+  SEGGER_RTT__WR32(SEGGER_RTT__ADDR(Address, SEGGER_RTT__CB_OFF_MAX_NUM_UP_BUFFERS), TEST_MEM_SIZE);
+  TEST_ASSERT_EQ_I(-1, SEGGER_RTT_CheckRegion(Address, TEST_MEM_SIZE));
+
+  memset(&_TestMem, 0, sizeof(_TestMem));
+  Address = _Base();
+  SEGGER_RTT__WR8(Address, 'S');
+  TEST_ASSERT_EQ_I(-1, SEGGER_RTT_CheckInit(Address));
+  TEST_ASSERT_EQ_U(1u, SEGGER_RTT_PutChar(Address, 0u, 'Z'));
+  TEST_ASSERT_EQ_I(0, SEGGER_RTT_CheckInit(Address));
 }
 
 /*********************************************************************
@@ -919,8 +944,12 @@ static void _TestConfigErrorAPI(void) {
   TEST_ASSERT_EQ_I(-1, SEGGER_RTT_ConfigUpBuffer(Address, 9u, sName, pBuffer, 24u, SEGGER_RTT_MODE_NO_BLOCK_SKIP));
   TEST_ASSERT_EQ_I(-1, SEGGER_RTT_ConfigUpBuffer(Address, 1u, (const char*)Address, pBuffer, 24u, SEGGER_RTT_MODE_NO_BLOCK_SKIP));
   TEST_ASSERT_EQ_I(-1, SEGGER_RTT_ConfigUpBuffer(Address, 1u, sName, (void*)Address, 24u, SEGGER_RTT_MODE_NO_BLOCK_SKIP));
+  TEST_ASSERT_EQ_I(-1, SEGGER_RTT_ConfigUpBuffer(Address, 1u, sName, pBuffer, 1u, SEGGER_RTT_MODE_NO_BLOCK_SKIP));
+  TEST_ASSERT_EQ_I(-1, SEGGER_RTT_ConfigUpBuffer(Address, 1u, sName, pBuffer, 24u, 3u));
   TEST_ASSERT_EQ_I(-1, SEGGER_RTT_ConfigDownBuffer(Address, 1u, (const char*)Address, pBuffer, 24u, SEGGER_RTT_MODE_NO_BLOCK_SKIP));
   TEST_ASSERT_EQ_I(-1, SEGGER_RTT_ConfigDownBuffer(Address, 1u, sName, (void*)Address, 24u, SEGGER_RTT_MODE_NO_BLOCK_SKIP));
+  TEST_ASSERT_EQ_I(-1, SEGGER_RTT_ConfigDownBuffer(Address, 1u, sName, pBuffer, 1u, SEGGER_RTT_MODE_NO_BLOCK_SKIP));
+  TEST_ASSERT_EQ_I(-1, SEGGER_RTT_ConfigDownBuffer(Address, 1u, sName, pBuffer, 24u, 3u));
   TEST_ASSERT_EQ_I(-1, SEGGER_RTT_ConfigDownBuffer(0u, 1u, sName, pBuffer, 24u, SEGGER_RTT_MODE_NO_BLOCK_SKIP));
   TEST_ASSERT_EQ_I(-1, SEGGER_RTT_ConfigDownBuffer(Address, 9u, sName, pBuffer, 24u, SEGGER_RTT_MODE_NO_BLOCK_SKIP));
   TEST_ASSERT_EQ_I(-1, SEGGER_RTT_SetNameUpBuffer(0u, 0u, sName));
@@ -931,14 +960,20 @@ static void _TestConfigErrorAPI(void) {
   TEST_ASSERT_EQ_I(-1, SEGGER_RTT_SetNameDownBuffer(Address, 9u, sName));
   TEST_ASSERT_EQ_I(-1, SEGGER_RTT_SetFlagsUpBuffer(0u, 0u, SEGGER_RTT_MODE_NO_BLOCK_SKIP));
   TEST_ASSERT_EQ_I(-1, SEGGER_RTT_SetFlagsUpBuffer(Address, 9u, SEGGER_RTT_MODE_NO_BLOCK_SKIP));
+  TEST_ASSERT_EQ_I(-1, SEGGER_RTT_SetFlagsUpBuffer(Address, 0u, 3u));
   TEST_ASSERT_EQ_I(-1, SEGGER_RTT_SetFlagsDownBuffer(0u, 0u, SEGGER_RTT_MODE_NO_BLOCK_SKIP));
   TEST_ASSERT_EQ_I(-1, SEGGER_RTT_SetFlagsDownBuffer(Address, 9u, SEGGER_RTT_MODE_NO_BLOCK_SKIP));
+  TEST_ASSERT_EQ_I(-1, SEGGER_RTT_SetFlagsDownBuffer(Address, 0u, 3u));
   TEST_ASSERT_EQ_I(-1, SEGGER_RTT_AllocUpBuffer(0u, sName, pBuffer, 24u, SEGGER_RTT_MODE_NO_BLOCK_SKIP));
   TEST_ASSERT_EQ_I(-1, SEGGER_RTT_AllocUpBuffer(Address, sName, (void*)Address, 24u, SEGGER_RTT_MODE_NO_BLOCK_SKIP));
+  TEST_ASSERT_EQ_I(-1, SEGGER_RTT_AllocUpBuffer(Address, sName, pBuffer, 1u, SEGGER_RTT_MODE_NO_BLOCK_SKIP));
+  TEST_ASSERT_EQ_I(-1, SEGGER_RTT_AllocUpBuffer(Address, sName, pBuffer, 24u, 3u));
   TEST_ASSERT_EQ_I(-1, SEGGER_RTT_AllocDownBuffer(0u, sName, pBuffer, 24u, SEGGER_RTT_MODE_NO_BLOCK_SKIP));
   TEST_ASSERT_EQ_I(-1, SEGGER_RTT_AllocDownBuffer(Address, (const char*)Address, pBuffer, 24u, SEGGER_RTT_MODE_NO_BLOCK_SKIP));
   TEST_ASSERT_EQ_I(-1, SEGGER_RTT_AllocUpBuffer(Address, (const char*)Address, pBuffer, 24u, SEGGER_RTT_MODE_NO_BLOCK_SKIP));
   TEST_ASSERT_EQ_I(-1, SEGGER_RTT_AllocDownBuffer(Address, sName, (void*)Address, 24u, SEGGER_RTT_MODE_NO_BLOCK_SKIP));
+  TEST_ASSERT_EQ_I(-1, SEGGER_RTT_AllocDownBuffer(Address, sName, pBuffer, 1u, SEGGER_RTT_MODE_NO_BLOCK_SKIP));
+  TEST_ASSERT_EQ_I(-1, SEGGER_RTT_AllocDownBuffer(Address, sName, pBuffer, 24u, 3u));
 
   SEGGER_RTT__WR32(SEGGER_RTT__ADDR(Address, SEGGER_RTT__CB_OFF_MAX_NUM_UP_BUFFERS), 0u);
   TEST_ASSERT_EQ_I(-1, SEGGER_RTT_AllocUpBuffer(Address, sName, pBuffer, 24u, SEGGER_RTT_MODE_NO_BLOCK_SKIP));

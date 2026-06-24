@@ -140,6 +140,195 @@ static const char _aTerminalStr[] = "Terminal";  // Default terminal name copied
 
 /*********************************************************************
 *
+*       _IsValidFlags()
+*
+*  Function description
+*    Checks whether a public configuration flags value uses a known RTT
+*    operating mode and no reserved bits.
+*
+*  Parameters
+*    Flags  RTT buffer flags.
+*
+*  Return value
+*    != 0  Valid.
+*    == 0  Invalid.
+*/
+static int _IsValidFlags(unsigned Flags) {
+  return (Flags <= SEGGER_RTT_MODE_BLOCK_IF_FIFO_FULL) ? 1 : 0;
+}
+
+/*********************************************************************
+*
+*       _IsRTTId()
+*
+*  Function description
+*    Checks whether a control block contains the complete initialized
+*    RTT ID string.
+*
+*  Parameters
+*    Address  Base address of the RTT control block.
+*
+*  Return value
+*    != 0  Complete RTT ID is present.
+*    == 0  RTT ID is missing or address is invalid.
+*/
+static int _IsRTTId(uintptr_t Address) {
+  unsigned i;
+
+  if ((Address == 0u) || ((Address & 3u) != 0u)) {
+    return 0;
+  }
+  for (i = 0u; i < sizeof(_aRTTId); i++) {
+    if (SEGGER_RTT__RD8(SEGGER_RTT__ADDR(Address, SEGGER_RTT__CB_OFF_AC_ID + i)) != (unsigned char)_aRTTId[i]) {
+      return 0;
+    }
+  }
+  RTT__DMB();                         // Force ID read before reading the rest of the control block
+  return 1;
+}
+
+/*********************************************************************
+*
+*       _IsValidSharedName()
+*
+*  Function description
+*    Checks whether an optional shared-memory string pointer can be
+*    represented as a 32-bit offset from the control block base.
+*
+*  Parameters
+*    Address  Base address of the RTT control block.
+*    Ptr      Optional pointer to validate.
+*
+*  Return value
+*    != 0  Pointer is NULL or valid.
+*    == 0  Pointer cannot be encoded as a shared-memory offset.
+*/
+static int _IsValidSharedName(uintptr_t Address, const void* Ptr) {
+  uintptr_t Addr;
+
+  Addr = (uintptr_t)Ptr;
+  if (Addr == 0u) {
+    return 1;
+  }
+  if ((Addr <= Address) || ((Addr - Address) > (uintptr_t)UINT32_MAX)) {
+    return 0;
+  }
+  return 1;
+}
+
+/*********************************************************************
+*
+*       _IsValidSharedBuffer()
+*
+*  Function description
+*    Checks whether a shared-memory payload buffer can be represented as
+*    a 32-bit offset and has enough bytes to operate as a ring buffer.
+*
+*  Parameters
+*    Address     Base address of the RTT control block.
+*    pBuffer     Buffer pointer to validate.
+*    BufferSize  Buffer size in bytes.
+*
+*  Return value
+*    != 0  Buffer pointer and size are valid.
+*    == 0  Buffer cannot be encoded or is too small.
+*/
+static int _IsValidSharedBuffer(uintptr_t Address, const void* pBuffer, unsigned BufferSize) {
+  uintptr_t Addr;
+
+  Addr = (uintptr_t)pBuffer;
+  if ((BufferSize < 2u) || (Addr <= Address) || ((Addr - Address) > (uintptr_t)UINT32_MAX)) {
+    return 0;
+  }
+  if ((uintptr_t)BufferSize > ((uintptr_t)UINT32_MAX - (Addr - Address))) {
+    return 0;
+  }
+  return 1;
+}
+
+/*********************************************************************
+*
+*       _IsOffsetRangeInRegion()
+*
+*  Function description
+*    Checks whether an offset range is fully inside a mapped shared
+*    memory region.
+*
+*  Parameters
+*    Off       Offset from RTT control block base.
+*    NumBytes  Number of bytes in the range.
+*    Size      Mapped shared-memory region size.
+*
+*  Return value
+*    != 0  Range is inside the region.
+*    == 0  Range is outside the region.
+*/
+static int _IsOffsetRangeInRegion(uint32_t Off, uint32_t NumBytes, size_t Size) {
+  size_t Offset;
+
+  Offset = (size_t)Off;
+  if (Offset >= Size) {
+    return 0;
+  }
+  if ((size_t)NumBytes > (Size - Offset)) {
+    return 0;
+  }
+  return 1;
+}
+
+/*********************************************************************
+*
+*       _CheckRingInRegion()
+*
+*  Function description
+*    Validates one ring descriptor against a known shared-memory region.
+*
+*  Parameters
+*    pRing  Address of the descriptor to validate.
+*    Size   Mapped shared-memory region size.
+*
+*  Return value
+*    >= 0  Descriptor is valid.
+*     < 0  Descriptor is invalid.
+*/
+static int _CheckRingInRegion(uintptr_t pRing, size_t Size) {
+  uint32_t NameOff;
+  uint32_t BufferOff;
+  uint32_t SizeOfBuffer;
+  uint32_t RdOff;
+  uint32_t WrOff;
+  uint32_t Flags;
+
+  NameOff      = SEGGER_RTT__RD32(SEGGER_RTT__FIELD(pRing, SEGGER_RTT__BUFFER_OFF_NAME));
+  BufferOff    = SEGGER_RTT__RD32(SEGGER_RTT__FIELD(pRing, SEGGER_RTT__BUFFER_OFF_P_BUFFER));
+  SizeOfBuffer = SEGGER_RTT__RD32(SEGGER_RTT__FIELD(pRing, SEGGER_RTT__BUFFER_OFF_SIZE_OF_BUFFER));
+  RdOff        = SEGGER_RTT__RD32(SEGGER_RTT__FIELD(pRing, SEGGER_RTT__BUFFER_OFF_RD_OFF));
+  WrOff        = SEGGER_RTT__RD32(SEGGER_RTT__FIELD(pRing, SEGGER_RTT__BUFFER_OFF_WR_OFF));
+  Flags        = SEGGER_RTT__RD32(SEGGER_RTT__FIELD(pRing, SEGGER_RTT__BUFFER_OFF_FLAGS));
+  RTT__DMB();                         // Force descriptor reads before validating offsets
+  if ((NameOff != 0u) && !_IsOffsetRangeInRegion(NameOff, 1u, Size)) {
+    return -1;
+  }
+  if (!_IsValidFlags(Flags)) {
+    return -1;
+  }
+  if (BufferOff == 0u) {
+    if ((SizeOfBuffer != 0u) || (RdOff != 0u) || (WrOff != 0u)) {
+      return -1;
+    }
+    return 0;
+  }
+  if ((SizeOfBuffer < 2u) || !_IsOffsetRangeInRegion(BufferOff, SizeOfBuffer, Size)) {
+    return -1;
+  }
+  if ((RdOff >= SizeOfBuffer) || (WrOff >= SizeOfBuffer)) {
+    return -1;
+  }
+  return 0;
+}
+
+/*********************************************************************
+*
 *       _DoInit()
 *
 *  Function description
@@ -157,7 +346,7 @@ static const char _aTerminalStr[] = "Terminal";  // Default terminal name copied
     uintptr_t _SEGGER_RTT__Address;                                    \
     _SEGGER_RTT__Address = (uintptr_t)(Address);                       \
     if (_SEGGER_RTT__Address != 0u) {                                  \
-      if (SEGGER_RTT__RD8(SEGGER_RTT__ADDR(_SEGGER_RTT__Address, SEGGER_RTT__CB_OFF_AC_ID)) != 'S') { \
+      if (_IsRTTId(_SEGGER_RTT__Address) == 0) {                       \
         _DoInit(_SEGGER_RTT__Address);                                 \
       }                                                                \
     }                                                                  \
@@ -454,17 +643,71 @@ static unsigned _GetAvailWriteSpace(uintptr_t pRing) {
 *    < 0 - RTT control block is not initialized.
 */
 int SEGGER_RTT_CheckInit(uintptr_t Address) {
-  unsigned i;
+  return _IsRTTId(Address) ? 0 : -1;
+}
 
-  if ((Address == 0u) || ((Address & 3u) != 0u)) {
+/*********************************************************************
+*
+*       SEGGER_RTT_CheckRegion()
+*
+*  Function description
+*    Checks whether an initialized RTT control block and its currently
+*    configured descriptors are fully contained in a mapped shared
+*    memory region.  This function never initializes or modifies the
+*    control block.
+*
+*  Parameters
+*    Address     Base address of the RTT control block.
+*    Size        Size of the mapped shared-memory region.
+*
+*  Return value
+*      0 - RTT control block and descriptors are valid for the region.
+*    < 0 - RTT control block or descriptors are invalid.
+*/
+int SEGGER_RTT_CheckRegion(uintptr_t Address, size_t Size) {
+  unsigned MaxNumUpBuffers;
+  unsigned MaxNumDownBuffers;
+  unsigned i;
+  uintptr_t DownOff;
+  uintptr_t pRing;
+
+  if ((Address == 0u) || ((Address & 3u) != 0u) || (Size < SEGGER_RTT__REQUIRED_MEM_SIZE)) {
     return -1;
   }
-  for (i = 0u; i < sizeof(_aRTTId); i++) {
-    if (SEGGER_RTT__RD8(SEGGER_RTT__ADDR(Address, SEGGER_RTT__CB_OFF_AC_ID + i)) != (unsigned char)_aRTTId[i]) {
+  if (Size > (size_t)(UINTPTR_MAX - Address)) {
+    return -1;
+  }
+  if (_IsRTTId(Address) == 0) {
+    return -1;
+  }
+  MaxNumUpBuffers   = SEGGER_RTT__RD32(SEGGER_RTT__ADDR(Address, SEGGER_RTT__CB_OFF_MAX_NUM_UP_BUFFERS));
+  MaxNumDownBuffers = SEGGER_RTT__RD32(SEGGER_RTT__ADDR(Address, SEGGER_RTT__CB_OFF_MAX_NUM_DOWN_BUFFERS));
+  RTT__DMB();                       // Force buffer count reads before checking descriptor ranges
+  if ((MaxNumUpBuffers == 0u) || (MaxNumDownBuffers == 0u)) {
+    return -1;
+  }
+  if ((uintptr_t)MaxNumUpBuffers > ((uintptr_t)(Size - SEGGER_RTT__CB_OFF_A_UP) / SEGGER_RTT__BUFFER_SIZE)) {
+    return -1;
+  }
+  DownOff = SEGGER_RTT__CB_OFF_A_DOWN_RUNTIME(MaxNumUpBuffers);
+  if (DownOff > (uintptr_t)Size) {
+    return -1;
+  }
+  if ((uintptr_t)MaxNumDownBuffers > (((uintptr_t)Size - DownOff) / SEGGER_RTT__BUFFER_SIZE)) {
+    return -1;
+  }
+  for (i = 0u; i < MaxNumUpBuffers; i++) {
+    pRing = SEGGER_RTT__ADDR(Address, SEGGER_RTT__CB_OFF_A_UP_INDEX(i));
+    if (_CheckRingInRegion(pRing, Size) < 0) {
       return -1;
     }
   }
-  RTT__DMB();                       // Force ID read before reading the rest of the control block
+  for (i = 0u; i < MaxNumDownBuffers; i++) {
+    pRing = SEGGER_RTT__ADDR(Address, SEGGER_RTT__CB_OFF_A_DOWN_RUNTIME_INDEX(MaxNumUpBuffers, i));
+    if (_CheckRingInRegion(pRing, Size) < 0) {
+      return -1;
+    }
+  }
   return 0;
 }
 
@@ -1925,15 +2168,7 @@ int SEGGER_RTT_AllocDownBuffer(uintptr_t Address, const char* sName, void* pBuff
   uintptr_t Addr;
   uintptr_t pRing;
 
-  if (Address == 0u) {
-    return -1;
-  }
-  Addr = (uintptr_t)sName;
-  if ((Addr != 0u) && ((Addr <= Address) || ((Addr - Address) > (uintptr_t)UINT32_MAX))) {
-    return -1;
-  }
-  Addr = (uintptr_t)pBuffer;
-  if ((Addr <= Address) || ((Addr - Address) > (uintptr_t)UINT32_MAX) || ((uintptr_t)BufferSize > ((uintptr_t)UINT32_MAX - (Addr - Address)))) {
+  if ((Address == 0u) || !_IsValidFlags(Flags) || !_IsValidSharedName(Address, sName) || !_IsValidSharedBuffer(Address, pBuffer, BufferSize)) {
     return -1;
   }
   INIT(Address);
@@ -1997,15 +2232,7 @@ int SEGGER_RTT_AllocUpBuffer(uintptr_t Address, const char* sName, void* pBuffer
   uintptr_t Addr;
   uintptr_t pRing;
 
-  if (Address == 0u) {
-    return -1;
-  }
-  Addr = (uintptr_t)sName;
-  if ((Addr != 0u) && ((Addr <= Address) || ((Addr - Address) > (uintptr_t)UINT32_MAX))) {
-    return -1;
-  }
-  Addr = (uintptr_t)pBuffer;
-  if ((Addr <= Address) || ((Addr - Address) > (uintptr_t)UINT32_MAX) || ((uintptr_t)BufferSize > ((uintptr_t)UINT32_MAX - (Addr - Address)))) {
+  if ((Address == 0u) || !_IsValidFlags(Flags) || !_IsValidSharedName(Address, sName) || !_IsValidSharedBuffer(Address, pBuffer, BufferSize)) {
     return -1;
   }
   INIT(Address);
@@ -2075,17 +2302,13 @@ int SEGGER_RTT_ConfigUpBuffer(uintptr_t Address, unsigned BufferIndex, const cha
   uintptr_t pUp;
 
   if (Address != 0u) {
-    r = 0;
+    r = _IsValidFlags(Flags) ? 0 : -1;
     if (BufferIndex) {
-      Addr = (uintptr_t)sName;
-      if ((Addr != 0u) && ((Addr <= Address) || ((Addr - Address) > (uintptr_t)UINT32_MAX))) {
+      if (!_IsValidSharedName(Address, sName)) {
         r = -1;
       }
-      if (r == 0) {
-        Addr = (uintptr_t)pBuffer;
-        if ((Addr <= Address) || ((Addr - Address) > (uintptr_t)UINT32_MAX) || ((uintptr_t)BufferSize > ((uintptr_t)UINT32_MAX - (Addr - Address)))) {
-          r = -1;
-        }
+      if ((r == 0) && !_IsValidSharedBuffer(Address, pBuffer, BufferSize)) {
+        r = -1;
       }
     }
     if (r == 0) {
@@ -2152,17 +2375,13 @@ int SEGGER_RTT_ConfigDownBuffer(uintptr_t Address, unsigned BufferIndex, const c
   uintptr_t pDown;
 
   if (Address != 0u) {
-    r = 0;
+    r = _IsValidFlags(Flags) ? 0 : -1;
     if (BufferIndex) {
-      Addr = (uintptr_t)sName;
-      if ((Addr != 0u) && ((Addr <= Address) || ((Addr - Address) > (uintptr_t)UINT32_MAX))) {
+      if (!_IsValidSharedName(Address, sName)) {
         r = -1;
       }
-      if (r == 0) {
-        Addr = (uintptr_t)pBuffer;
-        if ((Addr <= Address) || ((Addr - Address) > (uintptr_t)UINT32_MAX) || ((uintptr_t)BufferSize > ((uintptr_t)UINT32_MAX - (Addr - Address)))) {
-          r = -1;
-        }
+      if ((r == 0) && !_IsValidSharedBuffer(Address, pBuffer, BufferSize)) {
+        r = -1;
       }
     }
     if (r == 0) {
@@ -2220,7 +2439,7 @@ int SEGGER_RTT_SetNameUpBuffer(uintptr_t Address, unsigned BufferIndex, const ch
 
   if (Address != 0u) {
     Addr = (uintptr_t)sName;
-    if ((Addr != 0u) && ((Addr <= Address) || ((Addr - Address) > (uintptr_t)UINT32_MAX))) {
+    if (!_IsValidSharedName(Address, sName)) {
       r = -1;
     } else {
       INIT(Address);
@@ -2268,7 +2487,7 @@ int SEGGER_RTT_SetNameDownBuffer(uintptr_t Address, unsigned BufferIndex, const 
 
   if (Address != 0u) {
     Addr = (uintptr_t)sName;
-    if ((Addr != 0u) && ((Addr <= Address) || ((Addr - Address) > (uintptr_t)UINT32_MAX))) {
+    if (!_IsValidSharedName(Address, sName)) {
       r = -1;
     } else {
       INIT(Address);
@@ -2315,18 +2534,22 @@ int SEGGER_RTT_SetFlagsUpBuffer(uintptr_t Address, unsigned BufferIndex, unsigne
   uintptr_t pUp;
 
   if (Address != 0u) {
-    INIT(Address);
-    SEGGER_RTT_LOCK();
-    MaxNumUpBuffers = SEGGER_RTT__RD32(SEGGER_RTT__ADDR(Address, SEGGER_RTT__CB_OFF_MAX_NUM_UP_BUFFERS));
-    RTT__DMB();                       // Force MaxNumUpBuffers read before calculating the ring address
-    if ((MaxNumUpBuffers == 0u) || (BufferIndex >= MaxNumUpBuffers)) {
+    if (!_IsValidFlags(Flags)) {
       r = -1;
     } else {
-      pUp = SEGGER_RTT__ADDR(Address, SEGGER_RTT__CB_OFF_A_UP_INDEX(BufferIndex));
-      SEGGER_RTT__WR32(SEGGER_RTT__FIELD(pUp, SEGGER_RTT__BUFFER_OFF_FLAGS), Flags);
-      r =  0;
+      INIT(Address);
+      SEGGER_RTT_LOCK();
+      MaxNumUpBuffers = SEGGER_RTT__RD32(SEGGER_RTT__ADDR(Address, SEGGER_RTT__CB_OFF_MAX_NUM_UP_BUFFERS));
+      RTT__DMB();                       // Force MaxNumUpBuffers read before calculating the ring address
+      if ((MaxNumUpBuffers == 0u) || (BufferIndex >= MaxNumUpBuffers)) {
+        r = -1;
+      } else {
+        pUp = SEGGER_RTT__ADDR(Address, SEGGER_RTT__CB_OFF_A_UP_INDEX(BufferIndex));
+        SEGGER_RTT__WR32(SEGGER_RTT__FIELD(pUp, SEGGER_RTT__BUFFER_OFF_FLAGS), Flags);
+        r =  0;
+      }
+      SEGGER_RTT_UNLOCK();
     }
-    SEGGER_RTT_UNLOCK();
   } else {
     r = -1;
   }
@@ -2358,19 +2581,23 @@ int SEGGER_RTT_SetFlagsDownBuffer(uintptr_t Address, unsigned BufferIndex, unsig
   uintptr_t pDown;
 
   if (Address != 0u) {
-    INIT(Address);
-    SEGGER_RTT_LOCK();
-    MaxNumUpBuffers   = SEGGER_RTT__RD32(SEGGER_RTT__ADDR(Address, SEGGER_RTT__CB_OFF_MAX_NUM_UP_BUFFERS));
-    MaxNumDownBuffers = SEGGER_RTT__RD32(SEGGER_RTT__ADDR(Address, SEGGER_RTT__CB_OFF_MAX_NUM_DOWN_BUFFERS));
-    RTT__DMB();                       // Force buffer count reads before calculating the ring address
-    if ((MaxNumUpBuffers == 0u) || (MaxNumDownBuffers == 0u) || (BufferIndex >= MaxNumDownBuffers)) {
+    if (!_IsValidFlags(Flags)) {
       r = -1;
     } else {
-      pDown = SEGGER_RTT__ADDR(Address, SEGGER_RTT__CB_OFF_A_DOWN_RUNTIME_INDEX(MaxNumUpBuffers, BufferIndex));
-      SEGGER_RTT__WR32(SEGGER_RTT__FIELD(pDown, SEGGER_RTT__BUFFER_OFF_FLAGS), Flags);
-      r =  0;
+      INIT(Address);
+      SEGGER_RTT_LOCK();
+      MaxNumUpBuffers   = SEGGER_RTT__RD32(SEGGER_RTT__ADDR(Address, SEGGER_RTT__CB_OFF_MAX_NUM_UP_BUFFERS));
+      MaxNumDownBuffers = SEGGER_RTT__RD32(SEGGER_RTT__ADDR(Address, SEGGER_RTT__CB_OFF_MAX_NUM_DOWN_BUFFERS));
+      RTT__DMB();                       // Force buffer count reads before calculating the ring address
+      if ((MaxNumUpBuffers == 0u) || (MaxNumDownBuffers == 0u) || (BufferIndex >= MaxNumDownBuffers)) {
+        r = -1;
+      } else {
+        pDown = SEGGER_RTT__ADDR(Address, SEGGER_RTT__CB_OFF_A_DOWN_RUNTIME_INDEX(MaxNumUpBuffers, BufferIndex));
+        SEGGER_RTT__WR32(SEGGER_RTT__FIELD(pDown, SEGGER_RTT__BUFFER_OFF_FLAGS), Flags);
+        r =  0;
+      }
+      SEGGER_RTT_UNLOCK();
     }
-    SEGGER_RTT_UNLOCK();
   } else {
     r = -1;
   }
@@ -2390,6 +2617,34 @@ int SEGGER_RTT_SetFlagsDownBuffer(uintptr_t Address, unsigned BufferIndex, unsig
 */
 void SEGGER_RTT_Init (uintptr_t Address) {
   _DoInit(Address);
+}
+
+/*********************************************************************
+*
+*       SEGGER_RTT_InitEx
+*
+*  Function description
+*    Initializes the RTT Control Block after verifying that the mapped
+*    shared-memory region is large enough for the default control block
+*    and buffers.
+*
+*  Parameters
+*    Address     Base address of the RTT control block.
+*    Size        Size of the mapped shared-memory region.
+*
+*  Return value
+*      0 - O.K.
+*    < 0 - Error
+*/
+int SEGGER_RTT_InitEx (uintptr_t Address, size_t Size) {
+  if ((Address == 0u) || ((Address & 3u) != 0u) || (Size < SEGGER_RTT__REQUIRED_MEM_SIZE)) {
+    return -1;
+  }
+  if (Size > (size_t)(UINTPTR_MAX - Address)) {
+    return -1;
+  }
+  _DoInit(Address);
+  return SEGGER_RTT_CheckRegion(Address, Size);
 }
 
 /*********************************************************************

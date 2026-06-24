@@ -220,6 +220,46 @@ extern "C" {
 
 /*********************************************************************
 *
+*       Define: SEGGER_SYSVIEW_RTT_CB_ADDRESS
+*
+*  Description
+*    Base address of the shared-memory RTT control block used by
+*    SystemView.
+*  Default
+*    SEGGER_RTT_CB_ADDRESS
+*  Notes
+*    The shared-memory RTT API requires all calls to pass the RTT
+*    control-block base explicitly.  Applications can override this
+*    define in SEGGER_SYSVIEW_Conf.h only if SystemView intentionally
+*    uses a different RTT control block from the common
+*    SEGGER_RTT_CB_ADDRESS.
+*/
+#ifndef   SEGGER_SYSVIEW_RTT_CB_ADDRESS
+  #define SEGGER_SYSVIEW_RTT_CB_ADDRESS          SEGGER_RTT_CB_ADDRESS
+#endif
+
+/*********************************************************************
+*
+*       Define: SEGGER_SYSVIEW_RTT_NAME_ADDRESS
+*
+*  Description
+*    Optional shared-memory address of the RTT buffer name used for
+*    SystemView channels.
+*  Default
+*    0: No name is installed.
+*  Notes
+*    Shared-memory RTT descriptors store names as offsets from
+*    SEGGER_SYSVIEW_RTT_CB_ADDRESS.  String literals are usually not in
+*    the shared-memory region, so applications that want a channel name
+*    must place "SysView" or another name in shared memory and define
+*    this address.
+*/
+#ifndef   SEGGER_SYSVIEW_RTT_NAME_ADDRESS
+  #define SEGGER_SYSVIEW_RTT_NAME_ADDRESS        (0u)
+#endif
+
+/*********************************************************************
+*
 *       Define: SEGGER_SYSVIEW_RTT_BUFFER_SIZE
 *
 *  Description
