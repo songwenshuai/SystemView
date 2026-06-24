@@ -1,0 +1,131 @@
+# SharedMem debug mmap driver
+
+This driver is a debug-only helper for mapping pre-reserved physical shared
+memory windows into Linux user space.  It is intended for heterogeneous RTT /
+SystemView bring-up, not as a production ownership or security boundary.
+
+The platform must reserve the memory ranges outside the Linux buddy allocator
+and configure the inter-core mapping/cache attributes.  For RTT payload access,
+the shared memory must be non-cacheable normal memory.
+
+## Build
+
+export KERNEL_BUILD_DIR="/lib/modules/$(uname -r)/build"
+export SHAREDMEM_DIR="/path/to/SharedMem"
+export ARCH="arm64"
+
+make -C "$KERNEL_BUILD_DIR" M="$SHAREDMEM_DIR/Kernel" modules ARCH="$ARCH"
+
+## Docker build from macOS
+
+Docker is supported as a Linux build container for the kernel module.  The
+kernel build directory must still come from the target Linux kernel.  Do not use
+the Docker VM kernel as the target unless the module will be loaded into that
+same kernel.
+
+The host path in `KERNEL_BUILD_DIR` is mounted into the container and passed to
+kbuild as the module target:
+
+```sh
+export KERNEL_BUILD_DIR="/path/to/target/linux/build"
+export ARCH="arm64"
+
+SharedMem/docker/build.sh
+```
+
+For ARM32 with a Debian cross toolchain:
+
+```sh
+export KERNEL_BUILD_DIR="/path/to/target/linux/build"
+export ARCH="arm"
+export CROSS_COMPILE="arm-linux-gnueabihf-"
+export INSTALL_DEBIAN_CROSS_TOOLCHAINS=1
+
+SharedMem/docker/build.sh
+```
+
+For ARM64 with a Debian cross toolchain from an amd64 container:
+
+```sh
+export KERNEL_BUILD_DIR="/path/to/target/linux/build"
+export ARCH="arm64"
+export CROSS_COMPILE="aarch64-linux-gnu-"
+export INSTALL_DEBIAN_CROSS_TOOLCHAINS=1
+export DOCKER_PLATFORM="linux/amd64"
+
+SharedMem/docker/build.sh
+```
+
+For vendor SDK toolchains, mount the SDK and set `CROSS_COMPILE` to the compiler
+prefix inside the container:
+
+```sh
+export KERNEL_BUILD_DIR="/path/to/target/linux/build"
+export SDK_DIR="/path/to/vendor/sdk"
+export ARCH="arm"
+export CROSS_COMPILE="/work/sdk/path/to/bin/arm-ostl-linux-gnueabi-"
+
+SharedMem/docker/build.sh
+```
+
+The generated module is written to:
+
+```text
+SharedMem/Kernel/SharedMem.ko
+```
+
+## Loading
+
+Single region:
+
+```sh
+sudo insmod SharedMem.ko phys_addrs=0x90000000 mem_sizes=0x10000
+```
+
+Multiple non-contiguous regions:
+
+```sh
+sudo insmod SharedMem.ko \
+  phys_addrs=0x90000000,0x91000000 \
+  mem_sizes=0x10000,0x20000
+```
+
+Multiple non-contiguous regions with one common size:
+
+```sh
+sudo insmod SharedMem.ko \
+  phys_addrs=0x90000000,0x91000000 \
+  mem_sizes=0x10000
+```
+
+Multiple contiguous equal-size regions are still passed explicitly:
+
+```sh
+sudo insmod SharedMem.ko \
+  phys_addrs=0x90000000,0x90010000 \
+  mem_sizes=0x10000
+```
+
+Each region is exposed as one character device:
+
+- `/dev/shared_mem0`
+- `/dev/shared_mem1`
+- `/dev/shared_mem2`
+- `/dev/shared_mem3`
+
+If `request_mem_region()` fails because the debug range is already owned by a
+reserved-memory resource, load with:
+
+```sh
+sudo insmod SharedMem.ko phys_addrs=0x90000000 mem_sizes=0x10000 claim_mem_region=0
+```
+
+## Constraints
+
+- Every `phys_addrs[]` and `mem_sizes[]` entry must be page-aligned.
+- `mmap()` offsets and lengths must be page-aligned.
+- All mmap users must use `MAP_SHARED`.
+- The driver maps user VMAs with `pgprot_noncached()`, but the platform still
+  has to verify the resulting page attributes on the target kernel.
+- This driver does not implement cross-core locking.  RTT users still need
+  single-writer ownership per ring buffer or a separate cross-core lock.

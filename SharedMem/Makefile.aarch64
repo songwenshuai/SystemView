@@ -1,0 +1,184 @@
+#==============================================================================
+# SharedMem Driver Makefile
+# Platform: Linux ARM Cortex-A76 (ARMv8-A 64-bit)
+#==============================================================================
+
+# Configuration Variables
+CROSS_COMPILE ?= aarch64-ostl-linux-
+ARCH ?= arm64
+
+# Cross-compilation paths (set by kernel/build.sh or user environment)
+# KERNEL_DIR or KERNEL_BUILD_DIR and SYSROOT_PATH may be exported before running make.
+KERNEL_DIR ?= $(KERNEL_BUILD_DIR)
+
+# Compiler and tools
+CC := $(CROSS_COMPILE)gcc
+CXX := $(CROSS_COMPILE)g++
+LD := $(CROSS_COMPILE)ld
+AR := $(CROSS_COMPILE)ar
+STRIP := $(CROSS_COMPILE)strip
+OBJCOPY := $(CROSS_COMPILE)objcopy
+
+# Directories
+TOPDIR := $(dir $(lastword $(MAKEFILE_LIST)))
+KERNELDIR := $(realpath $(TOPDIR)/Kernel)
+LIBDIR := $(TOPDIR)/Lib
+CPPDIR := $(TOPDIR)/CPP
+INCDIR := $(TOPDIR)/Include
+
+# Build directories
+BUILD_DIR := $(TOPDIR)/build
+OBJ_DIR := $(BUILD_DIR)/obj
+BIN_DIR := $(BUILD_DIR)/bin
+MOD_DIR := $(BUILD_DIR)/modules
+
+# Common compilation flags
+COMMON_CFLAGS := -Wall -Werror -Wextra -O2 -pipe -g -feliminate-unused-debug-types
+COMMON_CXXFLAGS := $(COMMON_CFLAGS) -std=c++17 -Wno-psabi
+
+# ARM Cortex-A76 specific flags with sysroot for header files
+SYSROOT_FLAG := $(if $(SYSROOT_PATH),--sysroot=$(SYSROOT_PATH),)
+ARM64_CFLAGS := -mcpu=cortex-a76 -D_TIME_BITS=64 -D_FILE_OFFSET_BITS=64 $(SYSROOT_FLAG)
+ARM64_LDFLAGS := $(SYSROOT_FLAG)
+
+# Include directories
+INC_FLAGS := -I$(INCDIR) -I$(KERNELDIR) -I$(TOPDIR)/UAPI
+
+# Debug flags
+DEBUG_CFLAGS := -g -DDEBUG -O0
+DEBUG_CXXFLAGS := $(DEBUG_CFLAGS)
+
+# Release flags
+RELEASE_CFLAGS := -O3 -DNDEBUG
+RELEASE_CXXFLAGS := $(RELEASE_CFLAGS)
+
+# Default to release build unless DEBUG=1 is specified
+ifeq ($(DEBUG),1)
+  BASE_CFLAGS := $(COMMON_CFLAGS) $(ARM64_CFLAGS) $(DEBUG_CFLAGS) $(INC_FLAGS)
+  BASE_CXXFLAGS := $(COMMON_CXXFLAGS) $(ARM64_CFLAGS) $(DEBUG_CXXFLAGS) $(INC_FLAGS)
+else
+  BASE_CFLAGS := $(COMMON_CFLAGS) $(ARM64_CFLAGS) $(RELEASE_CFLAGS) $(INC_FLAGS)
+  BASE_CXXFLAGS := $(COMMON_CXXFLAGS) $(ARM64_CFLAGS) $(RELEASE_CXXFLAGS) $(INC_FLAGS)
+endif
+
+# Linker flags
+LDFLAGS := $(ARM64_LDFLAGS) -Wl,-O1 -Wl,--hash-style=gnu -Wl,--as-needed
+
+#==============================================================================
+# Kernel Module Sources
+#==============================================================================
+KERNEL_SRCS := $(KERNELDIR)/SharedMem.c
+KERNEL_MODS := $(MOD_DIR)/SharedMem.ko
+
+#==============================================================================
+# C Library Sources
+#==============================================================================
+LIB_SRCS := $(LIBDIR)/SharedMem_Lib.c
+LIB_OBJS := $(patsubst $(LIBDIR)/%.c,$(OBJ_DIR)/lib/%.o,$(LIB_SRCS))
+
+#==============================================================================
+# C++ Wrapper Sources
+#==============================================================================
+CPP_SRCS :=
+ifneq ($(wildcard $(CPPDIR)/SharedMem.cpp),)
+CPP_SRCS += $(CPPDIR)/SharedMem.cpp
+endif
+CPP_OBJS := $(patsubst $(CPPDIR)/%.cpp,$(OBJ_DIR)/cpp/%.o,$(CPP_SRCS))
+
+#==============================================================================
+# Header Files
+#==============================================================================
+KERNEL_HEADERS := $(TOPDIR)/UAPI/SharedMem.h
+LIB_HEADERS := $(INCDIR)/SharedMem_Lib.h
+CPP_HEADERS :=
+ifneq ($(wildcard $(INCDIR)/SharedMem.hpp),)
+CPP_HEADERS += $(INCDIR)/SharedMem.hpp
+endif
+
+#==============================================================================
+# Main Targets
+#==============================================================================
+.PHONY: all kernel lib clean help check-kernel-dir
+
+# Default target - builds all components
+all: kernel lib
+
+# Create build directories
+$(BUILD_DIR):
+	@mkdir -p $@
+
+$(OBJ_DIR): | $(BUILD_DIR)
+	@mkdir -p $@
+
+$(BIN_DIR) $(MOD_DIR): | $(BUILD_DIR)
+	@mkdir -p $@
+
+$(OBJ_DIR)/kernel $(OBJ_DIR)/lib $(OBJ_DIR)/cpp: | $(OBJ_DIR)
+	@mkdir -p $@
+
+#==============================================================================
+# Kernel Module Build Rules
+#==============================================================================
+kernel: $(KERNEL_MODS)
+
+check-kernel-dir:
+	@if [ -z "$(KERNEL_DIR)" ]; then \
+		echo "KERNEL_DIR or KERNEL_BUILD_DIR must be set for kernel module builds"; \
+		exit 1; \
+	fi
+
+$(MOD_DIR)/SharedMem.ko: check-kernel-dir $(KERNEL_SRCS) $(KERNEL_HEADERS) | $(MOD_DIR)
+	@echo "Building kernel module..."
+	$(MAKE) -C $(KERNEL_DIR) M=$(KERNELDIR) ARCH=$(ARCH) CROSS_COMPILE=$(CROSS_COMPILE) modules
+	@mkdir -p $(MOD_DIR)
+	@cp $(KERNELDIR)/*.ko $(MOD_DIR)
+
+#==============================================================================
+# C Library Build Rules
+#==============================================================================
+lib: $(LIB_OBJS) $(CPP_OBJS)
+
+$(OBJ_DIR)/lib/%.o: $(LIBDIR)/%.c $(LIB_HEADERS) | $(OBJ_DIR)/lib
+	@echo "Compiling $<..."
+	@$(CC) $(BASE_CFLAGS) -c $< -o $@
+
+#==============================================================================
+# C++ Wrapper Build Rules
+#==============================================================================
+$(OBJ_DIR)/cpp/%.o: $(CPPDIR)/%.cpp $(CPP_HEADERS) $(LIB_HEADERS) | $(OBJ_DIR)/cpp
+	@echo "Compiling $<..."
+	@$(CXX) $(BASE_CXXFLAGS) -c $< -o $@
+
+#==============================================================================
+# Help Target
+#==============================================================================
+help:
+	@echo "SharedMem Driver Makefile - Available targets:"
+	@echo "  all             - Build everything (default target)"
+	@echo "  kernel          - Build kernel module only"
+	@echo "  lib             - Build library objects only"
+	@echo "  clean           - Clean all build artifacts"
+	@echo "  help            - Display this help message"
+	@echo ""
+	@echo "Configuration Options:"
+	@echo "  DEBUG=1         - Build with debug flags"
+	@echo "  CROSS_COMPILE=  - Cross-compiler prefix"
+	@echo "  ARCH=           - Architecture"
+	@echo "  KERNEL_DIR=     - Kernel source directory"
+	@echo "  SYSROOT_PATH=   - Path to sysroot for cross-compilation"
+
+#==============================================================================
+# Clean Target - Removes all build artifacts
+#==============================================================================
+clean:
+	@echo "Cleaning kernel module..."
+	@$(MAKE) -C $(KERNEL_DIR) M=$(KERNELDIR) ARCH=$(ARCH) clean 2>/dev/null || true
+	@echo "Cleaning compiled objects..."
+	@rm -f $(LIB_OBJS) $(CPP_OBJS)
+	@echo "Removing build directory..."
+	@rm -rf $(BUILD_DIR)
+
+#==============================================================================
+# Include kernel module dependencies if they exist
+#==============================================================================
+-include $(KERNELDIR)/.*.cmd
