@@ -15,38 +15,21 @@ Purpose : Sample program for measuring RTT performance.
 ----------------------------------------------------------------------
 */
 
-#include "RTOS.h"
-#include "BSP.h"
-
 #include "SEGGER_RTT.h"
 #include <stdio.h>
 
-OS_STACKPTR int StackHP[128], StackLP[128];          /* Task stacks */
-OS_TASK TCBHP, TCBLP;                        /* Task-control-blocks */
+volatile int _Cnt;
+volatile int _Delay;
+volatile int _Marker;
 
-static void HPTask(void) {
-  while (1) {
-    //
-    // Measure time needed for RTT output
-    // Perform dummy write with 0 characters, so we know the overhead of toggling LEDs and RTT in general
-    //
-// Set BP here. Then start sampling on scope
-    BSP_ClrLED(0);
-    SEGGER_RTT_Write(0, 0, 0);
-    BSP_SetLED(0);
-    BSP_ClrLED(0);
-    SEGGER_RTT_Write(0, "01234567890123456789012345678901234567890123456789012345678901234567890123456789\r\n", 82);
-    BSP_SetLED(0);
-// Set BP here. Then stop sampling on scope
-    OS_Delay(200);
-  }
-}
+static unsigned char _aRTTMemory[SEGGER_RTT__REQUIRED_MEM_SIZE + 4u];
 
-static void LPTask(void) {
-  while (1) {
-    BSP_ToggleLED(1);
-    OS_Delay (500);
-  }
+/*********************************************************************
+*
+*       _GetRTTAddress
+*/
+static uintptr_t _GetRTTAddress(void) {
+  return ((uintptr_t)_aRTTMemory + 3u) & ~(uintptr_t)3u;
 }
 
 /*********************************************************************
@@ -56,15 +39,25 @@ static void LPTask(void) {
 *********************************************************************/
 
 int main(void) {
-  OS_IncDI();                      /* Initially disable interrupts  */
-  OS_InitKern();                   /* Initialize OS                 */
-  OS_InitHW();                     /* Initialize Hardware for OS    */
-  BSP_Init();                      /* Initialize LED ports          */
-  BSP_SetLED(0);
-  /* You need to create at least one task before calling OS_Start() */
-  OS_CREATETASK(&TCBHP, "HP Task", HPTask, 100, StackHP);
-  OS_CREATETASK(&TCBLP, "LP Task", LPTask,  50, StackLP);
-  OS_Start();                      /* Start multitasking            */
-  return 0;
-}
+  uintptr_t RTTAddress;
 
+  RTTAddress = _GetRTTAddress();
+  SEGGER_RTT_Init(RTTAddress);
+  do {
+    //
+    // Measure time needed for RTT output.
+    // The marker variable replaces board LED toggling so the example can
+    // be built without RTOS/BSP dependencies.
+    //
+    _Marker = 0;
+    SEGGER_RTT_Write(RTTAddress, 0u, NULL, 0u);
+    _Marker = 1;
+    _Marker = 0;
+    SEGGER_RTT_Write(RTTAddress, 0u, "01234567890123456789012345678901234567890123456789012345678901234567890123456789\r\n", 82u);
+    _Marker = 1;
+    _Cnt++;
+    for (_Delay = 0; _Delay < 100000; _Delay++) {
+      ;
+    }
+  } while (1);
+}

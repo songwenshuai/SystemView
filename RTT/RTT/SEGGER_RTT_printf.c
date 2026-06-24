@@ -50,6 +50,7 @@ typedef struct {
 
   int   ReturnValue;
 
+  uintptr_t Address;
   unsigned RTTBufferIndex;
 } SEGGER_RTT_PRINTF_DESC;
 
@@ -83,7 +84,7 @@ static void _StoreChar(SEGGER_RTT_PRINTF_DESC * p, char c) {
   // Write part of string, when the buffer is full
   //
   if (p->Cnt == p->BufferSize) {
-    if (SEGGER_RTT_Write(p->RTTBufferIndex, p->pBuffer, p->Cnt) != p->Cnt) {
+    if (SEGGER_RTT_Write(p->Address, p->RTTBufferIndex, p->pBuffer, p->Cnt) != p->Cnt) {
       p->ReturnValue = -1;
     } else {
       p->Cnt = 0u;
@@ -272,6 +273,7 @@ static void _PrintInt(SEGGER_RTT_PRINTF_DESC * pBufferDesc, int v, unsigned Base
 *    This data is read by the host.
 *
 *  Parameters
+*    Address      Base address of the RTT control block.
 *    BufferIndex  Index of "Up"-buffer to be used. (e.g. 0 for "Terminal")
 *    sFormat      Pointer to format string
 *    pParamList   Pointer to the list of arguments for the format string
@@ -280,7 +282,7 @@ static void _PrintInt(SEGGER_RTT_PRINTF_DESC * pBufferDesc, int v, unsigned Base
 *    >= 0:  Number of bytes which have been stored in the "Up"-buffer.
 *     < 0:  Error
 */
-int SEGGER_RTT_vprintf(unsigned BufferIndex, const char * sFormat, va_list * pParamList) {
+int SEGGER_RTT_vprintf(uintptr_t Address, unsigned BufferIndex, const char * sFormat, va_list * pParamList) {
   char c;
   SEGGER_RTT_PRINTF_DESC BufferDesc;
   int v;
@@ -293,6 +295,7 @@ int SEGGER_RTT_vprintf(unsigned BufferIndex, const char * sFormat, va_list * pPa
   BufferDesc.pBuffer        = acBuffer;
   BufferDesc.BufferSize     = SEGGER_RTT_PRINTF_BUFFER_SIZE;
   BufferDesc.Cnt            = 0u;
+  BufferDesc.Address        = Address;
   BufferDesc.RTTBufferIndex = BufferIndex;
   BufferDesc.ReturnValue    = 0;
 
@@ -433,7 +436,7 @@ int SEGGER_RTT_vprintf(unsigned BufferIndex, const char * sFormat, va_list * pPa
     // Write remaining data, if any
     //
     if (BufferDesc.Cnt != 0u) {
-      SEGGER_RTT_Write(BufferIndex, acBuffer, BufferDesc.Cnt);
+      SEGGER_RTT_Write(Address, BufferIndex, acBuffer, BufferDesc.Cnt);
     }
     BufferDesc.ReturnValue += (int)BufferDesc.Cnt;
   }
@@ -449,6 +452,7 @@ int SEGGER_RTT_vprintf(unsigned BufferIndex, const char * sFormat, va_list * pPa
 *    This data is read by the host.
 *
 *  Parameters
+*    Address      Base address of the RTT control block.
 *    BufferIndex  Index of "Up"-buffer to be used. (e.g. 0 for "Terminal")
 *    sFormat      Pointer to format string, followed by the arguments for conversion
 *
@@ -471,13 +475,14 @@ int SEGGER_RTT_vprintf(unsigned BufferIndex, const char * sFormat, va_list * pPa
 *          s: Print the string pointed to by the argument
 *          p: Print the argument as an 8-digit hexadecimal integer. (Argument shall be a pointer to void.)
 */
-int SEGGER_RTT_printf(unsigned BufferIndex, const char * sFormat, ...) {
+int SEGGER_RTT_printf(uintptr_t Address, unsigned BufferIndex, const char * sFormat, ...) {
   int r;
   va_list ParamList;
 
   va_start(ParamList, sFormat);
-  r = SEGGER_RTT_vprintf(BufferIndex, sFormat, &ParamList);
+  r = SEGGER_RTT_vprintf(Address, BufferIndex, sFormat, &ParamList);
   va_end(ParamList);
   return r;
 }
+
 /*************************** End of file ****************************/

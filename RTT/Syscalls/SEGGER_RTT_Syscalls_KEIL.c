@@ -156,7 +156,7 @@ int _sys_write(FILEHANDLE hFile, const unsigned char * pBuffer, unsigned NumByte
 
   (void)Mode;
   if (hFile == STDOUT) {
-    SEGGER_RTT_Write(0, (const char*)pBuffer, NumBytes);
+    SEGGER_RTT_Write((uintptr_t)SEGGER_RTT_SYSCALL_CB_ADDRESS, 0u, (const char*)pBuffer, NumBytes);
 		return 0;
   }
   return r;

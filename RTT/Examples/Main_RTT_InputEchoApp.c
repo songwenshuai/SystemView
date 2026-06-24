@@ -25,18 +25,30 @@ volatile int _Cnt;
 volatile int _Delay;
 
 static char r;
+static unsigned char _aRTTMemory[SEGGER_RTT__REQUIRED_MEM_SIZE + 4u];
+
+/*********************************************************************
+*
+*       _GetRTTAddress
+*/
+static uintptr_t _GetRTTAddress(void) {
+  return ((uintptr_t)_aRTTMemory + 3u) & ~(uintptr_t)3u;
+}
 
 /*********************************************************************
 *
 *       main
 */
 void main(void) {
+  uintptr_t RTTAddress;
 
-  SEGGER_RTT_WriteString(0, "SEGGER Real-Time-Terminal Sample\r\n");
-  SEGGER_RTT_ConfigUpBuffer(0, NULL, NULL, 0, SEGGER_RTT_MODE_NO_BLOCK_SKIP);
+  RTTAddress = _GetRTTAddress();
+  SEGGER_RTT_Init(RTTAddress);
+  SEGGER_RTT_WriteString(RTTAddress, 0u, "SEGGER Real-Time-Terminal Sample\r\n");
+  SEGGER_RTT_ConfigUpBuffer(RTTAddress, 0u, NULL, NULL, 0, SEGGER_RTT_MODE_NO_BLOCK_SKIP);
   do {
-    r = SEGGER_RTT_WaitKey();
-    SEGGER_RTT_Write(0, &r, 1);
+    r = SEGGER_RTT_WaitKey(RTTAddress);
+    SEGGER_RTT_Write(RTTAddress, 0u, &r, 1);
     r++;
   } while (1);
 }

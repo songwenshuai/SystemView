@@ -62,7 +62,7 @@ _ssize_t _write_r(struct _reent *r, int file, const void *ptr, size_t len);
 */
 _ssize_t _write(int file, const void *ptr, size_t len) {
   (void) file;  /* Not used, avoid warning */
-  SEGGER_RTT_Write(0, ptr, len);
+  SEGGER_RTT_Write((uintptr_t)SEGGER_RTT_SYSCALL_CB_ADDRESS, 0u, ptr, (unsigned)len);
   return len;
 }
 
@@ -79,7 +79,7 @@ _ssize_t _write(int file, const void *ptr, size_t len) {
 _ssize_t _write_r(struct _reent *r, int file, const void *ptr, size_t len) {
   (void) file;  /* Not used, avoid warning */
   (void) r;     /* Not used, avoid warning */
-  SEGGER_RTT_Write(0, ptr, len);
+  SEGGER_RTT_Write((uintptr_t)SEGGER_RTT_SYSCALL_CB_ADDRESS, 0u, ptr, (unsigned)len);
   return len;
 }
 

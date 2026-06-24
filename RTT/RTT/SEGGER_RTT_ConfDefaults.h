@@ -18,7 +18,13 @@ Purpose : Default configuration for RTT.
 #ifndef SEGGER_RTT_CONF_DEFAULTS_H
 #define SEGGER_RTT_CONF_DEFAULTS_H
 
-#include "SEGGER_RTT_Conf.h"
+#if defined(__has_include)
+  #if __has_include("SEGGER_RTT_Conf.h")
+    #include "SEGGER_RTT_Conf.h"
+  #endif
+#else
+  #include "SEGGER_RTT_Conf.h"
+#endif
 
 /*********************************************************************
 *
@@ -107,6 +113,40 @@ Purpose : Default configuration for RTT.
 */
 #ifndef   SEGGER_RTT_MODE_DEFAULT
   #define SEGGER_RTT_MODE_DEFAULT                   SEGGER_RTT_MODE_NO_BLOCK_SKIP
+#endif
+
+/*********************************************************************
+*
+*     SEGGER_RTT_USE_SHARED_MEMORY
+*
+*  Description
+*    Selects the shared-memory RTT control block layout.
+*
+*  Additional information
+*    In shared-memory mode, pointer fields in the RTT control block
+*    contain 32-bit offsets relative to the base address passed to the
+*    RTT API.
+*/
+#ifndef   SEGGER_RTT_USE_SHARED_MEMORY
+  #define SEGGER_RTT_USE_SHARED_MEMORY               (1)
+#endif
+
+/*********************************************************************
+*
+*     SEGGER_RTT_SYSCALL_CB_ADDRESS
+*
+*  Description
+*    RTT control block base address used by the low-level printf/
+*    stdio retargeting modules.
+*
+*  Additional information
+*    The RTT API itself always receives the control block base address
+*    explicitly. Standard library syscall hooks do not have such a
+*    parameter, so applications which include RTT/Syscalls can configure
+*    the shared-memory control block used for stdout/stderr here.
+*/
+#ifndef   SEGGER_RTT_SYSCALL_CB_ADDRESS
+  #define SEGGER_RTT_SYSCALL_CB_ADDRESS              (0u)
 #endif
 
 /*********************************************************************
@@ -459,17 +499,6 @@ Purpose : Default configuration for RTT.
 
 #ifndef   SEGGER_RTT_UNLOCK
   #define SEGGER_RTT_UNLOCK()              // Unlock RTT (nestable) (i.e. enable previous interrupt lock state)
-#endif
-
-/*********************************************************************
-*
-*       If SEGGER_RTT_SECTION is defined but SEGGER_RTT_BUFFER_SECTION
-*       is not, use the same section for SEGGER_RTT_BUFFER_SECTION.
-*/
-#ifndef SEGGER_RTT_BUFFER_SECTION
-  #if defined(SEGGER_RTT_SECTION)
-    #define SEGGER_RTT_BUFFER_SECTION SEGGER_RTT_SECTION
-  #endif
 #endif
 
 #endif
