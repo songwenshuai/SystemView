@@ -150,6 +150,12 @@ static void _TelnetCodec_AppendOptionResponse(unsigned char command,
 /*********************************************************************
 *
 *       TelnetCodec_Reset()
+*
+*  Function description
+*    Reset a Telnet codec state object to the data state.
+*
+*  Parameters
+*    state  Codec state to reset.
 */
 void TelnetCodec_Reset(TelnetCodec_State_t *state) {
     if (state == NULL) {
@@ -163,6 +169,16 @@ void TelnetCodec_Reset(TelnetCodec_State_t *state) {
 /*********************************************************************
 *
 *       TelnetCodec_SendNegotiation()
+*
+*  Function description
+*    Send the Telnet option negotiation sequence to a connected socket.
+*
+*  Parameters
+*    hSock  Connected socket handle.
+*
+*  Return value
+*    0   Negotiation sequence sent.
+*   -1   Send failed.
 */
 int TelnetCodec_SendNegotiation(SYS_SOCKET_HANDLE hSock) {
     int Result;
@@ -182,6 +198,23 @@ int TelnetCodec_SendNegotiation(SYS_SOCKET_HANDLE hSock) {
 /*********************************************************************
 *
 *       TelnetCodec_FilterClientData()
+*
+*  Function description
+*    Filter Telnet command bytes from client data and generate any
+*    required Telnet command responses.
+*
+*  Parameters
+*    state          Codec state.
+*    input          Client input bytes.
+*    input_len      Number of input bytes.
+*    output         Filtered data output buffer.
+*    output_size    Output buffer size in bytes.
+*    response       Telnet response output buffer.
+*    response_size  Response buffer size in bytes.
+*    response_len   Number of response bytes produced.
+*
+*  Return value
+*    Number of filtered data bytes produced.
 */
 unsigned TelnetCodec_FilterClientData(TelnetCodec_State_t *state,
                                       const char *input,

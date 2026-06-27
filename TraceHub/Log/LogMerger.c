@@ -1007,6 +1007,7 @@ int LogMerger_FlushReady(LogMerger_Output_t output, void *user_data) {
 *
 *  Function description
 *    Flush all buffered entries in sorted order via output callback.
+*    Use during shutdown after collectors have stopped.
 *
 *  Parameters
 *    output     Output callback function
@@ -1291,7 +1292,12 @@ unsigned LogMerger_GetBufferedCount(void) {
 *       LogMerger_WriteEntry()
 *
 *  Function description
-*    Write one delivered entry to the merger-owned log file.
+*    Persist a merged entry to the merger-owned log file when logging is
+*    enabled.
+*
+*  Return value
+*    0   Success or logging disabled.
+*   -1   Log file write failed.
 */
 int LogMerger_WriteEntry(const LogEntry_t *entry) {
     const char *source_name;
@@ -1331,6 +1337,13 @@ int LogMerger_WriteEntry(const LogEntry_t *entry) {
 /*********************************************************************
 *
 *       LogMerger_HasFileError()
+*
+*  Function description
+*    Check whether the merger log file encountered a persistence error.
+*
+*  Return value
+*    true   Persistence error occurred.
+*    false  No persistence error recorded.
 */
 bool LogMerger_HasFileError(void) {
     bool file_error;

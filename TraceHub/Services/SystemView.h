@@ -150,12 +150,12 @@ _Static_assert((SYSVIEW_HELLO_PREFIX_SIZE + 9u) <= SYSVIEW_HELLO_SIZE,
 *    version constants.
 *
 *  Parameters
-*    pMessage     Output buffer
-*    MessageSize  Output buffer size in bytes
+*    pMessage     Output buffer.
+*    MessageSize  Output buffer size in bytes.
 *
 *  Return value
-*    true   Message was built
-*    false  Invalid buffer contract
+*    true   Message was built.
+*    false  Invalid buffer contract.
 */
 static inline bool SystemView_BuildHelloMessage(unsigned char *pMessage, size_t MessageSize) {
     static const char acPrefix[] = SYSVIEW_HELLO_PREFIX;
@@ -193,12 +193,12 @@ static inline bool SystemView_BuildHelloMessage(unsigned char *pMessage, size_t 
 *    required SEGGER SystemView prefix.
 *
 *  Parameters
-*    pMessage     Input message
-*    MessageSize  Input message size in bytes
+*    pMessage     Input message.
+*    MessageSize  Input message size in bytes.
 *
 *  Return value
-*    true   Prefix is valid
-*    false  Prefix or buffer contract is invalid
+*    true   Prefix is valid.
+*    false  Prefix or buffer contract is invalid.
 */
 static inline bool SystemView_HelloHasValidPrefix(const unsigned char *pMessage, size_t MessageSize) {
     static const char acPrefix[] = SYSVIEW_HELLO_PREFIX;
@@ -256,77 +256,11 @@ typedef struct {
 **********************************************************************
 */
 
-/*********************************************************************
-*
-*       SystemView_Init()
-*
-*  Function description
-*    Initialize the SystemView service with the specified configuration.
-*
-*  Parameters
-*    config  Pointer to configuration structure
-*
-*  Return value
-*    0   Success
-*   -1   Invalid configuration or already initialized
-*/
-int SystemView_Init(SystemView_Config_t *config);
-
-/*********************************************************************
-*
-*       SystemView_Start()
-*
-*  Function description
-*    Start the recording thread and optional network service thread.
-*
-*  Return value
-*    0   Success
-*   -1   Failed to start service
-*/
-int SystemView_Start(void);
-
-/*********************************************************************
-*
-*       SystemView_Stop()
-*
-*  Function description
-*    Stop the SystemView service and cleanup resources.
-*/
-void SystemView_Stop(void);
-
-/*********************************************************************
-*
-*       SystemView_Status()
-*
-*  Function description
-*    Print current SystemView service status to stdout.
-*/
-void SystemView_Status(void);
-
-/*********************************************************************
-*
-*       SystemView_IsEnabled()
-*
-*  Function description
-*    Check if the SystemView service is enabled.
-*
-*  Return value
-*    true   Service is enabled
-*    false  Service is disabled
-*/
-bool SystemView_IsEnabled(void);
-
-/*********************************************************************
-*
-*       SystemView_HasFatalError()
-*
-*  Function description
-*    Check whether the SystemView service entered a fatal state.
-*
-*  Return value
-*    true   Fatal error occurred
-*    false  No fatal error recorded
-*/
+int  SystemView_Init         (SystemView_Config_t *config);
+int  SystemView_Start        (void);
+void SystemView_Stop         (void);
+void SystemView_Status       (void);
+bool SystemView_IsEnabled    (void);
 bool SystemView_HasFatalError(void);
 
 #if defined(__cplusplus)          // Allow usage of this module from C++ files (disable name mangling)

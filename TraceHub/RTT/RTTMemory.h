@@ -130,41 +130,25 @@ typedef struct RTTMem_Backend {
 
 /*********************************************************************
 *
-*       API functions - Backend management
+*       API functions
 *
 **********************************************************************
 */
 
-int                       RTTMem_InstallBackend   (const RTTMem_Backend_t *backend);
-const RTTMem_Backend_t   *RTTMem_GetBackend       (void);
-const char               *RTTMem_GetBackendName   (void);
-void                      RTTMem_SetResetOnInit   (bool enabled);
-bool                      RTTMem_GetResetOnInit   (void);
-
-/*********************************************************************
-*
-*       API functions - Backend implementations
-*
-**********************************************************************
-*/
-
-const RTTMem_Backend_t   *RTTMem_Backend_SMEM     (void);
-const RTTMem_Backend_t   *RTTMem_Backend_MEMSHM   (void);
-int                       RTTMem_InstallDefaultBackend(void);
-
-/*********************************************************************
-*
-*       API functions - Memory operations (backend-agnostic)
-*
-**********************************************************************
-*/
-
-int       RTTMem_Init           (const char *device_path);
-int       RTTMem_InitEx         (const char *path, uint64_t base, size_t size);
-void      RTTMem_Cleanup        (void);
-uint64_t  RTTMem_GetBackendBase (void);
-size_t    RTTMem_GetMappedSize  (void);
-uintptr_t RTTMem_ToLocalAddress (uint64_t address, size_t size);
+int                      RTTMem_InstallBackend       (const RTTMem_Backend_t *backend);
+const RTTMem_Backend_t * RTTMem_GetBackend           (void);
+const char *             RTTMem_GetBackendName       (void);
+void                     RTTMem_SetResetOnInit       (bool enabled);
+bool                     RTTMem_GetResetOnInit       (void);
+const RTTMem_Backend_t * RTTMem_Backend_SMEM         (void);
+const RTTMem_Backend_t * RTTMem_Backend_MEMSHM       (void);
+int                      RTTMem_InstallDefaultBackend(void);
+int                      RTTMem_Init                 (const char *device_path);
+int                      RTTMem_InitEx               (const char *path, uint64_t base, size_t size);
+void                     RTTMem_Cleanup              (void);
+uint64_t                 RTTMem_GetBackendBase       (void);
+size_t                   RTTMem_GetMappedSize        (void);
+uintptr_t                RTTMem_ToLocalAddress       (uint64_t address, size_t size);
 
 #if defined(__cplusplus)
 }

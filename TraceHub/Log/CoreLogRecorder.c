@@ -664,6 +664,12 @@ static void _Recorder_DrainSource(CoreLogRecorder_SourceId_t source_id) {
 /*********************************************************************
 *
 *       _Recorder_LinuxThread()
+*
+*  Function description
+*    Thread entry for draining the Linux core log source.
+*
+*  Parameters
+*    arg  Unused thread context.
 */
 static void _Recorder_LinuxThread(void *arg) {
     (void)arg;
@@ -674,6 +680,12 @@ static void _Recorder_LinuxThread(void *arg) {
 /*********************************************************************
 *
 *       _Recorder_RTOSThread()
+*
+*  Function description
+*    Thread entry for draining the RTOS core log source.
+*
+*  Parameters
+*    arg  Unused thread context.
 */
 static void _Recorder_RTOSThread(void *arg) {
     (void)arg;
@@ -872,6 +884,18 @@ static int _Recorder_InitSource(CoreLogRecorder_SourceId_t source_id,
 /*********************************************************************
 *
 *       CoreLogRecorder_Init()
+*
+*  Function description
+*    Initialize the core log recorder and prepare enabled source queues
+*    and output files.
+*
+*  Parameters
+*    config  Recorder configuration.
+*
+*  Return value
+*    0   Success.
+*   -1   Invalid configuration or recorder state.
+*   -2   Failed to initialize an enabled source.
 */
 int CoreLogRecorder_Init(const CoreLogRecorder_Config_t *config) {
     const char *linux_prefix;
@@ -936,6 +960,15 @@ int CoreLogRecorder_Init(const CoreLogRecorder_Config_t *config) {
 /*********************************************************************
 *
 *       CoreLogRecorder_Start()
+*
+*  Function description
+*    Start recorder threads for enabled core log sources.
+*
+*  Return value
+*    0   Success.
+*   -1   Recorder is not initialized, has failed, or is already running.
+*   -2   Failed to create a recorder thread.
+*   -3   RTT source channel validation failed.
 */
 int CoreLogRecorder_Start(void) {
     int result;
@@ -983,6 +1016,10 @@ int CoreLogRecorder_Start(void) {
 /*********************************************************************
 *
 *       CoreLogRecorder_Stop()
+*
+*  Function description
+*    Stop recorder threads, flush pending file output, and report
+*    recorder statistics.
 */
 void CoreLogRecorder_Stop(void) {
     _Recorder_SetRunning(false);
@@ -1004,6 +1041,9 @@ void CoreLogRecorder_Stop(void) {
 /*********************************************************************
 *
 *       CoreLogRecorder_Cleanup()
+*
+*  Function description
+*    Stop recording when needed and release recorder resources.
 */
 void CoreLogRecorder_Cleanup(void) {
     if (_Recorder_IsRunning() ||
@@ -1027,6 +1067,17 @@ void CoreLogRecorder_Cleanup(void) {
 /*********************************************************************
 *
 *       CoreLogRecorder_RegisterConsumer()
+*
+*  Function description
+*    Register a consumer for a core log channel.
+*
+*  Parameters
+*    channel  RTT up-buffer channel used by the source.
+*
+*  Return value
+*    0   Consumer registered.
+*   -1   Recorder or channel is invalid.
+*   -2   Consumer is already registered.
 */
 int CoreLogRecorder_RegisterConsumer(unsigned channel) {
     CoreLogRecorder_Source_t *source;
@@ -1054,6 +1105,12 @@ int CoreLogRecorder_RegisterConsumer(unsigned channel) {
 /*********************************************************************
 *
 *       CoreLogRecorder_UnregisterConsumer()
+*
+*  Function description
+*    Unregister the consumer for a core log channel.
+*
+*  Parameters
+*    channel  RTT up-buffer channel used by the source.
 */
 void CoreLogRecorder_UnregisterConsumer(unsigned channel) {
     CoreLogRecorder_Source_t *source;
@@ -1075,6 +1132,20 @@ void CoreLogRecorder_UnregisterConsumer(unsigned channel) {
 /*********************************************************************
 *
 *       CoreLogRecorder_ReadChannel()
+*
+*  Function description
+*    Read queued core log bytes for a registered consumer.
+*
+*  Parameters
+*    channel      RTT up-buffer channel used by the source.
+*    buffer       Destination buffer.
+*    buffer_size  Destination buffer size in bytes.
+*
+*  Return value
+*    >= 0  Number of bytes read.
+*    -1    Recorder, channel, or buffer is invalid.
+*    -2    No consumer is registered for the channel.
+*    -3    Consumer queue capacity failure was detected.
 */
 int CoreLogRecorder_ReadChannel(unsigned channel, void *buffer, size_t buffer_size) {
     CoreLogRecorder_Source_t *source;
@@ -1160,6 +1231,16 @@ int CoreLogRecorder_ReadChannel(unsigned channel, void *buffer, size_t buffer_si
 /*********************************************************************
 *
 *       CoreLogRecorder_IsCoreChannel()
+*
+*  Function description
+*    Check whether a channel belongs to an initialized core log source.
+*
+*  Parameters
+*    channel  RTT up-buffer channel to check.
+*
+*  Return value
+*    true   Channel belongs to a core log source.
+*    false  Channel is not a core log source.
 */
 bool CoreLogRecorder_IsCoreChannel(unsigned channel) {
     if (!_recorder_state.initialized) {
@@ -1172,6 +1253,16 @@ bool CoreLogRecorder_IsCoreChannel(unsigned channel) {
 /*********************************************************************
 *
 *       CoreLogRecorder_GetStats()
+*
+*  Function description
+*    Copy recorder statistics for all core log sources.
+*
+*  Parameters
+*    stats  Destination statistics structure.
+*
+*  Return value
+*    0   Statistics copied.
+*   -1   Recorder is not initialized or destination is invalid.
 */
 int CoreLogRecorder_GetStats(CoreLogRecorder_Stats_t *stats) {
     CoreLogRecorder_Source_t       *source;
@@ -1214,6 +1305,13 @@ int CoreLogRecorder_GetStats(CoreLogRecorder_Stats_t *stats) {
 /*********************************************************************
 *
 *       CoreLogRecorder_HasFatalError()
+*
+*  Function description
+*    Check whether the recorder has entered a fatal error state.
+*
+*  Return value
+*    true   Fatal error occurred.
+*    false  No fatal error recorded.
 */
 bool CoreLogRecorder_HasFatalError(void) {
     return _Recorder_HasFatalError();
@@ -1222,6 +1320,13 @@ bool CoreLogRecorder_HasFatalError(void) {
 /*********************************************************************
 *
 *       CoreLogRecorder_IsRunning()
+*
+*  Function description
+*    Check whether core log recorder threads are running.
+*
+*  Return value
+*    true   Recorder is running.
+*    false  Recorder is stopped.
 */
 bool CoreLogRecorder_IsRunning(void) {
     return _Recorder_IsRunning();

@@ -122,30 +122,19 @@ typedef enum {
 **********************************************************************
 */
 
-//
-// Main log file management API
-//
-int   LOG_Init(void);
-int   LOG_InitEx(const char *prefix);
-void  LOG_Cleanup(void);
-FILE* LOG_GetMainFile(void);
-
-//
-// Basic logging API
-//
-FILE* LOG_CreateTimestampedFile(const char *prefix);
-FILE* LOG_CreateTimestampedFileEx(const char *prefix, const char *extension, const char *mode);
-void  LOG_Hexdump(void *inbuf, unsigned inlen, bool ascii, bool addr);
-void  LOG_LogToFile(FILE *file, const char* sFormat, ...);
-void  LOG_Debug(const char *file, int line, const char *function, const char* sFormat, ...);
-void  LOG_Error(const char* sFormat, ...);
-void  LOG_Warn(const char* sFormat, ...);
-
-//
-// Specialized logging API (with thread-safe VT state)
-//
-int   LOG_TelnetLogToFile(FILE *file, const char *inBuf, uint32_t inLen, VT_State_t *vt_state);
-int   LOG_SwimLaneLogToFile(FILE *file, uint64_t timestamp_us, const char *source, const char *content);
+int    LOG_Init                 (void);
+int    LOG_InitEx               (const char *prefix);
+void   LOG_Cleanup              (void);
+FILE * LOG_GetMainFile          (void);
+FILE * LOG_CreateTimestampedFile(const char *prefix);
+FILE * LOG_CreateTimestampedFileEx(const char *prefix, const char *extension, const char *mode);
+void   LOG_Hexdump              (void *inbuf, unsigned inlen, bool ascii, bool addr);
+void   LOG_LogToFile            (FILE *file, const char *sFormat, ...);
+void   LOG_Debug                (const char *file, int line, const char *function, const char *sFormat, ...);
+void   LOG_Error                (const char *sFormat, ...);
+void   LOG_Warn                 (const char *sFormat, ...);
+int    LOG_TelnetLogToFile      (FILE *file, const char *inBuf, uint32_t inLen, VT_State_t *vt_state);
+int    LOG_SwimLaneLogToFile    (FILE *file, uint64_t timestamp_us, const char *source, const char *content);
 
 #if defined(__cplusplus)          // Allow usage of this module from C++ files (disable name mangling)
 }                /* Make sure we have C-declarations in C++ programs */

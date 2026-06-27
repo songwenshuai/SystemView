@@ -71,7 +71,7 @@ extern "C" {
 */
 
 void CLI_PrintBanner(FILE *stream);
-void CLI_PrintUsage(void);
+void CLI_PrintUsage (void);
 
 #if defined(__cplusplus)
 }

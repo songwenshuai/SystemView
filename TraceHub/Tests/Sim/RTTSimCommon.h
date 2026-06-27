@@ -84,6 +84,10 @@ Purpose : Shared helpers for RTT simulation programs
 *
 *  Function description
 *    Print raw bytes as hexadecimal values.
+*
+*  Parameters
+*    data       Bytes to print.
+*    num_bytes  Number of bytes to print.
 */
 static void RTT_SIM_PrintBytes(const unsigned char *data, unsigned num_bytes) {
     unsigned i;
@@ -106,10 +110,16 @@ static void RTT_SIM_PrintBytes(const unsigned char *data, unsigned num_bytes) {
 *
 *  Function description
 *    Read host-to-target bytes from a down-buffer and print them.
+*
+*  Parameters
+*    rtt_address  Local mapped RTT control block address.
+*    channel      RTT down-buffer channel index.
+*    name         Display name for the source.
+*
+*  Return value
+*    Number of bytes drained from the down-buffer.
 */
-static unsigned RTT_SIM_DrainDownBuffer(uintptr_t rtt_address,
-                                        unsigned channel,
-                                        const char *name) {
+static unsigned RTT_SIM_DrainDownBuffer(uintptr_t rtt_address, unsigned channel, const char *name) {
     unsigned char buffer[RTT_SIM_DOWN_BUFFER_SIZE];
     unsigned      bytes_read;
 

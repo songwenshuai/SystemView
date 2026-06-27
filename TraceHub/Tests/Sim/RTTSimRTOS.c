@@ -119,6 +119,12 @@ static volatile sig_atomic_t _running = 1;
 /*********************************************************************
 *
 *       _SignalHandler()
+*
+*  Function description
+*    Request simulator shutdown when a termination signal is received.
+*
+*  Parameters
+*    signum  Signal number.
 */
 static void _SignalHandler(int signum) {
     (void)signum;

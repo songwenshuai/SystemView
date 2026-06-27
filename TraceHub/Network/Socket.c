@@ -351,6 +351,11 @@ SYS_SOCKET_HANDLE SYS_SOCKET_AcceptEx(SYS_SOCKET_HANDLE hSocket, int TimeoutMs) 
 *
 *       SYS_SOCKET_EnableKeepalive
 *
+*  Function description
+*    Enables TCP keepalive on a socket.
+*
+*  Parameters
+*    hSocket  Handle to socket that has been returned by SYS_SOCKET_OpenTCP().
 */
 void SYS_SOCKET_EnableKeepalive(SYS_SOCKET_HANDLE hSocket) {
   int on = 1;

@@ -85,12 +85,10 @@ typedef enum {
 **********************************************************************
 */
 
-size_t LogLineParser_TrimTrailingWhitespace(char *str);
-size_t LogLineParser_AdjustUtf8Boundary(const char *str, size_t len);
-const char *LogLineParser_SkipHorizontalWhitespace(const char *p);
-LogLineTimestampParseResult_t LogLineParser_ParseTimestampPrefix(const char *line,
-                                                                 uint64_t *timestamp_us,
-                                                                 const char **content);
+size_t                         LogLineParser_TrimTrailingWhitespace  (char *str);
+size_t                         LogLineParser_AdjustUtf8Boundary      (const char *str, size_t len);
+const char *                   LogLineParser_SkipHorizontalWhitespace(const char *p);
+LogLineTimestampParseResult_t  LogLineParser_ParseTimestampPrefix    (const char *line, uint64_t *timestamp_us, const char **content);
 
 #if defined(__cplusplus)
 }

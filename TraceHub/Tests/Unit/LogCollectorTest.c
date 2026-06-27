@@ -389,6 +389,13 @@ static int _TestLeadingUntimedLineWaitsForFirstTimestamp(void) {
 /*********************************************************************
 *
 *       main()
+*
+*  Function description
+*    Run LogCollector unit tests.
+*
+*  Return value
+*    0  All tests passed.
+*    1  A test failed.
 */
 int main(void) {
     if (_TestUntimedLineDoesNotUseStaleSourceTimestamp() != 0) {

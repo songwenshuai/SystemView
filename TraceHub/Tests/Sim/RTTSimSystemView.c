@@ -102,6 +102,15 @@ static int                          _started;
 /*********************************************************************
 *
 *       _TaskId()
+*
+*  Function description
+*    Build the deterministic SystemView task identifier for a task index.
+*
+*  Parameters
+*    index  Task table index.
+*
+*  Return value
+*    SystemView task identifier.
 */
 static uint32_t _TaskId(unsigned index) {
     return _core_config.task_base + ((index + 1u) * 0x10u);
@@ -110,6 +119,15 @@ static uint32_t _TaskId(unsigned index) {
 /*********************************************************************
 *
 *       _TaskName()
+*
+*  Function description
+*    Get the deterministic task name for a task index.
+*
+*  Parameters
+*    index  Task table index.
+*
+*  Return value
+*    Task name string.
 */
 static const char *_TaskName(unsigned index) {
     static const char *const names[RTT_SIM_SYSVIEW_TASK_COUNT] = {
@@ -127,6 +145,12 @@ static const char *_TaskName(unsigned index) {
 /*********************************************************************
 *
 *       _SendTaskInfo()
+*
+*  Function description
+*    Send SystemView task metadata for a simulated task.
+*
+*  Parameters
+*    index  Task table index.
 */
 static void _SendTaskInfo(unsigned index) {
     SEGGER_SYSVIEW_TASKINFO info;
@@ -150,6 +174,9 @@ static void _SendTaskInfo(unsigned index) {
 /*********************************************************************
 *
 *       _SendCoreDescription()
+*
+*  Function description
+*    Send SystemView system description metadata for the simulated core.
 */
 static void _SendCoreDescription(void) {
     char desc[96];
@@ -179,6 +206,17 @@ static void _SendCoreDescription(void) {
 /*********************************************************************
 *
 *       _WaitForSpinLock()
+*
+*  Function description
+*    Wait until the RTT software spinlock area is initialized.
+*
+*  Parameters
+*    address  Spinlock base address.
+*    size     Spinlock memory size in bytes.
+*
+*  Return value
+*    0   Spinlock is ready.
+*   -1   Spinlock did not become ready before timeout.
 */
 static int _WaitForSpinLock(uintptr_t address, size_t size) {
     uint64_t start_us;
@@ -206,6 +244,16 @@ static int _WaitForSpinLock(uintptr_t address, size_t size) {
 /*********************************************************************
 *
 *       _ConfigureSpinLock()
+*
+*  Function description
+*    Configure the simulated SystemView spinlock address and owner id.
+*
+*  Parameters
+*    config  Core simulation configuration.
+*
+*  Return value
+*    0   Spinlock configured.
+*   -1   Configuration is invalid or spinlock is not ready.
 */
 static int _ConfigureSpinLock(const RTT_SIM_SYSVIEW_CoreConfig_t *config) {
     size_t rtt_size;
@@ -242,6 +290,12 @@ static int _ConfigureSpinLock(const RTT_SIM_SYSVIEW_CoreConfig_t *config) {
 /*********************************************************************
 *
 *       RTT_SIM_SYSVIEW_GetRTTAddress()
+*
+*  Function description
+*    Return the active simulated SystemView RTT control block address.
+*
+*  Return value
+*    RTT control block address.
 */
 uintptr_t RTT_SIM_SYSVIEW_GetRTTAddress(void) {
     return _rtt_address;
@@ -250,6 +304,12 @@ uintptr_t RTT_SIM_SYSVIEW_GetRTTAddress(void) {
 /*********************************************************************
 *
 *       RTT_SIM_SYSVIEW_GetTimestamp()
+*
+*  Function description
+*    Return the current simulated SystemView timestamp.
+*
+*  Return value
+*    Timestamp in configured SystemView ticks.
 */
 unsigned RTT_SIM_SYSVIEW_GetTimestamp(void) {
     return (unsigned)(SYS_GetMonotonicTimeUs() & 0xFFFFFFFFu);
@@ -258,6 +318,12 @@ unsigned RTT_SIM_SYSVIEW_GetTimestamp(void) {
 /*********************************************************************
 *
 *       RTT_SIM_SYSVIEW_GetInterruptId()
+*
+*  Function description
+*    Return the current simulated interrupt identifier.
+*
+*  Return value
+*    Interrupt identifier.
 */
 unsigned RTT_SIM_SYSVIEW_GetInterruptId(void) {
     return _interrupt_id;
@@ -266,6 +332,12 @@ unsigned RTT_SIM_SYSVIEW_GetInterruptId(void) {
 /*********************************************************************
 *
 *       RTT_SIM_SYSVIEW_OnEventRecorded()
+*
+*  Function description
+*    Account for bytes recorded by the simulated SystemView backend.
+*
+*  Parameters
+*    NumBytes  Number of bytes recorded.
 */
 void RTT_SIM_SYSVIEW_OnEventRecorded(unsigned NumBytes) {
     _recorded_bytes += NumBytes;
@@ -274,6 +346,9 @@ void RTT_SIM_SYSVIEW_OnEventRecorded(unsigned NumBytes) {
 /*********************************************************************
 *
 *       RTT_SIM_SYSVIEW_Lock()
+*
+*  Function description
+*    Acquire the simulated SystemView RTT spinlock.
 */
 void RTT_SIM_SYSVIEW_Lock(void) {
     if (SEGGER_RTT_SPINLOCK_SW_LockWithLimit(_spinlock_address,
@@ -287,6 +362,9 @@ void RTT_SIM_SYSVIEW_Lock(void) {
 /*********************************************************************
 *
 *       RTT_SIM_SYSVIEW_Unlock()
+*
+*  Function description
+*    Release the simulated SystemView RTT spinlock.
 */
 void RTT_SIM_SYSVIEW_Unlock(void) {
     if (SEGGER_RTT_SPINLOCK_SW_Unlock(_spinlock_address, _spinlock_core_id) != 0) {
@@ -305,6 +383,17 @@ void RTT_SIM_SYSVIEW_Unlock(void) {
 /*********************************************************************
 *
 *       RTT_SIM_SYSVIEW_StartCore()
+*
+*  Function description
+*    Initialize simulated SystemView state for one core and emit initial
+*    target metadata.
+*
+*  Parameters
+*    config  Core simulation configuration.
+*
+*  Return value
+*    0   Success.
+*   -1   Invalid configuration or spinlock setup failure.
 */
 int RTT_SIM_SYSVIEW_StartCore(const RTT_SIM_SYSVIEW_CoreConfig_t *config) {
     SEGGER_SYSVIEW_CORE_CONTEXT *context;
@@ -353,6 +442,16 @@ int RTT_SIM_SYSVIEW_StartCore(const RTT_SIM_SYSVIEW_CoreConfig_t *config) {
 /*********************************************************************
 *
 *       RTT_SIM_SYSVIEW_RecordCycle()
+*
+*  Function description
+*    Record one deterministic simulated SystemView activity cycle.
+*
+*  Parameters
+*    sequence      Simulation sequence number.
+*    load_percent  Simulated load percentage.
+*
+*  Return value
+*    Number of bytes recorded during this cycle.
 */
 unsigned RTT_SIM_SYSVIEW_RecordCycle(unsigned sequence, unsigned load_percent) {
     uint64_t before_bytes;
@@ -409,6 +508,9 @@ unsigned RTT_SIM_SYSVIEW_RecordCycle(unsigned sequence, unsigned load_percent) {
 /*********************************************************************
 *
 *       RTT_SIM_SYSVIEW_StopCore()
+*
+*  Function description
+*    Stop simulated SystemView recording and clear spinlock state.
 */
 void RTT_SIM_SYSVIEW_StopCore(void) {
     if (_started) {
@@ -423,6 +525,12 @@ void RTT_SIM_SYSVIEW_StopCore(void) {
 /*********************************************************************
 *
 *       RTT_SIM_SYSVIEW_GetRecordedBytes()
+*
+*  Function description
+*    Return the total number of simulated SystemView bytes recorded.
+*
+*  Return value
+*    Total recorded byte count.
 */
 uint64_t RTT_SIM_SYSVIEW_GetRecordedBytes(void) {
     return _recorded_bytes;

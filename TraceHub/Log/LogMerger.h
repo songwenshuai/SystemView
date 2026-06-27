@@ -163,51 +163,15 @@ typedef int (*LogMerger_Output_t)(LogEntry_t *entry, void *user_data);
 **********************************************************************
 */
 
-int      LogMerger_Init             (LogMerger_Config_t *config);
-void     LogMerger_Cleanup          (void);
-int      LogMerger_Insert           (LogEntry_t *entry);
-/*********************************************************************
-*
-*       LogMerger_FlushReady()
-*
-*  Function description
-*    Flush entries that are safe to deliver according to required source
-*    timestamp watermarks.
-*/
-int      LogMerger_FlushReady       (LogMerger_Output_t output, void *user_data);
-/*********************************************************************
-*
-*       LogMerger_Flush()
-*
-*  Function description
-*    Force flush all buffered entries. Use during shutdown after
-*    collectors have stopped.
-*/
-int      LogMerger_Flush            (LogMerger_Output_t output, void *user_data);
-/* LogMerger_Process() takes ownership of entry regardless of return value. */
-int      LogMerger_Process          (LogEntry_t *entry, LogMerger_Output_t output, void *user_data);
-unsigned LogMerger_GetBufferedCount (void);
-/*********************************************************************
-*
-*       LogMerger_WriteEntry()
-*
-*  Function description
-*    Persist a merged entry to the merger-owned log file when logging is
-*    enabled.
-*
-*  Return value
-*    0   Success or logging disabled
-*   -1   Log file write failed
-*/
-int      LogMerger_WriteEntry       (const LogEntry_t *entry);
-/*********************************************************************
-*
-*       LogMerger_HasFileError()
-*
-*  Function description
-*    Check whether the merger log file encountered a persistence error.
-*/
-bool     LogMerger_HasFileError     (void);
+int      LogMerger_Init            (LogMerger_Config_t *config);
+void     LogMerger_Cleanup         (void);
+int      LogMerger_Insert          (LogEntry_t *entry);
+int      LogMerger_FlushReady      (LogMerger_Output_t output, void *user_data);
+int      LogMerger_Flush           (LogMerger_Output_t output, void *user_data);
+int      LogMerger_Process         (LogEntry_t *entry, LogMerger_Output_t output, void *user_data);
+unsigned LogMerger_GetBufferedCount(void);
+int      LogMerger_WriteEntry      (const LogEntry_t *entry);
+bool     LogMerger_HasFileError    (void);
 
 #if defined(__cplusplus)          // Allow usage of this module from C++ files (disable name mangling)
 }                /* Make sure we have C-declarations in C++ programs */

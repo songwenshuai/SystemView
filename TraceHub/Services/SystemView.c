@@ -593,6 +593,13 @@ static unsigned _SystemView_SetConnectedClient(SystemView_State_t *pState, SYS_S
 /*********************************************************************
 *
 *       _SystemView_AddBytesSent()
+*
+*  Function description
+*    Add sent byte count to SystemView service statistics.
+*
+*  Parameters
+*    pState    SystemView service state.
+*    NumBytes  Number of bytes sent.
 */
 static void _SystemView_AddBytesSent(SystemView_State_t *pState, unsigned NumBytes) {
     if ((pState == NULL) || (NumBytes == 0u)) {
@@ -607,6 +614,13 @@ static void _SystemView_AddBytesSent(SystemView_State_t *pState, unsigned NumByt
 /*********************************************************************
 *
 *       _SystemView_AddBytesReceived()
+*
+*  Function description
+*    Add received byte count to SystemView service statistics.
+*
+*  Parameters
+*    pState    SystemView service state.
+*    NumBytes  Number of bytes received.
 */
 static void _SystemView_AddBytesReceived(SystemView_State_t *pState, unsigned NumBytes) {
     if ((pState == NULL) || (NumBytes == 0u)) {
@@ -1230,6 +1244,16 @@ static void _SystemView_ServiceThread(void *pArg) {
 /*********************************************************************
 *
 *       SystemView_Init()
+*
+*  Function description
+*    Initialize the SystemView service with the specified configuration.
+*
+*  Parameters
+*    pConfig  Pointer to configuration structure.
+*
+*  Return value
+*    0   Success.
+*   -1   Invalid configuration or already initialized.
 */
 int SystemView_Init(SystemView_Config_t *pConfig) {
     int Ret;
@@ -1314,6 +1338,13 @@ int SystemView_Init(SystemView_Config_t *pConfig) {
 /*********************************************************************
 *
 *       SystemView_Start()
+*
+*  Function description
+*    Start the recording thread and optional network service thread.
+*
+*  Return value
+*    0   Success.
+*   -1   Failed to start service.
 */
 int SystemView_Start(void) {
     SystemView_State_t *pState = &_sysview_state;
@@ -1404,6 +1435,9 @@ int SystemView_Start(void) {
 /*********************************************************************
 *
 *       SystemView_Stop()
+*
+*  Function description
+*    Stop the SystemView service and cleanup resources.
 */
 void SystemView_Stop(void) {
     SystemView_State_t *pState = &_sysview_state;
@@ -1470,6 +1504,9 @@ void SystemView_Stop(void) {
 /*********************************************************************
 *
 *       SystemView_Status()
+*
+*  Function description
+*    Print current SystemView service status to stdout.
 */
 void SystemView_Status(void) {
     SystemView_State_t *pState = &_sysview_state;
@@ -1499,6 +1536,13 @@ void SystemView_Status(void) {
 /*********************************************************************
 *
 *       SystemView_IsEnabled()
+*
+*  Function description
+*    Check if the SystemView service is enabled.
+*
+*  Return value
+*    true   Service is enabled.
+*    false  Service is disabled.
 */
 bool SystemView_IsEnabled(void) {
     return _sysview_state.Config.enabled;
@@ -1507,6 +1551,13 @@ bool SystemView_IsEnabled(void) {
 /*********************************************************************
 *
 *       SystemView_HasFatalError()
+*
+*  Function description
+*    Check whether the SystemView service entered a fatal state.
+*
+*  Return value
+*    true   Fatal error occurred.
+*    false  No fatal error recorded.
 */
 bool SystemView_HasFatalError(void) {
     return _SystemView_HasFatalError(&_sysview_state);

@@ -85,15 +85,15 @@ typedef struct SHAREDMEM_CONTEXT* SHAREDMEM_HANDLE;
 **********************************************************************
 */
 
-SHAREDMEM_HANDLE SHAREDMEM_Open       (const char* sDevice);
+SHAREDMEM_HANDLE SHAREDMEM_Open       (const char *sDevice);
 SHAREDMEM_ERROR  SHAREDMEM_Close      (SHAREDMEM_HANDLE hMem);
-const char*      SHAREDMEM_StrError   (SHAREDMEM_ERROR Error);
-SHAREDMEM_ERROR  SHAREDMEM_GetPhysAddr(SHAREDMEM_HANDLE hMem, uint64_t* pPhysAddr);
-SHAREDMEM_ERROR  SHAREDMEM_GetSize    (SHAREDMEM_HANDLE hMem, size_t* pSize);
-SHAREDMEM_ERROR  SHAREDMEM_Read       (SHAREDMEM_HANDLE hMem, uint64_t Off, void* pBuffer, size_t NumBytes);
-SHAREDMEM_ERROR  SHAREDMEM_Write      (SHAREDMEM_HANDLE hMem, uint64_t Off, const void* pBuffer, size_t NumBytes);
-SHAREDMEM_ERROR  SHAREDMEM_Map        (SHAREDMEM_HANDLE hMem, uint64_t Off, size_t NumBytes, void** ppMem);
-SHAREDMEM_ERROR  SHAREDMEM_Unmap      (void* pMem, size_t NumBytes);
+const char *     SHAREDMEM_StrError   (SHAREDMEM_ERROR Error);
+SHAREDMEM_ERROR  SHAREDMEM_GetPhysAddr(SHAREDMEM_HANDLE hMem, uint64_t *pPhysAddr);
+SHAREDMEM_ERROR  SHAREDMEM_GetSize    (SHAREDMEM_HANDLE hMem, size_t *pSize);
+SHAREDMEM_ERROR  SHAREDMEM_Read       (SHAREDMEM_HANDLE hMem, uint64_t Off, void *pBuffer, size_t NumBytes);
+SHAREDMEM_ERROR  SHAREDMEM_Write      (SHAREDMEM_HANDLE hMem, uint64_t Off, const void *pBuffer, size_t NumBytes);
+SHAREDMEM_ERROR  SHAREDMEM_Map        (SHAREDMEM_HANDLE hMem, uint64_t Off, size_t NumBytes, void **ppMem);
+SHAREDMEM_ERROR  SHAREDMEM_Unmap      (void *pMem, size_t NumBytes);
 
 #ifdef __cplusplus
 }

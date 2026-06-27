@@ -612,6 +612,13 @@ static unsigned _Terminal_SetConnectedClient(Terminal_State_t *pState, SYS_SOCKE
 /*********************************************************************
 *
 *       _Terminal_AddBytesSent()
+*
+*  Function description
+*    Add sent byte count to terminal service statistics.
+*
+*  Parameters
+*    pState    Terminal service state.
+*    NumBytes  Number of bytes sent.
 */
 static void _Terminal_AddBytesSent(Terminal_State_t *pState, unsigned NumBytes) {
     if ((pState == NULL) || (NumBytes == 0u)) {
@@ -626,6 +633,13 @@ static void _Terminal_AddBytesSent(Terminal_State_t *pState, unsigned NumBytes) 
 /*********************************************************************
 *
 *       _Terminal_AddBytesReceived()
+*
+*  Function description
+*    Add received byte count to terminal service statistics.
+*
+*  Parameters
+*    pState    Terminal service state.
+*    NumBytes  Number of bytes received.
 */
 static void _Terminal_AddBytesReceived(Terminal_State_t *pState, unsigned NumBytes) {
     if ((pState == NULL) || (NumBytes == 0u)) {
@@ -1331,6 +1345,16 @@ static void _Terminal_ServiceThread(void *pArg) {
 /*********************************************************************
 *
 *       Terminal_Init()
+*
+*  Function description
+*    Initialize the Terminal service with the specified configuration.
+*
+*  Parameters
+*    pConfig  Pointer to configuration structure.
+*
+*  Return value
+*    0   Success.
+*   -1   Invalid configuration or already initialized.
 */
 int Terminal_Init(Terminal_Config_t *pConfig) {
     int Ret;
@@ -1403,6 +1427,13 @@ int Terminal_Init(Terminal_Config_t *pConfig) {
 /*********************************************************************
 *
 *       Terminal_Start()
+*
+*  Function description
+*    Start the Terminal service threads.
+*
+*  Return value
+*    0   Success.
+*   -1   Failed to start service.
 */
 int Terminal_Start(void) {
     Terminal_State_t *pState = &_terminal_state;
@@ -1514,6 +1545,9 @@ int Terminal_Start(void) {
 /*********************************************************************
 *
 *       Terminal_Stop()
+*
+*  Function description
+*    Stop the Terminal service and cleanup resources.
 */
 void Terminal_Stop(void) {
     Terminal_State_t *pState = &_terminal_state;
@@ -1596,6 +1630,9 @@ void Terminal_Stop(void) {
 /*********************************************************************
 *
 *       Terminal_Status()
+*
+*  Function description
+*    Print current Terminal service status to stdout.
 */
 void Terminal_Status(void) {
     Terminal_State_t *pState = &_terminal_state;
@@ -1624,6 +1661,13 @@ void Terminal_Status(void) {
 /*********************************************************************
 *
 *       Terminal_IsEnabled()
+*
+*  Function description
+*    Check if the Terminal service is enabled.
+*
+*  Return value
+*    true   Service is enabled.
+*    false  Service is disabled.
 */
 bool Terminal_IsEnabled(void) {
     return _terminal_state.Config.enabled;
@@ -1632,6 +1676,13 @@ bool Terminal_IsEnabled(void) {
 /*********************************************************************
 *
 *       Terminal_HasFatalError()
+*
+*  Function description
+*    Check whether the Terminal service entered a fatal state.
+*
+*  Return value
+*    true   Fatal error occurred.
+*    false  No fatal error recorded.
 */
 bool Terminal_HasFatalError(void) {
     return _Terminal_HasFatalError(&_terminal_state);

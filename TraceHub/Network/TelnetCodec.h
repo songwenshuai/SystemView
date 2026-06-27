@@ -99,16 +99,9 @@ typedef struct {
 **********************************************************************
 */
 
-void     TelnetCodec_Reset(TelnetCodec_State_t *state);
-int      TelnetCodec_SendNegotiation(SYS_SOCKET_HANDLE hSock);
-unsigned TelnetCodec_FilterClientData(TelnetCodec_State_t *state,
-                                      const char *input,
-                                      unsigned input_len,
-                                      char *output,
-                                      unsigned output_size,
-                                      char *response,
-                                      unsigned response_size,
-                                      unsigned *response_len);
+void     TelnetCodec_Reset           (TelnetCodec_State_t *state);
+int      TelnetCodec_SendNegotiation (SYS_SOCKET_HANDLE hSock);
+unsigned TelnetCodec_FilterClientData(TelnetCodec_State_t *state, const char *input, unsigned input_len, char *output, unsigned output_size, char *response, unsigned response_size, unsigned *response_len);
 
 #if defined(__cplusplus)
 }

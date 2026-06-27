@@ -106,77 +106,11 @@ typedef struct {
 **********************************************************************
 */
 
-/*********************************************************************
-*
-*       Terminal_Init()
-*
-*  Function description
-*    Initialize the Terminal service with the specified configuration.
-*
-*  Parameters
-*    config  Pointer to configuration structure
-*
-*  Return value
-*    0   Success
-*   -1   Invalid configuration or already initialized
-*/
-int Terminal_Init(Terminal_Config_t *config);
-
-/*********************************************************************
-*
-*       Terminal_Start()
-*
-*  Function description
-*    Start the Terminal service threads.
-*
-*  Return value
-*    0   Success
-*   -1   Failed to start service
-*/
-int Terminal_Start(void);
-
-/*********************************************************************
-*
-*       Terminal_Stop()
-*
-*  Function description
-*    Stop the Terminal service and cleanup resources.
-*/
-void Terminal_Stop(void);
-
-/*********************************************************************
-*
-*       Terminal_Status()
-*
-*  Function description
-*    Print current Terminal service status to stdout.
-*/
-void Terminal_Status(void);
-
-/*********************************************************************
-*
-*       Terminal_IsEnabled()
-*
-*  Function description
-*    Check if the Terminal service is enabled.
-*
-*  Return value
-*    true   Service is enabled
-*    false  Service is disabled
-*/
-bool Terminal_IsEnabled(void);
-
-/*********************************************************************
-*
-*       Terminal_HasFatalError()
-*
-*  Function description
-*    Check whether the Terminal service entered a fatal state.
-*
-*  Return value
-*    true   Fatal error occurred
-*    false  No fatal error recorded
-*/
+int  Terminal_Init         (Terminal_Config_t *config);
+int  Terminal_Start        (void);
+void Terminal_Stop         (void);
+void Terminal_Status       (void);
+bool Terminal_IsEnabled    (void);
 bool Terminal_HasFatalError(void);
 
 #if defined(__cplusplus)          // Allow usage of this module from C++ files (disable name mangling)

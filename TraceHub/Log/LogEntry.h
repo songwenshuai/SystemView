@@ -141,24 +141,19 @@ typedef struct {
 **********************************************************************
 */
 
-LogEntry_t* LogEntry_Create         (uint64_t timestamp_us, LogSource_t source,
-                                     const char *content, size_t content_len);
-LogEntry_t* LogEntry_CreateEx       (uint64_t timestamp_us, LogSource_t source,
-                                     uint64_t sequence,
-                                     bool fragment_continuation,
-                                     bool fragment_continues,
-                                     const char *content, size_t content_len);
-LogEntry_t* LogEntry_Clone          (const LogEntry_t *entry);
-void        LogEntry_Destroy        (LogEntry_t *entry);
-uint64_t    LogEntry_GetTimestamp   (const LogEntry_t *entry);
-LogSource_t LogEntry_GetSource      (const LogEntry_t *entry);
-uint64_t    LogEntry_GetSequence    (const LogEntry_t *entry);
-const char* LogEntry_GetContent     (const LogEntry_t *entry);
-size_t      LogEntry_GetContentLen  (const LogEntry_t *entry);
-bool        LogEntry_IsFragmentContinuation(const LogEntry_t *entry);
-bool        LogEntry_FragmentContinues     (const LogEntry_t *entry);
-bool        LogEntry_IsValid        (const LogEntry_t *entry);
-int         LogEntry_Compare        (const LogEntry_t *a, const LogEntry_t *b);
+LogEntry_t * LogEntry_Create                (uint64_t timestamp_us, LogSource_t source, const char *content, size_t content_len);
+LogEntry_t * LogEntry_CreateEx              (uint64_t timestamp_us, LogSource_t source, uint64_t sequence, bool fragment_continuation, bool fragment_continues, const char *content, size_t content_len);
+LogEntry_t * LogEntry_Clone                 (const LogEntry_t *entry);
+void         LogEntry_Destroy               (LogEntry_t *entry);
+uint64_t     LogEntry_GetTimestamp          (const LogEntry_t *entry);
+LogSource_t  LogEntry_GetSource             (const LogEntry_t *entry);
+uint64_t     LogEntry_GetSequence           (const LogEntry_t *entry);
+const char * LogEntry_GetContent            (const LogEntry_t *entry);
+size_t       LogEntry_GetContentLen         (const LogEntry_t *entry);
+bool         LogEntry_IsFragmentContinuation(const LogEntry_t *entry);
+bool         LogEntry_FragmentContinues     (const LogEntry_t *entry);
+bool         LogEntry_IsValid               (const LogEntry_t *entry);
+int          LogEntry_Compare               (const LogEntry_t *a, const LogEntry_t *b);
 
 #if defined(__cplusplus)          // Allow usage of this module from C++ files (disable name mangling)
 }                /* Make sure we have C-declarations in C++ programs */

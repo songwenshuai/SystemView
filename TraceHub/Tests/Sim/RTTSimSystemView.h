@@ -104,12 +104,12 @@ typedef struct {
 **********************************************************************
 */
 
-int      RTT_SIM_SYSVIEW_StartCore(const RTT_SIM_SYSVIEW_CoreConfig_t *config);
-unsigned RTT_SIM_SYSVIEW_RecordCycle(unsigned sequence, unsigned load_percent);
-void     RTT_SIM_SYSVIEW_StopCore(void);
+int      RTT_SIM_SYSVIEW_StartCore       (const RTT_SIM_SYSVIEW_CoreConfig_t *config);
+unsigned RTT_SIM_SYSVIEW_RecordCycle     (unsigned sequence, unsigned load_percent);
+void     RTT_SIM_SYSVIEW_StopCore        (void);
 uint64_t RTT_SIM_SYSVIEW_GetRecordedBytes(void);
-void     RTT_SIM_SYSVIEW_Lock(void);
-void     RTT_SIM_SYSVIEW_Unlock(void);
+void     RTT_SIM_SYSVIEW_Lock            (void);
+void     RTT_SIM_SYSVIEW_Unlock          (void);
 
 #endif
 

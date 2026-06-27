@@ -164,13 +164,13 @@ typedef struct {
 **********************************************************************
 */
 
-int               SwimLane_Init             (SwimLane_Config_t *config);
-void              SwimLane_Cleanup          (void);
-int               SwimLane_RenderHeader     (void);
-int               SwimLane_RenderSeparator  (void);
-int               SwimLane_RenderEntry      (const LogEntry_t *entry);
-const SwimLane_State_t* SwimLane_GetState   (void);
-unsigned          SwimLane_GetRowCount      (void);
+int                      SwimLane_Init           (SwimLane_Config_t *config);
+void                     SwimLane_Cleanup        (void);
+int                      SwimLane_RenderHeader   (void);
+int                      SwimLane_RenderSeparator(void);
+int                      SwimLane_RenderEntry    (const LogEntry_t *entry);
+const SwimLane_State_t * SwimLane_GetState       (void);
+unsigned                 SwimLane_GetRowCount    (void);
 
 #if defined(__cplusplus)          // Allow usage of this module from C++ files (disable name mangling)
 }                /* Make sure we have C-declarations in C++ programs */

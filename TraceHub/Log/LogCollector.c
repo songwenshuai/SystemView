@@ -1840,6 +1840,13 @@ int LogCollector_Poll(LogCollector_Callback_t callback, void *user_data) {
 /*********************************************************************
 *
 *       LogCollector_IsRunning()
+*
+*  Function description
+*    Check whether log collection threads are running.
+*
+*  Return value
+*    true   Collector is running.
+*    false  Collector is stopped.
 */
 bool LogCollector_IsRunning(void) {
     return _Collector_IsRunning();
@@ -1848,6 +1855,13 @@ bool LogCollector_IsRunning(void) {
 /*********************************************************************
 *
 *       LogCollector_HasFatalError()
+*
+*  Function description
+*    Check whether the collector has entered a fatal error state.
+*
+*  Return value
+*    true   Fatal error occurred.
+*    false  No fatal error recorded.
 */
 bool LogCollector_HasFatalError(void) {
     return _Collector_HasFatalError();

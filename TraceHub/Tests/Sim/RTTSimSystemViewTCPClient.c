@@ -408,6 +408,17 @@ static void _Usage(const char *program) {
 /*********************************************************************
 *
 *       main()
+*
+*  Function description
+*    Run the SystemView TCP client smoke-test helper.
+*
+*  Parameters
+*    argc  Argument count.
+*    argv  Argument vector.
+*
+*  Return value
+*    0  Test succeeded.
+*    1  Test failed.
 */
 int main(int argc, char **argv) {
     const char    *host;

@@ -136,24 +136,13 @@ typedef int (*LogCollector_Callback_t)(LogEntry_t *entry, void *user_data);
 **********************************************************************
 */
 
-int  LogCollector_Init          (LogCollector_Config_t *config);
-void LogCollector_Cleanup       (void);
-int  LogCollector_Start         (LogCollector_Callback_t callback, void *user_data);
-void LogCollector_Stop          (void);
-/*********************************************************************
-*
-*       LogCollector_Poll()
-*
-*  Return value
-*    >= 0  Number of entries collected
-*    -1    Collector not initialized, invalid callback, or collector is running
-*    -2    Recorder is not available or collector state is invalid
-*    -3    Callback requested stop
-*    -4    Leading untimestamped pending data exceeded its ordering buffer
-*/
-int  LogCollector_Poll          (LogCollector_Callback_t callback, void *user_data);
-bool LogCollector_IsRunning     (void);
-bool LogCollector_HasFatalError (void);
+int  LogCollector_Init         (LogCollector_Config_t *config);
+void LogCollector_Cleanup      (void);
+int  LogCollector_Start        (LogCollector_Callback_t callback, void *user_data);
+void LogCollector_Stop         (void);
+int  LogCollector_Poll         (LogCollector_Callback_t callback, void *user_data);
+bool LogCollector_IsRunning    (void);
+bool LogCollector_HasFatalError(void);
 
 #if defined(__cplusplus)          // Allow usage of this module from C++ files (disable name mangling)
 }                /* Make sure we have C-declarations in C++ programs */

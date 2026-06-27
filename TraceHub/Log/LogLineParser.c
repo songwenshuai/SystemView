@@ -333,6 +333,16 @@ static int _ParseTimestampValue(const char **cursor, uint64_t *timestamp_us) {
 /*********************************************************************
 *
 *       LogLineParser_TrimTrailingWhitespace()
+*
+*  Function description
+*    Remove trailing spaces, tabs, carriage returns, and line feeds from
+*    a mutable string.
+*
+*  Parameters
+*    str  String to trim.
+*
+*  Return value
+*    Trimmed string length.
 */
 size_t LogLineParser_TrimTrailingWhitespace(char *str) {
     size_t len;
@@ -353,6 +363,17 @@ size_t LogLineParser_TrimTrailingWhitespace(char *str) {
 /*********************************************************************
 *
 *       LogLineParser_AdjustUtf8Boundary()
+*
+*  Function description
+*    Shorten a byte length so it does not split an incomplete UTF-8
+*    sequence at the end of the range.
+*
+*  Parameters
+*    str  UTF-8 byte string.
+*    len  Candidate byte length.
+*
+*  Return value
+*    Safe byte length ending on a UTF-8 boundary.
 */
 size_t LogLineParser_AdjustUtf8Boundary(const char *str, size_t len) {
     size_t   lead_index;
@@ -397,6 +418,15 @@ size_t LogLineParser_AdjustUtf8Boundary(const char *str, size_t len) {
 /*********************************************************************
 *
 *       LogLineParser_SkipHorizontalWhitespace()
+*
+*  Function description
+*    Skip spaces and tabs at the current parse position.
+*
+*  Parameters
+*    p  Current parse cursor.
+*
+*  Return value
+*    Cursor after horizontal whitespace, or NULL for invalid input.
 */
 const char *LogLineParser_SkipHorizontalWhitespace(const char *p) {
     if (p == NULL) {
@@ -412,6 +442,20 @@ const char *LogLineParser_SkipHorizontalWhitespace(const char *p) {
 /*********************************************************************
 *
 *       LogLineParser_ParseTimestampPrefix()
+*
+*  Function description
+*    Parse a supported timestamp prefix and return the remaining log
+*    content cursor.
+*
+*  Parameters
+*    line          Input log line.
+*    timestamp_us  Parsed timestamp in microseconds.
+*    content       Cursor to the first content byte after the prefix.
+*
+*  Return value
+*    LOG_LINE_TIMESTAMP_PARSE_PRESENT        Timestamp and content parsed.
+*    LOG_LINE_TIMESTAMP_PARSE_EMPTY_CONTENT  Timestamp prefix has no content.
+*    LOG_LINE_TIMESTAMP_PARSE_NONE           No supported timestamp prefix.
 */
 LogLineTimestampParseResult_t LogLineParser_ParseTimestampPrefix(const char *line,
                                                                  uint64_t *timestamp_us,

@@ -209,6 +209,13 @@ static int _TestCapacityWaitsForTimeoutReadyEntries(void) {
 /*********************************************************************
 *
 *       main()
+*
+*  Function description
+*    Run LogMerger unit tests.
+*
+*  Return value
+*    0  All tests passed.
+*    1  A test failed.
 */
 int main(void) {
     if (_TestOutputFailureDoesNotAdvanceDelivered() != 0) {

@@ -113,6 +113,13 @@ static int _ExpectNoTimestamp(const char *line) {
 /*********************************************************************
 *
 *       main()
+*
+*  Function description
+*    Run LogLineParser unit tests.
+*
+*  Return value
+*    0  All tests passed.
+*    1  A test failed.
 */
 int main(void) {
     if (_ExpectTimestamp("[123] message", 123u, "message") != 0) {

@@ -151,19 +151,19 @@ typedef int SYS_SOCKET_HANDLE;
 **********************************************************************
 */
 
-SYS_SOCKET_HANDLE SYS_SOCKET_OpenTCP(void);
+SYS_SOCKET_HANDLE SYS_SOCKET_OpenTCP        (void);
 int               SYS_SOCKET_ListenAtTCPAddr(SYS_SOCKET_HANDLE hSocket, unsigned IPAddr, unsigned Port, unsigned NumConnectionsQueued);
-void              SYS_SOCKET_Shutdown(SYS_SOCKET_HANDLE hSocket, int How);
-void              SYS_SOCKET_Close(SYS_SOCKET_HANDLE hSocket);
-int               SYS_SOCKET_IsReadable(SYS_SOCKET_HANDLE hSocket, int TimeoutMs);
-int               SYS_SOCKET_IsWriteable(SYS_SOCKET_HANDLE hSocket, int TimeoutMs);
-SYS_SOCKET_HANDLE SYS_SOCKET_AcceptEx(SYS_SOCKET_HANDLE hSocket, int TimeoutMs);
+void              SYS_SOCKET_Shutdown       (SYS_SOCKET_HANDLE hSocket, int How);
+void              SYS_SOCKET_Close          (SYS_SOCKET_HANDLE hSocket);
+int               SYS_SOCKET_IsReadable     (SYS_SOCKET_HANDLE hSocket, int TimeoutMs);
+int               SYS_SOCKET_IsWriteable    (SYS_SOCKET_HANDLE hSocket, int TimeoutMs);
+SYS_SOCKET_HANDLE SYS_SOCKET_AcceptEx       (SYS_SOCKET_HANDLE hSocket, int TimeoutMs);
 void              SYS_SOCKET_EnableKeepalive(SYS_SOCKET_HANDLE hSocket);
-int               SYS_SOCKET_IsReady(SYS_SOCKET_HANDLE hSocket);
-void              SYS_SOCKET_SetNonBlocking(SYS_SOCKET_HANDLE hSocket);
-int               SYS_SOCKET_Send(SYS_SOCKET_HANDLE hSocket, const void* pData, unsigned NumBytes);
-int               SYS_SOCKET_SendAll(SYS_SOCKET_HANDLE hSocket, const void* pData, unsigned NumBytes, int TimeoutMs);
-int               SYS_SOCKET_Receive(SYS_SOCKET_HANDLE hSocket, void* pData, unsigned MaxNumBytes);
+int               SYS_SOCKET_IsReady        (SYS_SOCKET_HANDLE hSocket);
+void              SYS_SOCKET_SetNonBlocking (SYS_SOCKET_HANDLE hSocket);
+int               SYS_SOCKET_Send           (SYS_SOCKET_HANDLE hSocket, const void *pData, unsigned NumBytes);
+int               SYS_SOCKET_SendAll        (SYS_SOCKET_HANDLE hSocket, const void *pData, unsigned NumBytes, int TimeoutMs);
+int               SYS_SOCKET_Receive        (SYS_SOCKET_HANDLE hSocket, void *pData, unsigned MaxNumBytes);
 
 #if defined(__cplusplus)          // Allow usage of this module from C++ files (disable name mangling)
 }                /* Make sure we have C-declarations in C++ programs */

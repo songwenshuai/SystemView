@@ -104,20 +104,18 @@ typedef pthread_mutex_t SYS_Mutex;
 **********************************************************************
 */
 
-int      SYS_createThread(void (*threadEntry)(void*), void* context, SYS_Thread *pRetTid);
-void     SYS_destroyThread(SYS_Thread handle);
-void     SYS_ExitThread(void *status);
-void     SYS_WaitThreadTerm(SYS_Thread pRetTid);
-unsigned SYS_GetTickCount(void);
+int      SYS_createThread      (void (*threadEntry)(void *), void *context, SYS_Thread *pRetTid);
+void     SYS_destroyThread     (SYS_Thread handle);
+void     SYS_ExitThread        (void *status);
+void     SYS_WaitThreadTerm    (SYS_Thread pRetTid);
+unsigned SYS_GetTickCount      (void);
 uint64_t SYS_GetMonotonicTimeUs(void);
-void     SYS_Sleep(unsigned ms);
-
-int      SYS_MutexInit(SYS_Mutex *mutex);
-int      SYS_MutexLock(SYS_Mutex *mutex);
-int      SYS_MutexUnlock(SYS_Mutex *mutex);
-int      SYS_MutexDestroy(SYS_Mutex *mutex);
-
-void     SYS_GetTimestampStr(char *buf, size_t size);
+void     SYS_Sleep             (unsigned ms);
+int      SYS_MutexInit         (SYS_Mutex *mutex);
+int      SYS_MutexLock         (SYS_Mutex *mutex);
+int      SYS_MutexUnlock       (SYS_Mutex *mutex);
+int      SYS_MutexDestroy      (SYS_Mutex *mutex);
+void     SYS_GetTimestampStr   (char *buf, size_t size);
 
 #if defined(__cplusplus)          // Allow usage of this module from C++ files (disable name mangling)
 }                /* Make sure we have C-declarations in C++ programs */

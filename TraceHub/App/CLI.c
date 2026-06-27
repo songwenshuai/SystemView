@@ -69,6 +69,12 @@ Purpose : Command line banner and usage output
 /*********************************************************************
 *
 *       CLI_PrintBanner()
+*
+*  Function description
+*    Print the TraceHub banner to the specified stream.
+*
+*  Parameters
+*    stream  Output stream, defaults to stdout when NULL.
 */
 void CLI_PrintBanner(FILE *stream) {
     if (stream == NULL) {
@@ -76,13 +82,13 @@ void CLI_PrintBanner(FILE *stream) {
     }
 
     fprintf(stream, "/*********************************************************************\r\n");
-    fprintf(stream, "*                                                                    *\r\n");
-    fprintf(stream, "*                Copyright (C) 2023 xrTest Inc.                      *\r\n");
-    fprintf(stream, "*                      All rights reserved                           *\r\n");
+    fprintf(stream, "*                             CineLogic                              *\r\n");
+    fprintf(stream, "*                      RTT Trace and Debug Bridge                    *\r\n");
+    fprintf(stream, "*                    (c) 2023 - 2026 CineLogic                       *\r\n");
     fprintf(stream, "*                                                                    *\r\n");
     fprintf(stream, "*            TraceHub Compiled " __DATE__ " " __TIME__ "                  *\r\n");
     fprintf(stream, "*                                                                    *\r\n");
-    fprintf(stream, "*        Author: songwenshuai <songwenshuai@gmail.com>             *\r\n");
+    fprintf(stream, "*                  Support: wenshuaisong@gmail.com                   *\r\n");
     fprintf(stream, "*                                                                    *\r\n");
     fprintf(stream, "**********************************************************************\r\n");
 }
@@ -90,6 +96,9 @@ void CLI_PrintBanner(FILE *stream) {
 /*********************************************************************
 *
 *       CLI_PrintUsage()
+*
+*  Function description
+*    Print command-line usage information to stdout.
 */
 void CLI_PrintUsage(void) {
     printf("Usage:\n");
@@ -251,7 +260,7 @@ void CLI_PrintUsage(void) {
     printf("    * sysview_<timestamp>.SVDat - SystemView binary SVDat data (configured RTT channel)\n");
     printf("    * swimlane_<timestamp>.log  - Swimlane timestamped log (swimlane mode only)\n");
     printf("\n");
-    printf("Author: songwenshuai <songwenshuai@gmail.com>\n");
+    printf("Support: wenshuaisong@gmail.com\n");
     printf("\n");
 }
 
