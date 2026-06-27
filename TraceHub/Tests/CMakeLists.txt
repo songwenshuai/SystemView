@@ -72,7 +72,11 @@ set(COMMON_SOURCES
     ${TRACEHUB_RTT_DIR}/RTTMemory.c
     ${TRACEHUB_RTT_DIR}/RTTMemory_memshm.c
     ${TRACEHUB_RTT_DIR}/RTTBridge.c
-    ${TRACEHUB_LOG_DIR}/Log.c
+    ${TRACEHUB_LOG_DIR}/LogMain.c
+    ${TRACEHUB_LOG_DIR}/LogFile.c
+    ${TRACEHUB_LOG_DIR}/LogText.c
+    ${TRACEHUB_LOG_DIR}/LogHexdump.c
+    ${TRACEHUB_LOG_DIR}/LogSwimLane.c
     ${TRACEHUB_CORE_DIR}/Utils.c
     ${TRACEHUB_CORE_DIR}/SYS.c
     ${CMAKE_CURRENT_SOURCE_DIR}/Sim/RTTSimSystemView.c
@@ -173,7 +177,10 @@ if(BUILD_UNIT_TESTS)
         Unit/LogMergerTest.c
         ${TRACEHUB_LOG_DIR}/LogMerger.c
         ${TRACEHUB_LOG_DIR}/LogEntry.c
-        ${TRACEHUB_LOG_DIR}/Log.c
+        ${TRACEHUB_LOG_DIR}/LogMain.c
+        ${TRACEHUB_LOG_DIR}/LogFile.c
+        ${TRACEHUB_LOG_DIR}/LogText.c
+        ${TRACEHUB_LOG_DIR}/LogSwimLane.c
         ${TRACEHUB_CORE_DIR}/SYS.c
         ${TRACEHUB_CORE_DIR}/Utils.c
     )

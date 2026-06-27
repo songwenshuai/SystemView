@@ -220,12 +220,19 @@ set(SOURCES
     ${TRACEHUB_RTT_DIR}/RTTMemory.c
     ${RTT_MEMORY_BACKEND_SOURCE}
     ${SEGGER_RTT_SOURCE_DIR}/SEGGER_RTT.c
-    ${TRACEHUB_LOG_DIR}/Log.c
+    ${TRACEHUB_LOG_DIR}/LogMain.c
+    ${TRACEHUB_LOG_DIR}/LogFile.c
+    ${TRACEHUB_LOG_DIR}/LogText.c
+    ${TRACEHUB_LOG_DIR}/LogHexdump.c
+    ${TRACEHUB_LOG_DIR}/LogSwimLane.c
     ${TRACEHUB_CORE_DIR}/ByteQueue.c
     ${TRACEHUB_CORE_DIR}/Utils.c
     ${TRACEHUB_CORE_DIR}/SYS.c
     ${TRACEHUB_RTT_DIR}/RTTBridge.c
-    ${TRACEHUB_LOG_DIR}/CoreLogRecorder.c
+    ${TRACEHUB_LOG_DIR}/CoreLogRecorderState.c
+    ${TRACEHUB_LOG_DIR}/CoreLogRecorderSource.c
+    ${TRACEHUB_LOG_DIR}/CoreLogRecorderRuntime.c
+    ${TRACEHUB_LOG_DIR}/CoreLogRecorderStats.c
     ${TRACEHUB_NETWORK_DIR}/TelnetCodec.c
     ${TRACEHUB_SERVICES_DIR}/TerminalService.c
     ${TRACEHUB_SERVICES_DIR}/TerminalState.c
