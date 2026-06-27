@@ -1,43 +1,49 @@
 /*********************************************************************
+*                             CineLogic                              *
+*                      RTT Trace and Debug Bridge                    *
+**********************************************************************
 *                                                                    *
-*                Copyright (C) 2023 xrTest Inc.                      *
-*                      All rights reserved                           *
+*                    (c) 2023 - 2026 CineLogic                       *
+*                                                                    *
+*                  Support: wenshuaisong@gmail.com                   *
+*                                                                    *
+**********************************************************************
+*                                                                    *
+*       CineLogic TraceHub * RTT trace and debug bridge              *
+*                                                                    *
+**********************************************************************
+*                                                                    *
+* All rights reserved.                                               *
+*                                                                    *
+* CineLogic strongly recommends to not make any changes              *
+* to or modify the source code of this software in order to stay     *
+* compatible with the SharedMem and RTT data path.                   *
+*                                                                    *
+* Redistribution and use in source and binary forms, with or         *
+* without modification, are permitted provided that the following    *
+* condition is met:                                                  *
+*                                                                    *
+* o Redistributions of source code must retain the above copyright   *
+*   notice, this condition and the following disclaimer.             *
+*                                                                    *
+* THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND             *
+* CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES,        *
+* INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF           *
+* MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE           *
+* DISCLAIMED. IN NO EVENT SHALL CINELOGIC BE LIABLE FOR              *
+* ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR           *
+* CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT  *
+* OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;    *
+* OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF      *
+* LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT          *
+* (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE  *
+* USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH   *
+* DAMAGE.                                                            *
 *                                                                    *
 **********************************************************************
 ----------------------------------------------------------------------
 File    : main.c
-Author  : songwenshuai <songwenshuai@gmail.com>
 Purpose : Multi-channel RTT bridge supporting Terminal and SystemView.
-
-          This application provides TCP server interfaces for SEGGER
-          Real-Time Transfer (RTT) debugging protocol:
-          - Terminal service (default port 19021, channel 0)
-          - SystemView service (default port 19111, channel 2)
-          Implementation of SEGGER real-time transfer (RTT) which
-          allows real-time communication on targets which support
-          debugger memory accesses while the CPU is running.
-Revision: $Rev: <0.0.1> (org: 25842) $
-
-Additional information:
-          Type "int" is assumed to be 32-bits in size
-          H->T    Host to target communication
-          T->H    Target to host communication
-
-          RTT channel 0 is always present and reserved for Terminal usage.
-          Name is fixed to "Terminal"
-
-          Effective buffer size: SizeOfBuffer - 1
-
-          WrOff == RdOff:       Buffer is empty
-          WrOff == (RdOff - 1): Buffer is full
-          WrOff >  RdOff:       Free space includes wrap-around
-          WrOff <  RdOff:       Used space includes wrap-around
-          (WrOff == (SizeOfBuffer - 1)) && (RdOff == 0):
-                                Buffer full and wrap-around after next byte
-          RTT channel 0 is always reserved for Terminal usage.
-          RTT channel 1 is typically used for RTOS logs.
-          RTT channel 2 is typically used for SystemView/TRACE.
-
 ---------------------------END-OF-HEADER------------------------------
 */
 
