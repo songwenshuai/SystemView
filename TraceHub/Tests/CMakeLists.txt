@@ -37,23 +37,28 @@ set(CMAKE_C_STANDARD_REQUIRED ON)
 
 find_package(Threads REQUIRED)
 
-# Parent directory contains RTT source files
-set(RTT_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/..)
-set(SEGGER_RTT_SOURCE_DIR ${RTT_SOURCE_DIR}/../RTT/RTT)
-set(SEGGER_SYSVIEW_SOURCE_DIR ${RTT_SOURCE_DIR}/../SystemView/SYSVIEW)
-set(SEGGER_SOURCE_DIR ${RTT_SOURCE_DIR}/../SystemView/SEGGER)
-set(SEGGER_CONFIG_DIR ${RTT_SOURCE_DIR}/../SystemView/Config)
+set(TRACEHUB_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/..)
+set(TRACEHUB_APP_DIR ${TRACEHUB_SOURCE_DIR}/App)
+set(TRACEHUB_CORE_DIR ${TRACEHUB_SOURCE_DIR}/Core)
+set(TRACEHUB_LOG_DIR ${TRACEHUB_SOURCE_DIR}/Log)
+set(TRACEHUB_NETWORK_DIR ${TRACEHUB_SOURCE_DIR}/Network)
+set(TRACEHUB_RTT_DIR ${TRACEHUB_SOURCE_DIR}/RTT)
+set(TRACEHUB_SERVICES_DIR ${TRACEHUB_SOURCE_DIR}/Services)
+set(SEGGER_RTT_SOURCE_DIR ${TRACEHUB_SOURCE_DIR}/../RTT/RTT)
+set(SEGGER_SYSVIEW_SOURCE_DIR ${TRACEHUB_SOURCE_DIR}/../SystemView/SYSVIEW)
+set(SEGGER_SOURCE_DIR ${TRACEHUB_SOURCE_DIR}/../SystemView/SEGGER)
+set(SEGGER_CONFIG_DIR ${TRACEHUB_SOURCE_DIR}/../SystemView/Config)
 set(SYSVIEW_CONFIG_DIR ${CMAKE_CURRENT_SOURCE_DIR}/SystemViewConfig)
 
 # Common source files needed by test programs
 set(COMMON_SOURCES
-    ${RTT_SOURCE_DIR}/RTTMemory.c
-    ${RTT_SOURCE_DIR}/RTTMemory_memshm.c
-    ${RTT_SOURCE_DIR}/RTTBridge.c
-    ${RTT_SOURCE_DIR}/Log.c
-    ${RTT_SOURCE_DIR}/Utils.c
-    ${RTT_SOURCE_DIR}/SYS.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/RTTSimSystemView.c
+    ${TRACEHUB_RTT_DIR}/RTTMemory.c
+    ${TRACEHUB_RTT_DIR}/RTTMemory_memshm.c
+    ${TRACEHUB_RTT_DIR}/RTTBridge.c
+    ${TRACEHUB_LOG_DIR}/Log.c
+    ${TRACEHUB_CORE_DIR}/Utils.c
+    ${TRACEHUB_CORE_DIR}/SYS.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/Sim/RTTSimSystemView.c
     ${SEGGER_RTT_SOURCE_DIR}/SEGGER_RTT.c
     ${SEGGER_SYSVIEW_SOURCE_DIR}/SEGGER_SYSVIEW.c
 )
@@ -61,8 +66,13 @@ set(COMMON_SOURCES
 # Include directories
 set(COMMON_INCLUDES
     ${SYSVIEW_CONFIG_DIR}
-    ${CMAKE_CURRENT_SOURCE_DIR}
-    ${RTT_SOURCE_DIR}
+    ${CMAKE_CURRENT_SOURCE_DIR}/Sim
+    ${TRACEHUB_APP_DIR}
+    ${TRACEHUB_CORE_DIR}
+    ${TRACEHUB_LOG_DIR}
+    ${TRACEHUB_NETWORK_DIR}
+    ${TRACEHUB_RTT_DIR}
+    ${TRACEHUB_SERVICES_DIR}
     ${SEGGER_RTT_SOURCE_DIR}
     ${SEGGER_SYSVIEW_SOURCE_DIR}
     ${SEGGER_SOURCE_DIR}
@@ -90,7 +100,7 @@ set(COMMON_LIBRARIES
 # ==============================================================================
 
 add_executable(rtt_sim_rtos
-    RTTSimRTOS.c
+    Sim/RTTSimRTOS.c
     ${COMMON_SOURCES}
 )
 
@@ -103,7 +113,7 @@ target_link_libraries(rtt_sim_rtos PRIVATE ${COMMON_LIBRARIES})
 # ==============================================================================
 
 add_executable(rtt_sim_linux
-    RTTSimLinux.c
+    Sim/RTTSimLinux.c
     ${COMMON_SOURCES}
 )
 
@@ -116,10 +126,10 @@ target_link_libraries(rtt_sim_linux PRIVATE ${COMMON_LIBRARIES})
 # ==============================================================================
 
 add_executable(rtt_sim_sysview_tcp_client
-    RTTSimSystemViewTCPClient.c
+    Sim/RTTSimSystemViewTCPClient.c
 )
 
-target_include_directories(rtt_sim_sysview_tcp_client PRIVATE ${RTT_SOURCE_DIR})
+target_include_directories(rtt_sim_sysview_tcp_client PRIVATE ${COMMON_INCLUDES})
 target_link_libraries(rtt_sim_sysview_tcp_client PRIVATE ${COMMON_LIBRARIES})
 
 # ==============================================================================
@@ -127,33 +137,33 @@ target_link_libraries(rtt_sim_sysview_tcp_client PRIVATE ${COMMON_LIBRARIES})
 # ==============================================================================
 
 add_executable(test_logline_parser
-    LogLineParserTest.c
-    ${RTT_SOURCE_DIR}/LogLineParser.c
+    Unit/LogLineParserTest.c
+    ${TRACEHUB_LOG_DIR}/LogLineParser.c
 )
 
-target_include_directories(test_logline_parser PRIVATE ${RTT_SOURCE_DIR})
+target_include_directories(test_logline_parser PRIVATE ${COMMON_INCLUDES})
 add_test(NAME test_logline_parser COMMAND test_logline_parser)
 
 add_executable(test_logcollector
-    LogCollectorTest.c
-    ${RTT_SOURCE_DIR}/LogLineParser.c
-    ${RTT_SOURCE_DIR}/LogEntry.c
+    Unit/LogCollectorTest.c
+    ${TRACEHUB_LOG_DIR}/LogLineParser.c
+    ${TRACEHUB_LOG_DIR}/LogEntry.c
 )
 
-target_include_directories(test_logcollector PRIVATE ${RTT_SOURCE_DIR})
+target_include_directories(test_logcollector PRIVATE ${COMMON_INCLUDES})
 target_link_libraries(test_logcollector PRIVATE ${COMMON_LIBRARIES})
 add_test(NAME test_logcollector COMMAND test_logcollector)
 
 add_executable(test_logmerger
-    LogMergerTest.c
-    ${RTT_SOURCE_DIR}/LogMerger.c
-    ${RTT_SOURCE_DIR}/LogEntry.c
-    ${RTT_SOURCE_DIR}/Log.c
-    ${RTT_SOURCE_DIR}/SYS.c
-    ${RTT_SOURCE_DIR}/Utils.c
+    Unit/LogMergerTest.c
+    ${TRACEHUB_LOG_DIR}/LogMerger.c
+    ${TRACEHUB_LOG_DIR}/LogEntry.c
+    ${TRACEHUB_LOG_DIR}/Log.c
+    ${TRACEHUB_CORE_DIR}/SYS.c
+    ${TRACEHUB_CORE_DIR}/Utils.c
 )
 
-target_include_directories(test_logmerger PRIVATE ${RTT_SOURCE_DIR})
+target_include_directories(test_logmerger PRIVATE ${COMMON_INCLUDES})
 target_link_libraries(test_logmerger PRIVATE ${COMMON_LIBRARIES})
 add_test(NAME test_logmerger COMMAND test_logmerger)
 
@@ -164,7 +174,7 @@ add_test(NAME test_logmerger COMMAND test_logmerger)
 message(STATUS "==============================================================================")
 message(STATUS "RTT Simulation Test Programs")
 message(STATUS "==============================================================================")
-message(STATUS "  RTT Source Dir:  ${RTT_SOURCE_DIR}")
+message(STATUS "  TraceHub Source Dir:  ${TRACEHUB_SOURCE_DIR}")
 message(STATUS "  UP Buffers:      3")
 message(STATUS "  DOWN Buffers:    3")
 message(STATUS "  Memory Backend:  MEMSHM (POSIX shared memory)")

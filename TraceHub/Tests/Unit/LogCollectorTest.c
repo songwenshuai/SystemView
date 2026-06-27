@@ -129,7 +129,7 @@ void SYS_GetTimestampStr(char *buf, size_t size) {
     }
 }
 
-#include "../LogCollector.c"
+#include "LogCollector.c"
 
 /*********************************************************************
 *

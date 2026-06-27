@@ -1,21 +1,22 @@
 #!/bin/bash
 
 # ==============================================================================
-# TraceHub SystemView Only Mode Runner
+# TraceHub Terminal Only Mode Runner
 # ==============================================================================
 #
 # Linux SharedMem backend runner. This script loads the SharedMem kernel
-# module and runs tracehub in SystemView only mode, providing TCP server for
-# SEGGER SystemView service.
+# module and runs tracehub in terminal only mode, providing TCP server for
+# Terminal service.
 #
 # Usage:
-#   sudo ./run-sysview.sh [options]
+#   sudo Scripts/run-terminal.sh [options]
 #
 # Options:
 #   -a, --addr ADDR      RTT region backend address (hex, default: 0x10040000)
 #   -s, --size SIZE      RTT region size (hex, default: 0x20000)
-#   -p, --port PORT      SystemView TCP port (default: 19111)
-#   -c, --channel CH     RTT channel (default: 2)
+#   -p, --port PORT      Terminal TCP port (default: 19021)
+#   -c, --channel CH     Terminal RTT channel (default: source default)
+#   --source SOURCE      Core source to display: linux or rtos (default: linux)
 #   --rtt-timeout-ms MS  RTTCB discovery timeout in milliseconds (default: 0)
 #   --log-dir DIR        Directory for generated log and record files
 #   -k, --ko PATH        Path to SharedMem.ko (default: auto-detect)
@@ -23,9 +24,12 @@
 #   -h, --help           Show this help message
 #
 # Examples:
-#   sudo ./run-sysview.sh
-#   sudo ./run-sysview.sh --port 19111
-#   sudo ./run-sysview.sh --addr 0x80000000 --size 0x10000
+#   sudo Scripts/run-terminal.sh
+#   sudo Scripts/run-terminal.sh --port 2323
+#   sudo Scripts/run-terminal.sh --channel 1
+#   sudo Scripts/run-terminal.sh --source rtos
+#   sudo Scripts/run-terminal.sh --source linux --channel 3
+#   sudo Scripts/run-terminal.sh --addr 0x80000000 --size 0x10000
 #
 # ==============================================================================
 
@@ -36,6 +40,7 @@ set -euo pipefail
 # ==============================================================================
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 # ==============================================================================
 # Default Configuration
@@ -43,8 +48,10 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 RTT_REGION_ADDR="0x10040000"
 MEM_SIZE="0x20000"
-SYSVIEW_PORT="19111"
-SYSVIEW_CHANNEL="2"
+TERMINAL_PORT="19021"
+TERMINAL_CHANNEL="0"
+TERMINAL_CHANNEL_SPECIFIED=0
+TERMINAL_SOURCE=""
 RTT_TIMEOUT_MS="0"
 LOG_DIR=""
 KO_PATH=""
@@ -79,14 +86,15 @@ show_usage() {
     cat << EOF
 Usage: $0 [OPTIONS]
 
-SystemView Only Mode: Run SystemView TCP server (Terminal disabled).
-Connect with SEGGER SystemView application to port $SYSVIEW_PORT.
+Terminal Only Mode: Run Terminal TCP server (SystemView disabled).
+Connect with: telnet <host> $TERMINAL_PORT
 
 Options:
   -a, --addr ADDR      RTT region backend address (hex, default: $RTT_REGION_ADDR)
   -s, --size SIZE      RTT region size (hex, default: $MEM_SIZE)
-  -p, --port PORT      SystemView TCP port (default: $SYSVIEW_PORT)
-  -c, --channel CH     RTT channel (default: $SYSVIEW_CHANNEL)
+  -p, --port PORT      Terminal TCP port (default: $TERMINAL_PORT)
+  -c, --channel CH     Terminal RTT channel. Channel 0 selects Linux and channel 1 selects RTOS unless --source is set
+  --source SOURCE      Core source to display: linux or rtos (default: linux)
   --rtt-timeout-ms MS  RTTCB discovery timeout in milliseconds (default: $RTT_TIMEOUT_MS, 0 waits until interrupted)
   --log-dir DIR        Directory for generated log and record files
   -k, --ko PATH        Path to SharedMem.ko (default: auto-detect)
@@ -95,7 +103,10 @@ Options:
 
 Examples:
   sudo $0
-  sudo $0 --port 19111
+  sudo $0 --port 2323
+  sudo $0 --channel 1
+  sudo $0 --source rtos
+  sudo $0 --source linux --channel 3
   sudo $0 --addr 0x80000000 --size 0x10000
 
 EOF
@@ -112,7 +123,7 @@ check_root() {
 check_linux() {
     if [ "$(uname -s)" != "Linux" ]; then
         print_error "This script requires the Linux SharedMem backend"
-        print_info "Use ./build.sh --backend memshm and run tracehub with --shm for host simulation"
+        print_info "Use $ROOT_DIR/build.sh --backend memshm and run tracehub with --shm for host simulation"
         exit 1
     fi
 }
@@ -231,14 +242,42 @@ run_tracehub() {
 }
 
 resolve_tracehub() {
-    if [ -x "$SCRIPT_DIR/tracehub" ]; then
-        TRACEHUB_BIN="$SCRIPT_DIR/tracehub"
+    if [ -x "$ROOT_DIR/tracehub" ]; then
+        TRACEHUB_BIN="$ROOT_DIR/tracehub"
         return
     fi
 
     print_error "tracehub executable not found"
-    print_info "Expected: $SCRIPT_DIR/tracehub"
+    print_info "Expected: $ROOT_DIR/tracehub"
     exit 1
+}
+
+resolve_terminal_source() {
+    if [ -z "$TERMINAL_SOURCE" ]; then
+        if [ "$TERMINAL_CHANNEL_SPECIFIED" -eq 0 ]; then
+            TERMINAL_SOURCE="linux"
+            TERMINAL_CHANNEL="0"
+        elif [ "$TERMINAL_CHANNEL" = "0" ]; then
+            TERMINAL_SOURCE="linux"
+        elif [ "$TERMINAL_CHANNEL" = "1" ]; then
+            TERMINAL_SOURCE="rtos"
+        else
+            print_error "--channel $TERMINAL_CHANNEL requires --source linux or --source rtos"
+            exit 1
+        fi
+        return
+    fi
+
+    if [ "$TERMINAL_CHANNEL_SPECIFIED" -eq 0 ]; then
+        case "$TERMINAL_SOURCE" in
+            linux)
+                TERMINAL_CHANNEL="0"
+                ;;
+            rtos)
+                TERMINAL_CHANNEL="1"
+                ;;
+        esac
+    fi
 }
 
 # ==============================================================================
@@ -259,12 +298,22 @@ while [[ $# -gt 0 ]]; do
             ;;
         -p|--port)
             require_option_argument "$1" "${2-}"
-            SYSVIEW_PORT="$2"
+            TERMINAL_PORT="$2"
             shift 2
             ;;
         -c|--channel)
             require_option_argument "$1" "${2-}"
-            SYSVIEW_CHANNEL="$2"
+            TERMINAL_CHANNEL="$2"
+            TERMINAL_CHANNEL_SPECIFIED=1
+            shift 2
+            ;;
+        --source)
+            require_option_argument "$1" "${2-}"
+            TERMINAL_SOURCE="$2"
+            if [[ "$TERMINAL_SOURCE" != "linux" && "$TERMINAL_SOURCE" != "rtos" ]]; then
+                print_error "Invalid source: $TERMINAL_SOURCE (must be linux or rtos)"
+                exit 1
+            fi
             shift 2
             ;;
         --rtt-timeout-ms)
@@ -308,6 +357,9 @@ check_root "${ORIGINAL_ARGS[@]}"
 # Resolve executable before loading the kernel module
 resolve_tracehub
 
+# Resolve terminal source and channel before loading the kernel module
+resolve_terminal_source
+
 # Set up cleanup trap
 trap cleanup EXIT
 
@@ -320,17 +372,22 @@ TRACEHUB_ARGS=(
     "--size" "$MEM_SIZE"
     "--device" "/dev/shared_mem0"
     "--rtt-timeout-ms" "$RTT_TIMEOUT_MS"
-    "--systemview-port" "$SYSVIEW_PORT"
-    "--systemview-channel" "$SYSVIEW_CHANNEL"
+    "--telnet-port" "$TERMINAL_PORT"
 )
+
+if [ "$TERMINAL_SOURCE" = "linux" ]; then
+    TRACEHUB_ARGS+=("--linux-channel" "$TERMINAL_CHANNEL")
+else
+    TRACEHUB_ARGS+=("--rtos-channel" "$TERMINAL_CHANNEL")
+fi
 
 if [ -n "$LOG_DIR" ]; then
     TRACEHUB_ARGS+=("--log-dir" "$LOG_DIR")
 fi
 
 # Run tracehub
-print_section "SystemView Only Mode - RTT TCP Server"
-print_info "SystemView service: port $SYSVIEW_PORT, channel $SYSVIEW_CHANNEL"
+print_section "Terminal Only Mode - RTT TCP Server"
+print_info "Terminal service: port $TERMINAL_PORT, source $TERMINAL_SOURCE, channel $TERMINAL_CHANNEL"
 echo ""
 
 trap 'forward_signal INT' INT

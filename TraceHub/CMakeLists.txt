@@ -64,6 +64,12 @@ endif()
 
 set(SEGGER_RTT_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../RTT/RTT")
 set(SHAREDMEM_UAPI_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../SharedMem/UAPI")
+set(TRACEHUB_APP_DIR "${CMAKE_CURRENT_SOURCE_DIR}/App")
+set(TRACEHUB_CORE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/Core")
+set(TRACEHUB_LOG_DIR "${CMAKE_CURRENT_SOURCE_DIR}/Log")
+set(TRACEHUB_NETWORK_DIR "${CMAKE_CURRENT_SOURCE_DIR}/Network")
+set(TRACEHUB_RTT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/RTT")
+set(TRACEHUB_SERVICES_DIR "${CMAKE_CURRENT_SOURCE_DIR}/Services")
 
 # Set default build type if not specified
 if(NOT CMAKE_BUILD_TYPE)
@@ -126,7 +132,7 @@ endif()
 if(USE_MEMSHM_BACKEND)
     message(STATUS "Using MEMSHM backend (POSIX shared memory)")
     set(RTT_MEMORY_BACKEND_DEFINITIONS RTTMEM_USE_MEMSHM=1)
-    set(RTT_MEMORY_BACKEND_SOURCE RTTMemory_memshm.c)
+    set(RTT_MEMORY_BACKEND_SOURCE ${TRACEHUB_RTT_DIR}/RTTMemory_memshm.c)
     # Enable Linux, RTOS, and SystemView channels for simulation testing
     set(RTT_MEMORY_CHANNEL_DEFINITIONS
         SEGGER_RTT_MAX_NUM_UP_BUFFERS=3
@@ -136,7 +142,7 @@ else()
     message(STATUS "Using SMEM backend (SharedMem driver)")
     set(RTT_MEMORY_BACKEND_DEFINITIONS RTTMEM_USE_SMEM=1)
     set(RTT_MEMORY_CHANNEL_DEFINITIONS)
-    set(RTT_MEMORY_BACKEND_SOURCE RTTMemory_smem.c)
+    set(RTT_MEMORY_BACKEND_SOURCE ${TRACEHUB_RTT_DIR}/RTTMemory_smem.c)
 endif()
 
 set(RTT_MEMORY_COMMON_DEFINITIONS
@@ -150,25 +156,25 @@ set(RTT_MEMORY_COMMON_DEFINITIONS
 # ==============================================================================
 
 set(SOURCES
-    main.c
-    CLI.c
-    Socket.c
-    RTTMemory.c
+    ${TRACEHUB_APP_DIR}/main.c
+    ${TRACEHUB_APP_DIR}/CLI.c
+    ${TRACEHUB_NETWORK_DIR}/Socket.c
+    ${TRACEHUB_RTT_DIR}/RTTMemory.c
     ${RTT_MEMORY_BACKEND_SOURCE}
     ${SEGGER_RTT_SOURCE_DIR}/SEGGER_RTT.c
-    Log.c
-    Utils.c
-    SYS.c
-    RTTBridge.c
-    CoreLogRecorder.c
-    TelnetCodec.c
-    Terminal.c
-    SystemView.c
-    LogEntry.c
-    LogLineParser.c
-    LogCollector.c
-    LogMerger.c
-    SwimLaneRenderer.c
+    ${TRACEHUB_LOG_DIR}/Log.c
+    ${TRACEHUB_CORE_DIR}/Utils.c
+    ${TRACEHUB_CORE_DIR}/SYS.c
+    ${TRACEHUB_RTT_DIR}/RTTBridge.c
+    ${TRACEHUB_LOG_DIR}/CoreLogRecorder.c
+    ${TRACEHUB_NETWORK_DIR}/TelnetCodec.c
+    ${TRACEHUB_SERVICES_DIR}/Terminal.c
+    ${TRACEHUB_SERVICES_DIR}/SystemView.c
+    ${TRACEHUB_LOG_DIR}/LogEntry.c
+    ${TRACEHUB_LOG_DIR}/LogLineParser.c
+    ${TRACEHUB_LOG_DIR}/LogCollector.c
+    ${TRACEHUB_LOG_DIR}/LogMerger.c
+    ${TRACEHUB_LOG_DIR}/SwimLaneRenderer.c
 )
 
 # ==============================================================================
@@ -198,7 +204,12 @@ find_package(Threads REQUIRED)
 
 target_include_directories(${TRACEHUB_TARGET}
     PRIVATE
-        ${CMAKE_CURRENT_SOURCE_DIR}
+        ${TRACEHUB_APP_DIR}
+        ${TRACEHUB_CORE_DIR}
+        ${TRACEHUB_LOG_DIR}
+        ${TRACEHUB_NETWORK_DIR}
+        ${TRACEHUB_RTT_DIR}
+        ${TRACEHUB_SERVICES_DIR}
         ${SEGGER_RTT_SOURCE_DIR}
         ${SHAREDMEM_UAPI_DIR}
 )
