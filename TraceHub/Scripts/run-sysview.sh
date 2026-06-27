@@ -12,10 +12,10 @@
 #   sudo Scripts/run-sysview.sh [options]
 #
 # Options:
-#   -a, --addr ADDR      RTT region backend address (hex, default: 0x10040000)
-#   -s, --size SIZE      RTT region size (hex, default: 0x20000)
+#   --phys-addr ADDR     SharedMem physical address (hex, default: 0x10040000)
+#   --mem-size SIZE      SharedMem size (hex, default: 0x20000)
 #   -p, --port PORT      SystemView TCP port (default: 19111)
-#   -c, --channel CH     RTT channel (default: 2)
+#   -c, --channel CH     SystemView RTT channel (default: 2)
 #   --rtt-timeout-ms MS  RTTCB discovery timeout in milliseconds (default: 0)
 #   --log-dir DIR        Directory for generated log and record files
 #   -k, --ko PATH        Path to SharedMem.ko (default: auto-detect)
@@ -25,7 +25,7 @@
 # Examples:
 #   sudo Scripts/run-sysview.sh
 #   sudo Scripts/run-sysview.sh --port 19111
-#   sudo Scripts/run-sysview.sh --addr 0x80000000 --size 0x10000
+#   sudo Scripts/run-sysview.sh --phys-addr 0x80000000 --mem-size 0x10000
 #
 # ==============================================================================
 
@@ -84,10 +84,10 @@ SystemView Only Mode: Run SystemView TCP server (Terminal disabled).
 Connect with SEGGER SystemView application to port $SYSVIEW_PORT.
 
 Options:
-  -a, --addr ADDR      RTT region backend address (hex, default: $RTT_REGION_ADDR)
-  -s, --size SIZE      RTT region size (hex, default: $MEM_SIZE)
+  --phys-addr ADDR     SharedMem physical address (hex, default: $RTT_REGION_ADDR)
+  --mem-size SIZE      SharedMem size (hex, default: $MEM_SIZE)
   -p, --port PORT      SystemView TCP port (default: $SYSVIEW_PORT)
-  -c, --channel CH     RTT channel (default: $SYSVIEW_CHANNEL)
+  -c, --channel CH     SystemView RTT channel (default: $SYSVIEW_CHANNEL)
   --rtt-timeout-ms MS  RTTCB discovery timeout in milliseconds (default: $RTT_TIMEOUT_MS, 0 waits until interrupted)
   --log-dir DIR        Directory for generated log and record files
   -k, --ko PATH        Path to SharedMem.ko (default: auto-detect)
@@ -97,7 +97,7 @@ Options:
 Examples:
   sudo $0
   sudo $0 --port 19111
-  sudo $0 --addr 0x80000000 --size 0x10000
+  sudo $0 --phys-addr 0x80000000 --mem-size 0x10000
 
 EOF
 }
@@ -248,12 +248,12 @@ resolve_tracehub() {
 
 while [[ $# -gt 0 ]]; do
     case $1 in
-        -a|--addr)
+        --phys-addr)
             require_option_argument "$1" "${2-}"
             RTT_REGION_ADDR="$2"
             shift 2
             ;;
-        -s|--size)
+        --mem-size)
             require_option_argument "$1" "${2-}"
             MEM_SIZE="$2"
             shift 2
@@ -319,7 +319,7 @@ load_kernel_module
 TRACEHUB_ARGS=(
     "--addr" "$RTT_REGION_ADDR"
     "--size" "$MEM_SIZE"
-    "--device" "/dev/shared_mem0"
+    "--shm" "/dev/shared_mem0"
     "--rtt-timeout-ms" "$RTT_TIMEOUT_MS"
     "--systemview-port" "$SYSVIEW_PORT"
     "--systemview-channel" "$SYSVIEW_CHANNEL"

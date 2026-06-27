@@ -43,7 +43,7 @@
 **********************************************************************
 ----------------------------------------------------------------------
 File    : Terminal.h
-Purpose : Terminal service for RTT Channel 0 with Telnet protocol
+Purpose : Terminal service for a single RTT text channel
 ---------------------------END-OF-HEADER------------------------------
 */
 
@@ -59,8 +59,6 @@ Purpose : Terminal service for RTT Channel 0 with Telnet protocol
 
 #include <stdbool.h>
 #include <stdint.h>
-#include <stddef.h>
-#include <stdio.h>
 
 #if defined(__cplusplus)         // Allow usage of this module from C++ files (disable name mangling)
 extern "C" {     /* Make sure we have C-declarations in C++ programs */
@@ -82,21 +80,15 @@ extern "C" {     /* Make sure we have C-declarations in C++ programs */
 *
 *  Fields
 *    port          TCP port for Telnet connections (default 19021)
-*    channel       RTT channel number (default 0 for Terminal)
+*    channel       RTT text channel number
 *    enabled       Enable/disable flag for the service
 *    console_mode  Console mode flag (stdin/stdout instead of TCP socket)
-*    log_enabled   Enable logging to file
-*    log_prefix    Prefix for log file name (e.g., "terminal")
-*    network_queue_size  TCP backlog size in bytes, 0 selects the default
 */
 typedef struct {
     unsigned     port;
     unsigned     channel;
     bool         enabled;
     bool         console_mode;
-    bool         log_enabled;
-    const char  *log_prefix;
-    size_t       network_queue_size;
 } Terminal_Config_t;
 
 /*********************************************************************

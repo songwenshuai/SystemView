@@ -63,10 +63,29 @@ Purpose : Multi-channel RTT bridge supporting Terminal and SystemView.
 #include <stdbool.h>
 #include <signal.h>
 #include <inttypes.h>
-#include <getopt.h>
 #include <locale.h>
-#include <unistd.h>
-#include <sys/stat.h>
+
+#if defined(_WIN32)
+  #ifndef WIN32_LEAN_AND_MEAN
+    #define WIN32_LEAN_AND_MEAN
+  #endif
+  #include <windows.h>
+  #include <io.h>
+  #include <process.h>
+  #include <sys/stat.h>
+  #define write  _write
+  #define stat   _stat
+  #ifndef STDERR_FILENO
+    #define STDERR_FILENO 2
+  #endif
+  #ifndef S_ISDIR
+    #define S_ISDIR(mode) (((mode) & _S_IFDIR) != 0)
+  #endif
+#else
+  #include <getopt.h>
+  #include <unistd.h>
+  #include <sys/stat.h>
+#endif
 
 #include "SYS.h"
 #include "Log.h"
@@ -78,6 +97,7 @@ Purpose : Multi-channel RTT bridge supporting Terminal and SystemView.
 #include "LogCollector.h"
 #include "LogMerger.h"
 #include "SwimLaneRenderer.h"
+#include "TraceHubDefaults.h"
 #include "CLI.h"
 
 /*********************************************************************
@@ -91,8 +111,124 @@ Purpose : Multi-channel RTT bridge supporting Terminal and SystemView.
   #define PATH_MAX 4096
 #endif
 
-static char * const _TRACEHUB         = "TraceHub";
-static char * const _TRACEHUB_VERSION = "0.1.0";
+#ifndef TRACEHUB_VERSION
+  #define TRACEHUB_VERSION "0.0.0"
+#endif
+
+#if defined(_WIN32)
+#define no_argument       0
+#define required_argument 1
+
+struct option {
+    const char *name;
+    int         has_arg;
+    int        *flag;
+    int         val;
+};
+
+static char *optarg = NULL;
+static int   optind = 1;
+
+static int _WinGetOptFindShort(const char *optstring, int opt) {
+    const char *p;
+
+    if (optstring == NULL) {
+        return 0;
+    }
+    p = strchr(optstring, opt);
+    if (p == NULL) {
+        return 0;
+    }
+    return (p[1] == ':') ? required_argument : no_argument;
+}
+
+static int getopt_long(int argc, char * const argv[],
+                       const char *optstring,
+                       const struct option *longopts,
+                       int *longindex) {
+    const char *arg;
+    const char *name;
+    const char *value;
+    size_t      name_len;
+    int         i;
+    int         need_arg;
+
+    optarg = NULL;
+    if (optind >= argc) {
+        return -1;
+    }
+
+    arg = argv[optind];
+    if (arg == NULL || arg[0] != '-' || arg[1] == '\0') {
+        return -1;
+    }
+    if (strcmp(arg, "--") == 0) {
+        optind++;
+        return -1;
+    }
+
+    if (arg[1] == '-') {
+        name = arg + 2;
+        value = strchr(name, '=');
+        name_len = (value == NULL) ? strlen(name) : (size_t)(value - name);
+        if (name_len == 0u) {
+            optind++;
+            return '?';
+        }
+        for (i = 0; longopts != NULL && longopts[i].name != NULL; i++) {
+            if (strlen(longopts[i].name) == name_len &&
+                strncmp(longopts[i].name, name, name_len) == 0) {
+                if (longindex != NULL) {
+                    *longindex = i;
+                }
+                if (longopts[i].has_arg == required_argument) {
+                    if (value != NULL) {
+                        optarg = (char *)(value + 1);
+                    } else {
+                        optind++;
+                        if (optind >= argc) {
+                            return '?';
+                        }
+                        optarg = argv[optind];
+                    }
+                } else if (value != NULL) {
+                    optind++;
+                    return '?';
+                }
+                optind++;
+                if (longopts[i].flag != NULL) {
+                    *longopts[i].flag = longopts[i].val;
+                    return 0;
+                }
+                return longopts[i].val;
+            }
+        }
+        optind++;
+        return '?';
+    }
+
+    need_arg = _WinGetOptFindShort(optstring, (unsigned char)arg[1]);
+    if (need_arg == 0 && strchr(optstring, (unsigned char)arg[1]) == NULL) {
+        optind++;
+        return '?';
+    }
+    if (need_arg == required_argument) {
+        if (arg[2] != '\0') {
+            optarg = (char *)(arg + 2);
+        } else {
+            optind++;
+            if (optind >= argc) {
+                return '?';
+            }
+            optarg = argv[optind];
+        }
+    }
+    optind++;
+    return (unsigned char)arg[1];
+}
+#endif
+
+static char * const _TRACEHUB = "TraceHub";
 
 /*********************************************************************
 *
@@ -147,15 +283,11 @@ static int _SwimLaneMergerCallback(LogEntry_t *entry, void *user_data) {
 *    Queues entries for sorted rendering and file logging.
 */
 static int _SwimLaneCollectorCallback(LogEntry_t *entry, void *user_data) {
-    LogMerger_Output_t output_callback = (LogMerger_Output_t)user_data;
-    int                result;
+    int result;
 
-    if (output_callback == NULL) {
-        LogEntry_Destroy(entry);
-        return -1;
-    }
+    (void)user_data;
 
-    result = LogMerger_Process(entry, output_callback, NULL);
+    result = LogMerger_Process(entry, _SwimLaneMergerCallback, NULL);
     if (result != 0) {
         Log_Error("Swimlane merger failed to process entry: %d\n", result);
         return -1;
@@ -183,12 +315,34 @@ typedef struct {
     bool     core_log_enabled;
     bool     console_mode;
     bool     only_systemview;
-    bool     tport_specified;
-    bool     sport_specified;
+    bool     terminal_network_enabled;
+    bool     systemview_network_enabled;
+    unsigned swimlane_width;
     const char  *swimlane_log_prefix;
-    unsigned     swimlane_flush_threshold;
-    unsigned     swimlane_flush_timeout_ms;
 } RunConfig_t;
+
+/*********************************************************************
+*
+*       _StartCoreLogRecorderIfNeeded()
+*
+*  Function description
+*    Start core log recorder for modes that consume core log channels.
+*/
+static int _StartCoreLogRecorderIfNeeded(const RunConfig_t *config) {
+    int result;
+
+    if (config == NULL || !config->core_log_enabled) {
+        return 0;
+    }
+
+    result = CoreLogRecorder_Start();
+    if (result != 0) {
+        Log_Error("Failed to start core log recorder: %d\n", result);
+        return -1;
+    }
+
+    return 0;
+}
 
 /*********************************************************************
 *
@@ -232,8 +386,6 @@ static int _RunSwimLaneMode(const RunConfig_t *config) {
     //
     memset(&merger_config, 0, sizeof(merger_config));
     merger_config.buffer_size      = LOG_MERGER_DEFAULT_BUFFER_SIZE;
-    merger_config.flush_threshold  = config->swimlane_flush_threshold;
-    merger_config.flush_timeout_ms = config->swimlane_flush_timeout_ms;
     merger_config.required_source[LOG_SOURCE_LINUX] = true;
     merger_config.required_source[LOG_SOURCE_RTOS]  = true;
     merger_config.log_enabled      = true;
@@ -248,14 +400,11 @@ static int _RunSwimLaneMode(const RunConfig_t *config) {
     // Initialize swimlane renderer
     //
     memset(&swimlane_config, 0, sizeof(swimlane_config));
-    swimlane_config.timestamp_width = SWIMLANE_DEFAULT_TIMESTAMP_WIDTH;
-    swimlane_config.linux_width     = SWIMLANE_DEFAULT_LINUX_WIDTH;
-    swimlane_config.rtos_width      = SWIMLANE_DEFAULT_RTOS_WIDTH;
-    swimlane_config.show_header     = true;
-    swimlane_config.show_separator  = true;
-    swimlane_config.color_enabled   = true;
-    swimlane_config.output_stream   = stdout;
-
+    swimlane_config.show_header    = true;
+    swimlane_config.show_separator = true;
+    swimlane_config.color_enabled  = true;
+    swimlane_config.output_stream  = stdout;
+    swimlane_config.total_width     = config->swimlane_width;
     result = SwimLane_Init(&swimlane_config);
     if (result != 0) {
         Log_Error("Failed to initialize swimlane renderer: %d\n", result);
@@ -264,10 +413,17 @@ static int _RunSwimLaneMode(const RunConfig_t *config) {
     //
     // Start log collector
     //
-    result = LogCollector_Start(_SwimLaneCollectorCallback, _SwimLaneMergerCallback);
+    result = LogCollector_Start(_SwimLaneCollectorCallback, NULL);
     if (result != 0) {
         Log_Error("Failed to start log collector: %d\n", result);
         goto err_swimlane;
+    }
+    //
+    // Start core log recorder after collector consumers are registered
+    //
+    result = _StartCoreLogRecorderIfNeeded(config);
+    if (result != 0) {
+        goto err_collector_start;
     }
     //
     // Start SystemView service if enabled
@@ -285,10 +441,12 @@ static int _RunSwimLaneMode(const RunConfig_t *config) {
     printf("*                                                                    *\r\n");
     printf("*                  Swimlane Mode Started                             *\r\n");
     printf("*                                                                    *\r\n");
-    printf("*  Linux A53: channel %u                                             *\r\n", config->linux_channel);
-    printf("*  RTOS R5:   channel %u                                             *\r\n", config->rtos_channel);
+    printf("*  %-24.24s channel %-5u                          *\r\n",
+           SWIMLANE_DEFAULT_LINUX_LABEL, config->linux_channel);
+    printf("*  %-24.24s channel %-5u                          *\r\n",
+           SWIMLANE_DEFAULT_RTOS_LABEL, config->rtos_channel);
     if (config->sysview_enabled) {
-        if (config->sport_specified) {
+        if (config->systemview_network_enabled) {
             printf("*  SystemView: port %5u, channel %u                                 *\r\n",
                    config->sysview_port, config->sysview_channel);
         } else {
@@ -324,8 +482,8 @@ static int _RunSwimLaneMode(const RunConfig_t *config) {
             run_result = -1;
             break;
         }
-        SYS_Sleep((merger_config.flush_timeout_ms > 0u) ?
-                  merger_config.flush_timeout_ms :
+        SYS_Sleep((LOG_MERGER_DEFAULT_FLUSH_TIMEOUT_MS > 0u) ?
+                  LOG_MERGER_DEFAULT_FLUSH_TIMEOUT_MS :
                   RTT_BRIDGE_DEFAULT_POLL_INTERVAL_MS);
         //
         // Flush buffered entries to sorted swimlane output
@@ -396,6 +554,13 @@ static int _RunNormalMode(const RunConfig_t *config) {
         return -1;
     }
     //
+    // Start core log recorder after terminal consumer is registered
+    //
+    result = _StartCoreLogRecorderIfNeeded(config);
+    if (result != 0) {
+        return -1;
+    }
+    //
     // Start SystemView service
     //
     result = SystemView_Start();
@@ -412,7 +577,7 @@ static int _RunNormalMode(const RunConfig_t *config) {
     if (config->only_systemview) {
         fprintf(status_stream, "*                  SystemView Recording Mode Started                 *\r\n");
         fprintf(status_stream, "*                                                                    *\r\n");
-        if (config->sport_specified) {
+        if (config->systemview_network_enabled) {
             fprintf(status_stream, "*  SystemView: port %5u, channel %u                                 *\r\n",
                     config->sysview_port, config->sysview_channel);
         } else {
@@ -427,7 +592,7 @@ static int _RunNormalMode(const RunConfig_t *config) {
         fprintf(status_stream, "*  Terminal:   console (stdin/stdout), channel %u                    *\r\n",
                 config->terminal_channel);
         if (config->sysview_enabled) {
-            if (config->sport_specified) {
+            if (config->systemview_network_enabled) {
                 fprintf(status_stream, "*  SystemView: port %5u, channel %u                                 *\r\n",
                         config->sysview_port, config->sysview_channel);
             } else {
@@ -437,13 +602,13 @@ static int _RunNormalMode(const RunConfig_t *config) {
         }
         fprintf(status_stream, "*                                                                    *\r\n");
         fprintf(status_stream, "*                  Press Ctrl+C to exit                              *\r\n");
-    } else if (config->tport_specified) {
+    } else if (config->terminal_network_enabled) {
         fprintf(status_stream, "*                  RTT Telnet Mode Started                           *\r\n");
         fprintf(status_stream, "*                                                                    *\r\n");
         fprintf(status_stream, "*  Terminal:   port %5u, channel %u                                 *\r\n",
                 config->terminal_port, config->terminal_channel);
         if (config->sysview_enabled) {
-            if (config->sport_specified) {
+            if (config->systemview_network_enabled) {
                 fprintf(status_stream, "*  SystemView: port %5u, channel %u                                 *\r\n",
                         config->sysview_port, config->sysview_channel);
             } else {
@@ -461,7 +626,7 @@ static int _RunNormalMode(const RunConfig_t *config) {
                     config->terminal_channel);
         }
         if (config->sysview_enabled) {
-            if (config->sport_specified) {
+            if (config->systemview_network_enabled) {
                 fprintf(status_stream, "*  SystemView: port %5u, channel %u                                 *\r\n",
                         config->sysview_port, config->sysview_channel);
             } else {
@@ -527,6 +692,14 @@ static void _SignalHandler(int signum) {
 *    Initialize signal handlers for graceful shutdown.
 */
 static void _SignalInit(void) {
+#if defined(_WIN32)
+    signal(SIGINT, _SignalHandler);
+    signal(SIGTERM, _SignalHandler);
+    signal(SIGILL, _SignalHandler);
+    signal(SIGFPE, _SignalHandler);
+    signal(SIGSEGV, _SignalHandler);
+    signal(SIGABRT, _SignalHandler);
+#else
     struct sigaction action;
 
     memset(&action, 0, sizeof(action));
@@ -551,6 +724,7 @@ static void _SignalInit(void) {
     if (sigaction(SIGABRT, &action, NULL) != 0) {
         Log_Error("Failed to install SIGABRT handler\n");
     }
+#endif
 }
 
 /*********************************************************************
@@ -618,23 +792,6 @@ static int _ParseSize(const char *str, size_t *value, int base) {
 
     *value = (size_t)parsed;
     return 0;
-}
-
-/*********************************************************************
-*
-*       _ParseSizeAuto()
-*
-*  Function description
-*    Parse a size value as decimal unless it uses a 0x hexadecimal prefix.
-*/
-static int _ParseSizeAuto(const char *str, size_t *value) {
-    int base;
-
-    if (str == NULL) {
-        return -1;
-    }
-    base = ((str[0] == '0') && ((str[1] == 'x') || (str[1] == 'X'))) ? 16 : 10;
-    return _ParseSize(str, value, base);
 }
 
 /*********************************************************************
@@ -759,35 +916,57 @@ static int _ValidateLogDir(const char *log_dir) {
 
 /*********************************************************************
 *
+*       _EnableCoreLogForTerminalChannel()
+*
+*  Function description
+*    Enable core log recording when the Terminal default channel matches
+*    one of the named core log sources.
+*/
+static void _EnableCoreLogForTerminalChannel(unsigned terminal_channel,
+                                             unsigned linux_channel,
+                                             unsigned rtos_channel,
+                                             bool *linux_enabled,
+                                             bool *rtos_enabled) {
+    if ((linux_enabled == NULL) || (rtos_enabled == NULL)) {
+        return;
+    }
+
+    if (terminal_channel == linux_channel) {
+        *linux_enabled = true;
+    } else if (terminal_channel == rtos_channel) {
+        *rtos_enabled = true;
+    }
+}
+
+/*********************************************************************
+*
 *       Command line options
 *
 **********************************************************************
 */
 
-static char *_optstring = "hva:s:t:S:cd:";
+static char *_optstring = "hva:s:t:S:c";
 
 static const struct option _options[] = {
     {"help",                       no_argument,       NULL, 'h'},
     {"version",                    no_argument,       NULL, 'v'},
     {"addr",                       required_argument, NULL, 'a'},
     {"size",                       required_argument, NULL, 's'},
+    {"shm",                        required_argument, NULL, 1001},
     {"telnet-port",                required_argument, NULL, 't'},
     {"systemview-port",            required_argument, NULL, 'S'},
-    {"systemview-channel",         required_argument, NULL, 1002},
+    {"systemview",                 no_argument,       NULL, 1002},
+    {"linux",                      no_argument,       NULL, 1003},
+    {"rtos",                       no_argument,       NULL, 1004},
+    {"linux-channel",              required_argument, NULL, 1005},
+    {"rtos-channel",               required_argument, NULL, 1006},
+    {"systemview-channel",         required_argument, NULL, 1007},
     {"console",                    no_argument,       NULL, 'c'},
-    {"swimlane",                   no_argument,       NULL, 1005},
-    {"linux-channel",              required_argument, NULL, 1006},
-    {"rtos-channel",               required_argument, NULL, 1007},
-    {"rtt-timeout-ms",             required_argument, NULL, 1008},
-    {"memshm-reset",               no_argument,       NULL, 1009},
-    {"log-dir",                    required_argument, NULL, 1010},
-    {"terminal-queue-size",        required_argument, NULL, 1011},
-    {"systemview-queue-size",      required_argument, NULL, 1012},
-    {"swimlane-flush-threshold",   required_argument, NULL, 1013},
-    {"swimlane-flush-timeout-ms",  required_argument, NULL, 1014},
-    {"core-log-queue-size",        required_argument, NULL, 1015},
-    {"shm",                        required_argument, NULL, 'd'},
-    {"device",                     required_argument, NULL, 'd'},
+    {"swimlane",                   no_argument,       NULL, 1008},
+    {"rtt-timeout-ms",             required_argument, NULL, 1009},
+    {"memshm-reset",               no_argument,       NULL, 1010},
+    {"log-dir",                    required_argument, NULL, 1011},
+    {"swimlane-width",             required_argument, NULL, 1012},
     {NULL,                         0,                 NULL,  0 }
 };
 
@@ -808,11 +987,6 @@ int main(int argc, char* argv[]) {
     int  lindex      = -1;
     int  result      =  0;
 
-    // Required parameters
-    char *addr_str    = NULL;
-    char *size_str    = NULL;
-    char *device_path = NULL;
-
     // Optional parameters with defaults
     unsigned terminal_port              = RTT_BRIDGE_DEFAULT_TERMINAL_PORT;
     unsigned sysview_port               = RTT_BRIDGE_DEFAULT_SYSVIEW_PORT;
@@ -822,31 +996,28 @@ int main(int argc, char* argv[]) {
     bool     sysview_enabled            = false;
     bool     console_mode               = false;
     bool     swimlane_mode              = false;
-    unsigned linux_channel              = RTT_BRIDGE_DEFAULT_TERMINAL_CHANNEL;
+    bool     systemview_requested       = false;
+    unsigned linux_channel              = RTT_BRIDGE_DEFAULT_LINUX_CHANNEL;
     unsigned rtos_channel               = RTT_BRIDGE_DEFAULT_RTOS_CHANNEL;
-    size_t   terminal_queue_size        = 0u;
-    size_t   sysview_queue_size         = 0u;
-    size_t   core_log_queue_size        = 0u;
-    unsigned swimlane_flush_threshold   = LOG_MERGER_DEFAULT_FLUSH_THRESHOLD;
-    unsigned swimlane_flush_timeout_ms  = LOG_MERGER_DEFAULT_FLUSH_TIMEOUT_MS;
+    const char *device_path             = TRACEHUB_DEFAULT_MEMORY_PATH;
 
     // Track whether user explicitly specified options
-    bool     tport_specified            = false;
-    bool     sport_specified            = false;
+    bool     terminal_network_enabled   = false;
+    bool     systemview_network_enabled = false;
+    bool     linux_selected             = false;
+    bool     rtos_selected              = false;
     bool     linux_channel_specified    = false;
     bool     rtos_channel_specified     = false;
-    bool     systemview_channel_specified = false;
-    bool     terminal_queue_size_specified = false;
-    bool     sysview_queue_size_specified = false;
-    bool     core_log_queue_size_specified = false;
-    bool     swimlane_flush_threshold_specified = false;
-    bool     swimlane_flush_timeout_specified = false;
+    bool     linux_source_requested     = false;
+    bool     rtos_source_requested      = false;
     bool     core_log_linux_enabled     = false;
     bool     core_log_rtos_enabled      = false;
-    uint64_t rtt_address                = 0;
-    size_t   rtt_region_size            = 0;
+    uint64_t rtt_address                = TRACEHUB_DEFAULT_RTT_ADDR;
+    size_t   rtt_region_size            = TRACEHUB_DEFAULT_RTT_SIZE;
     unsigned rtt_search_timeout_ms      = 0;
+    unsigned swimlane_width             = 0;
     bool     memshm_reset               = false;
+    bool     swimlane_width_specified   = false;
     char    *log_dir                    = NULL;
     char     main_log_prefix[PATH_MAX];
     char     linux_log_prefix[PATH_MAX];
@@ -865,13 +1036,9 @@ int main(int argc, char* argv[]) {
     bool                      core_log_enabled;
     bool                      terminal_service_enabled;
 
-    if (argc <= 1) {
-        printf("usage: tracehub [OPTION]. Use --help for more information.\n");
-        return 0;
-    }
     //
-    // Set locale for correct UTF-8 display width calculation
-    // This enables wcwidth() to return correct values for CJK characters
+    // Set locale for correct UTF-8 display width calculation.
+    // This enables locale-dependent multibyte conversion for CJK characters.
     // Must be set early at program entry before any locale-dependent operations
     //
     setlocale(LC_CTYPE, "");
@@ -886,23 +1053,29 @@ int main(int argc, char* argv[]) {
                 return 0;
 
             case 'v':
-                printf("%s %s\n", _TRACEHUB, _TRACEHUB_VERSION);
+                printf("%s %s\n", _TRACEHUB, TRACEHUB_VERSION);
                 return 0;
 
             case 'a':
-                if (optarg == NULL) {
-                    printf("--addr option requires an argument\n");
+                if ((optarg == NULL) || (optarg[0] == '\0')) {
+                    printf("--addr option requires a non-empty argument\n");
                     return 1;
                 }
-                addr_str = optarg;
+                if (_ParseU64(optarg, &rtt_address, 0) != 0) {
+                    printf("Error: invalid --addr value: %s\n", optarg);
+                    return 1;
+                }
                 break;
 
             case 's':
-                if (optarg == NULL) {
-                    printf("--size option requires an argument\n");
+                if ((optarg == NULL) || (optarg[0] == '\0')) {
+                    printf("--size option requires a non-empty argument\n");
                     return 1;
                 }
-                size_str = optarg;
+                if (_ParseSize(optarg, &rtt_region_size, 0) != 0) {
+                    printf("Error: invalid --size value: %s\n", optarg);
+                    return 1;
+                }
                 break;
 
             case 't':
@@ -914,7 +1087,7 @@ int main(int argc, char* argv[]) {
                     printf("Error: invalid --telnet-port value: %s\n", optarg);
                     return 1;
                 }
-                tport_specified = true;
+                terminal_network_enabled = true;
                 break;
 
             case 'S':
@@ -926,30 +1099,30 @@ int main(int argc, char* argv[]) {
                     printf("Error: invalid --systemview-port value: %s\n", optarg);
                     return 1;
                 }
-                sport_specified = true;
+                systemview_network_enabled = true;
                 break;
 
-            case 1002:  // --systemview-channel
-                if (optarg == NULL) {
-                    printf("--systemview-channel option requires an argument\n");
+            case 1001:  // --shm
+                if ((optarg == NULL) || (optarg[0] == '\0')) {
+                    printf("--shm option requires a non-empty argument\n");
                     return 1;
                 }
-                if (_ParseUnsigned(optarg, &sysview_channel, 10) != 0) {
-                    printf("Error: invalid --systemview-channel value: %s\n", optarg);
-                    return 1;
-                }
-                systemview_channel_specified = true;
+                device_path = optarg;
                 break;
 
-            case 'c':  // --console
-                console_mode = true;
+            case 1002:  // --systemview
+                systemview_requested = true;
                 break;
 
-            case 1005:  // --swimlane
-                swimlane_mode = true;
+            case 1003:  // --linux
+                linux_selected = true;
                 break;
 
-            case 1006:  // --linux-channel
+            case 1004:  // --rtos
+                rtos_selected = true;
+                break;
+
+            case 1005:  // --linux-channel
                 if (optarg == NULL) {
                     printf("--linux-channel option requires an argument\n");
                     return 1;
@@ -961,7 +1134,7 @@ int main(int argc, char* argv[]) {
                 linux_channel_specified = true;
                 break;
 
-            case 1007:  // --rtos-channel
+            case 1006:  // --rtos-channel
                 if (optarg == NULL) {
                     printf("--rtos-channel option requires an argument\n");
                     return 1;
@@ -973,7 +1146,27 @@ int main(int argc, char* argv[]) {
                 rtos_channel_specified = true;
                 break;
 
-            case 1008:  // --rtt-timeout-ms
+            case 1007:  // --systemview-channel
+                if (optarg == NULL) {
+                    printf("--systemview-channel option requires an argument\n");
+                    return 1;
+                }
+                if (_ParseUnsigned(optarg, &sysview_channel, 10) != 0) {
+                    printf("Error: invalid --systemview-channel value: %s\n", optarg);
+                    return 1;
+                }
+                systemview_requested = true;
+                break;
+
+            case 'c':  // --console
+                console_mode = true;
+                break;
+
+            case 1008:  // --swimlane
+                swimlane_mode = true;
+                break;
+
+            case 1009:  // --rtt-timeout-ms
                 if (optarg == NULL) {
                     printf("--rtt-timeout-ms option requires an argument\n");
                     return 1;
@@ -984,7 +1177,7 @@ int main(int argc, char* argv[]) {
                 }
                 break;
 
-            case 1009:  // --memshm-reset
+            case 1010:  // --memshm-reset
 #if defined(RTTMEM_USE_MEMSHM)
                 memshm_reset = true;
 #else
@@ -993,7 +1186,7 @@ int main(int argc, char* argv[]) {
 #endif
                 break;
 
-            case 1010:  // --log-dir
+            case 1011:  // --log-dir
                 if ((optarg == NULL) || (optarg[0] == '\0')) {
                     printf("--log-dir option requires a non-empty argument\n");
                     return 1;
@@ -1001,79 +1194,16 @@ int main(int argc, char* argv[]) {
                 log_dir = optarg;
                 break;
 
-            case 1011:  // --terminal-queue-size
+            case 1012:  // --swimlane-width
                 if (optarg == NULL) {
-                    printf("--terminal-queue-size option requires an argument\n");
+                    printf("--swimlane-width option requires an argument\n");
                     return 1;
                 }
-                if (_ParseSizeAuto(optarg, &terminal_queue_size) != 0) {
-                    printf("Error: invalid --terminal-queue-size value: %s\n", optarg);
+                if (_ParseUnsigned(optarg, &swimlane_width, 10) != 0) {
+                    printf("Error: invalid --swimlane-width value: %s\n", optarg);
                     return 1;
                 }
-                terminal_queue_size_specified = true;
-                break;
-
-            case 1012:  // --systemview-queue-size
-                if (optarg == NULL) {
-                    printf("--systemview-queue-size option requires an argument\n");
-                    return 1;
-                }
-                if (_ParseSizeAuto(optarg, &sysview_queue_size) != 0) {
-                    printf("Error: invalid --systemview-queue-size value: %s\n", optarg);
-                    return 1;
-                }
-                sysview_queue_size_specified = true;
-                break;
-
-            case 1013:  // --swimlane-flush-threshold
-                if (optarg == NULL) {
-                    printf("--swimlane-flush-threshold option requires an argument\n");
-                    return 1;
-                }
-                if ((_ParseUnsigned(optarg, &swimlane_flush_threshold, 10) != 0) ||
-                    (swimlane_flush_threshold == 0u)) {
-                    printf("Error: invalid --swimlane-flush-threshold value: %s\n", optarg);
-                    return 1;
-                }
-                swimlane_flush_threshold_specified = true;
-                break;
-
-            case 1014:  // --swimlane-flush-timeout-ms
-                if (optarg == NULL) {
-                    printf("--swimlane-flush-timeout-ms option requires an argument\n");
-                    return 1;
-                }
-                if (_ParseUnsigned(optarg, &swimlane_flush_timeout_ms, 10) != 0) {
-                    printf("Error: invalid --swimlane-flush-timeout-ms value: %s\n", optarg);
-                    return 1;
-                }
-                swimlane_flush_timeout_specified = true;
-                break;
-
-            case 1015:  // --core-log-queue-size
-                if (optarg == NULL) {
-                    printf("--core-log-queue-size option requires an argument\n");
-                    return 1;
-                }
-                if (_ParseSizeAuto(optarg, &core_log_queue_size) != 0) {
-                    printf("Error: invalid --core-log-queue-size value: %s\n", optarg);
-                    return 1;
-                }
-                if ((core_log_queue_size > 0u) &&
-                    (core_log_queue_size < CORE_LOG_RECORDER_MIN_QUEUE_SIZE)) {
-                    printf("Error: --core-log-queue-size must be 0 or >= %u.\n",
-                           (unsigned)CORE_LOG_RECORDER_MIN_QUEUE_SIZE);
-                    return 1;
-                }
-                core_log_queue_size_specified = true;
-                break;
-
-            case 'd':  // --shm or --device
-                if (optarg == NULL) {
-                    printf("--shm/--device option requires an argument\n");
-                    return 1;
-                }
-                device_path = optarg;
+                swimlane_width_specified = true;
                 break;
 
             default:
@@ -1084,83 +1214,72 @@ int main(int argc, char* argv[]) {
     }
 
     //
-    // Validate required parameters
-    //
-    if (addr_str == NULL || size_str == NULL) {
-        printf("--addr and --size parameters are required.\n");
-        CLI_PrintUsage();
-        return 1;
-    }
-    if (device_path == NULL) {
-        printf("--shm or --device parameter is required.\n");
-        CLI_PrintUsage();
-        return 1;
-    }
-    if (_ParseU64(addr_str, &rtt_address, 16) != 0) {
-        printf("Error: invalid --addr value: %s\n", addr_str);
-        return 1;
-    }
-    if (_ParseSize(size_str, &rtt_region_size, 16) != 0) {
-        printf("Error: invalid --size value: %s\n", size_str);
-        return 1;
-    }
-
-    //
     // Validate and determine service enablement
     //
-
     if (console_mode && swimlane_mode) {
         printf("Error: --console and --swimlane are mutually exclusive.\n");
         return 1;
     }
-
-    // Validate console mode
-    if (console_mode) {
-        if (linux_channel_specified && rtos_channel_specified) {
-            printf("Error: --console cannot use both --linux-channel and --rtos-channel.\n");
-            printf("Use --swimlane for dual-channel display.\n");
-            return 1;
-        }
-        if (tport_specified) {
-            printf("Error: --console and --telnet-port are mutually exclusive.\n");
-            return 1;
-        }
+    if (console_mode && terminal_network_enabled) {
+        printf("Error: --console and --telnet-port are mutually exclusive.\n");
+        return 1;
+    }
+    if (swimlane_mode && terminal_network_enabled) {
+        printf("Error: --swimlane and --telnet-port are mutually exclusive.\n");
+        return 1;
+    }
+    if (linux_selected && rtos_selected) {
+        printf("Error: --linux and --rtos are mutually exclusive.\n");
+        return 1;
     }
 
-    // Validate swimlane mode
-    if (swimlane_mode) {
-        if (tport_specified) {
-            printf("Error: --swimlane and --telnet-port are mutually exclusive.\n");
-            return 1;
-        }
-    }
+    sysview_enabled = systemview_requested || systemview_network_enabled;
 
-    // Validate Telnet mode
-    if (tport_specified) {
-        if (linux_channel_specified && rtos_channel_specified) {
-            printf("Error: Cannot specify both --linux-channel and --rtos-channel with --telnet-port.\n");
-            printf("Telnet mode supports single channel only. Use --swimlane for dual-channel display.\n");
-            return 1;
-        }
-    }
-
-    // Determine SystemView enablement
-    sysview_enabled = systemview_channel_specified || sport_specified;
-
-    // Determine if user only wants SystemView (no Terminal)
     bool only_systemview = sysview_enabled &&
                            !console_mode &&
                            !swimlane_mode &&
-                           !tport_specified &&
+                           !terminal_network_enabled &&
+                           !linux_selected &&
+                           !rtos_selected &&
                            !linux_channel_specified &&
                            !rtos_channel_specified;
-    // Determine Terminal enablement and mode
+
+    if (!only_systemview &&
+        !console_mode &&
+        !swimlane_mode &&
+        !terminal_network_enabled) {
+        if (linux_selected || rtos_selected) {
+            console_mode = true;
+        } else {
+            swimlane_mode = true;
+        }
+    }
+
+    if (swimlane_mode && (linux_selected || rtos_selected)) {
+        printf("Error: --linux and --rtos select a single-source mode and cannot be used with --swimlane.\n");
+        return 1;
+    }
+
+    if (console_mode || terminal_network_enabled) {
+        linux_source_requested = linux_selected || linux_channel_specified;
+        rtos_source_requested  = rtos_selected || rtos_channel_specified;
+        if (linux_source_requested && rtos_source_requested) {
+            printf("Error: Linux and RTOS source options are mutually exclusive in single-source modes.\n");
+            return 1;
+        }
+    }
+
+    if (swimlane_width_specified && !swimlane_mode) {
+        printf("Error: --swimlane-width requires swimlane mode.\n");
+        return 1;
+    }
+
     if (only_systemview) {
         //
         // Only SystemView mode: disable Terminal
         //
         terminal_enabled = false;
-    } else if (tport_specified) {
+    } else if (terminal_network_enabled) {
         //
         // Telnet mode: Terminal service via network, no terminal display
         //
@@ -1168,85 +1287,51 @@ int main(int argc, char* argv[]) {
         console_mode     = false;
         swimlane_mode    = false;
 
-        // Determine which channel Terminal should use
-        if (linux_channel_specified) {
-            terminal_channel = linux_channel;
-            core_log_linux_enabled = true;
-        } else if (rtos_channel_specified) {
+        if (rtos_source_requested) {
             terminal_channel = rtos_channel;
             core_log_rtos_enabled = true;
+        } else if (linux_source_requested) {
+            terminal_channel = linux_channel;
+            core_log_linux_enabled = true;
         } else {
-            // Default: use linux-channel
-            terminal_channel = linux_channel;
-            core_log_linux_enabled = true;
-        }
-    } else if (console_mode) {
-        //
-        // Console mode: single channel on terminal
-        //
-        terminal_enabled = true;
-        swimlane_mode    = false;
-
-        // Determine which channel to use
-        if (linux_channel_specified) {
-            terminal_channel = linux_channel;
-            core_log_linux_enabled = true;
-        } else if (rtos_channel_specified) {
-            terminal_channel = rtos_channel;
-            core_log_rtos_enabled = true;
-        } else {
-            // Default: use linux-channel
-            terminal_channel = linux_channel;
-            core_log_linux_enabled = true;
+            _EnableCoreLogForTerminalChannel(terminal_channel,
+                                             linux_channel,
+                                             rtos_channel,
+                                             &core_log_linux_enabled,
+                                             &core_log_rtos_enabled);
         }
     } else if (swimlane_mode) {
         //
         // Swimlane mode: dual channels on terminal
         //
         terminal_enabled = true;
-        // Use specified channels or defaults
-        // (linux_channel and rtos_channel already have default values)
         core_log_linux_enabled = true;
         core_log_rtos_enabled  = true;
     } else {
         //
-        // Default mode: Swimlane mode with default channels
+        // Console mode: single-channel console with the selected core source.
         //
         terminal_enabled = true;
-        console_mode     = false;
-        swimlane_mode    = true;
-        // Use specified channels or defaults
-        // (linux_channel and rtos_channel already have default values)
-        core_log_linux_enabled = true;
-        core_log_rtos_enabled  = true;
+        console_mode     = true;
+        swimlane_mode    = false;
+
+        if (rtos_source_requested) {
+            terminal_channel = rtos_channel;
+            core_log_rtos_enabled = true;
+        } else if (linux_source_requested) {
+            terminal_channel = linux_channel;
+            core_log_linux_enabled = true;
+        } else {
+            _EnableCoreLogForTerminalChannel(terminal_channel,
+                                             linux_channel,
+                                             rtos_channel,
+                                             &core_log_linux_enabled,
+                                             &core_log_rtos_enabled);
+        }
     }
 
     core_log_enabled = core_log_linux_enabled || core_log_rtos_enabled;
     terminal_service_enabled = terminal_enabled && !swimlane_mode;
-
-    if (!swimlane_mode &&
-        (swimlane_flush_threshold_specified || swimlane_flush_timeout_specified)) {
-        printf("Error: --swimlane-flush-threshold and --swimlane-flush-timeout-ms require swimlane mode.\n");
-        return 1;
-    }
-    if (swimlane_mode &&
-        swimlane_flush_threshold > (unsigned)LOG_MERGER_DEFAULT_BUFFER_SIZE) {
-        printf("Error: --swimlane-flush-threshold must be <= %u.\n",
-               (unsigned)LOG_MERGER_DEFAULT_BUFFER_SIZE);
-        return 1;
-    }
-    if (!tport_specified && terminal_queue_size_specified) {
-        printf("Error: --terminal-queue-size requires --telnet-port.\n");
-        return 1;
-    }
-    if (!sport_specified && sysview_queue_size_specified) {
-        printf("Error: --systemview-queue-size requires --systemview-port.\n");
-        return 1;
-    }
-    if (!core_log_enabled && core_log_queue_size_specified) {
-        printf("Error: --core-log-queue-size requires an enabled core log source.\n");
-        return 1;
-    }
 
     if (!terminal_enabled && !sysview_enabled) {
         printf("Error: No service enabled.\n");
@@ -1332,8 +1417,6 @@ int main(int argc, char* argv[]) {
     bridge_config.rtt_region_size  = rtt_region_size;
     bridge_config.poll_interval_ms = RTT_BRIDGE_DEFAULT_POLL_INTERVAL_MS;
     bridge_config.device_path      = device_path;
-    bridge_config.log_file         = NULL;
-    bridge_config.log_file_handle  = NULL;
     bridge_config.run_flag         = &_running;
     bridge_config.rtt_search_timeout_ms = rtt_search_timeout_ms;
     bridge_config.reset_memory     = memshm_reset;
@@ -1346,14 +1429,13 @@ int main(int argc, char* argv[]) {
     }
 
     //
-    // Initialize Linux and RTOS core log recording for modes that consume core logs.
+    // Initialize Linux and RTOS core log recording for consuming modes.
     //
     if (core_log_enabled) {
         memset(&core_log_config, 0, sizeof(core_log_config));
         core_log_config.linux_channel        = linux_channel;
         core_log_config.rtos_channel         = rtos_channel;
         core_log_config.poll_interval_ms     = RTT_BRIDGE_DEFAULT_POLL_INTERVAL_MS;
-        core_log_config.consumer_queue_size  = core_log_queue_size;
         core_log_config.linux_prefix         = linux_log_prefix;
         core_log_config.rtos_prefix          = rtos_log_prefix;
         core_log_config.linux_enabled        = core_log_linux_enabled;
@@ -1374,9 +1456,6 @@ int main(int argc, char* argv[]) {
     terminal_config.channel      = terminal_channel;
     terminal_config.enabled      = terminal_service_enabled;
     terminal_config.console_mode = console_mode;
-    terminal_config.log_enabled  = false;
-    terminal_config.log_prefix   = NULL;
-    terminal_config.network_queue_size = terminal_queue_size;
 
     result = Terminal_Init(&terminal_config);
     if (result != 0) {
@@ -1391,10 +1470,9 @@ int main(int argc, char* argv[]) {
     sysview_config.port            = sysview_port;
     sysview_config.channel         = sysview_channel;
     sysview_config.enabled         = sysview_enabled;
-    sysview_config.network_enabled = sport_specified;
+    sysview_config.network_enabled = systemview_network_enabled;
     sysview_config.record_enabled  = sysview_enabled;
     sysview_config.record_prefix   = sysview_log_prefix;
-    sysview_config.network_queue_size = sysview_queue_size;
 
     result = SystemView_Init(&sysview_config);
     if (result != 0) {
@@ -1406,13 +1484,6 @@ int main(int argc, char* argv[]) {
     // Start services
     //
     RTTBridge_SetRunning(true);
-    if (core_log_enabled) {
-        result = CoreLogRecorder_Start();
-        if (result != 0) {
-            Log_Error("Failed to start core log recorder: %d\n", result);
-            goto err_sysview;
-        }
-    }
 
     //
     // Prepare runtime configuration
@@ -1430,11 +1501,10 @@ int main(int argc, char* argv[]) {
     run_config.core_log_enabled  = core_log_enabled;
     run_config.console_mode      = console_mode;
     run_config.only_systemview   = only_systemview;
-    run_config.tport_specified   = tport_specified;
-    run_config.sport_specified   = sport_specified;
+    run_config.terminal_network_enabled = terminal_network_enabled;
+    run_config.systemview_network_enabled = systemview_network_enabled;
+    run_config.swimlane_width = swimlane_width;
     run_config.swimlane_log_prefix = swimlane_log_prefix;
-    run_config.swimlane_flush_threshold = swimlane_flush_threshold;
-    run_config.swimlane_flush_timeout_ms = swimlane_flush_timeout_ms;
 
     //
     // Run mode-specific logic

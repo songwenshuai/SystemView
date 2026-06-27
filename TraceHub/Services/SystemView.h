@@ -237,7 +237,6 @@ static inline bool SystemView_HelloHasValidPrefix(const unsigned char *pMessage,
 *    network_enabled Enable/disable network service (true: network service, false: local recording only)
 *    record_enabled  Enable recording to file
 *    record_prefix   Prefix for record file name (e.g., "sysview")
-*    network_queue_size  TCP backlog size in bytes, 0 selects the default
 */
 typedef struct {
     unsigned     port;
@@ -246,7 +245,6 @@ typedef struct {
     bool         network_enabled;
     bool         record_enabled;
     const char  *record_prefix;
-    size_t       network_queue_size;
 } SystemView_Config_t;
 
 /*********************************************************************

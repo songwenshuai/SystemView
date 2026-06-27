@@ -100,20 +100,18 @@ extern "C" {     /* Make sure we have C-declarations in C++ programs */
 
 /*********************************************************************
 *
-*       VT_State_t
+*       LOG_TextCleanState_t
 *
 *  Description
-*    VT100/ANSI escape sequence filter state machine.
-*    Each caller should maintain their own state for thread safety.
+*    Stateful text log sanitizer context.
 */
-typedef enum {
-    VT_STATE_NORMAL = 0,
-    VT_STATE_ESC,
-    VT_STATE_CSI,
-    VT_STATE_DCS,
-    VT_STATE_DCS_STRING,
-    VT_STATE_DROP_ONE
-} VT_State_t;
+typedef struct {
+    unsigned state;
+    unsigned utf8_expected;
+    unsigned utf8_length;
+    uint32_t utf8_codepoint;
+    unsigned char utf8_bytes[4];
+} LOG_TextCleanState_t;
 
 /*********************************************************************
 *
@@ -133,8 +131,10 @@ void   LOG_LogToFile            (FILE *file, const char *sFormat, ...);
 void   LOG_Debug                (const char *file, int line, const char *function, const char *sFormat, ...);
 void   LOG_Error                (const char *sFormat, ...);
 void   LOG_Warn                 (const char *sFormat, ...);
-int    LOG_TelnetLogToFile      (FILE *file, const char *inBuf, uint32_t inLen, VT_State_t *vt_state);
-int    LOG_SwimLaneLogToFile    (FILE *file, uint64_t timestamp_us, const char *source, const char *content);
+void   LOG_TextCleanStateInit   (LOG_TextCleanState_t *state);
+int    LOG_WriteCleanTextToFile (FILE *file, const char *data, size_t len, LOG_TextCleanState_t *state);
+int    LOG_WriteCleanTextToFileEx (FILE *file, const char *data, size_t len, LOG_TextCleanState_t *state, size_t *clean_len);
+int    LOG_SwimLaneLogToFile    (FILE *file, uint64_t timestamp_us, const char *source, const char *content, LOG_TextCleanState_t *state);
 
 #if defined(__cplusplus)          // Allow usage of this module from C++ files (disable name mangling)
 }                /* Make sure we have C-declarations in C++ programs */

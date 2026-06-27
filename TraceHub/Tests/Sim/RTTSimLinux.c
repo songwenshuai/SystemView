@@ -43,7 +43,7 @@
 **********************************************************************
 ----------------------------------------------------------------------
 File    : RTTSimLinux.c
-Purpose : Simulate Linux A53 core writing logs to RTT channel 0
+Purpose : Simulate Linux logs written to RTT channel 0
           and SystemView multi-core events to RTT channel 2.
           Linux app is the SOLE INITIALIZER of RTT control block.
           First startup: initializes RTTCB.
@@ -157,7 +157,7 @@ int main(int argc, char *argv[]) {
     (void)argv;
 
     printf("==============================================\n");
-    printf("  RTT Linux A53 Simulator (SOLE INITIALIZER)\n");
+    printf("  RTT Linux Simulator (SOLE INITIALIZER)\n");
     printf("==============================================\n");
     printf("  Role:          RTTCB Owner (init or reuse)\n");
     printf("  Shared Memory: %s\n", SIM_SHM_NAME);
@@ -227,7 +227,7 @@ int main(int argc, char *argv[]) {
     sysview_config.num_channels     = SIM_NUM_CHANNELS;
     sysview_config.core_id          = 0u;
     sysview_config.lock_owner       = true;
-    sysview_config.core_name        = "A53";
+    sysview_config.core_name        = "Linux";
     sysview_config.application_name = "tracehub-multicore-sim";
     sysview_config.device_name      = "MEMSHM heterogeneous target";
     sysview_config.os_name          = "Linux";
@@ -244,7 +244,7 @@ int main(int argc, char *argv[]) {
         return 1;
     }
     snprintf(log_msg, sizeof(log_msg),
-             "Linux A53 boot banner without timestamp\r\n");
+             "Linux boot banner without timestamp\r\n");
     message_len = (unsigned)strlen(log_msg);
     bytes_written = SEGGER_RTT_WriteNoLock(rtt_address, SIM_LINUX_CHANNEL,
                                            log_msg, message_len);
@@ -273,7 +273,7 @@ int main(int argc, char *argv[]) {
         // Format Linux log message
         //
         snprintf(log_msg, sizeof(log_msg),
-                 "[%" PRIu64 "] \033[32mLinux A53\033[0m: Application event #%u, CPU load: %u%%\r\n",
+                 "[%" PRIu64 "] \033[32mLinux\033[0m: Application event #%u, CPU load: %u%%\r\n",
                  timestamp_us, next_log_count, load_percent);
         message_len = (unsigned)strlen(log_msg);
         //
@@ -297,7 +297,7 @@ int main(int argc, char *argv[]) {
 
         sysview_cycle_count++;
         sysview_bytes = RTT_SIM_SYSVIEW_RecordCycle(sysview_cycle_count, load_percent);
-        printf("SystemView [ch%d A53]: event cycle #%u (%u bytes)\n",
+        printf("SystemView [ch%d Linux]: event cycle #%u (%u bytes)\n",
                SIM_SYSVIEW_CHANNEL, sysview_cycle_count, sysview_bytes);
 
         SYS_Sleep(SIM_LOG_INTERVAL_MS);

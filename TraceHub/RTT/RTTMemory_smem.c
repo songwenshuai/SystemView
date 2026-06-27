@@ -64,6 +64,10 @@ Purpose : SMEM (SharedMem driver) backend for RTT memory operations
 #include <sys/ioctl.h>
 #include <sys/mman.h>
 
+#if !defined(__linux__)
+  #error "SMEM backend requires the Linux SharedMem driver; use MEMSHM for host simulation"
+#endif
+
 #include "Log.h"
 #include "RTTMemory.h"
 #include "SharedMem.h"

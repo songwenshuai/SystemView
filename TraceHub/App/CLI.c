@@ -55,9 +55,9 @@ Purpose : Command line banner and usage output
 */
 
 #include "CLI.h"
-#include "CoreLogRecorder.h"
-#include "LogMerger.h"
+#include "TraceHubDefaults.h"
 #include "RTTBridge.h"
+#include "SwimLaneRenderer.h"
 
 /*********************************************************************
 *
@@ -101,164 +101,162 @@ void CLI_PrintBanner(FILE *stream) {
 *    Print command-line usage information to stdout.
 */
 void CLI_PrintUsage(void) {
+    printf("TraceHub - RTT Trace and Debug Bridge\n");
+    printf("\n");
     printf("Usage:\n");
-    printf("  tracehub --addr <addr> --size <size> --shm <name> [OPTIONS]\n");
+    printf("  tracehub [RTT_MEMORY] [MODE] [SYSTEMVIEW] [OUTPUT]\n");
+    printf("  tracehub --help\n");
+    printf("  tracehub --version\n");
+    printf("\n");
+    printf("No runtime argument is mandatory. Build-time defaults are used when an\n");
+    printf("option is omitted. RTT memory binding options are kept as runtime\n");
+    printf("overrides so one binary can attach to different RTT regions.\n");
     printf("\n");
     printf("Global options:\n");
-    printf("  --help, -h            Show this help message\n");
-    printf("  --version, -v         Show version information\n");
+    printf("  -h, --help\n");
+    printf("      Show this help message.\n");
     printf("\n");
-    printf("Required parameters:\n");
-    printf("====================\n");
-    printf("--addr, -a <hex_address>\n");
-    printf("  Backend start address of RTT region to map, search, and validate (hex format).\n");
-    printf("  Use 0 to select the backend base address.\n");
-    printf("  Example: --addr 0x10000000\n");
+    printf("  -v, --version\n");
+    printf("      Show version information.\n");
     printf("\n");
-    printf("--size, -s <hex_size>\n");
-    printf("  RTT region size to map, search, and validate (hex format).\n");
-    printf("  Use 0 to select the backend mapped size.\n");
-    printf("  Example: --size 0\n");
+    printf("RTT memory binding:\n");
+    printf("  -a, --addr <addr>\n");
+    printf("      RTT region search base address. Decimal and 0x-prefixed values are accepted.\n");
+    printf("      Use 0 to select the backend base address. Default: 0x%llx.\n",
+           (unsigned long long)TRACEHUB_DEFAULT_RTT_ADDR);
+    printf("      Example: --addr 0x10000000\n");
     printf("\n");
-    printf("--shm, --device, -d <path>\n");
-    printf("  Device path or shared memory name for RTT memory access.\n");
-    printf("  For MEMSHM backend: POSIX shared memory name (e.g., /rtt_sim)\n");
-    printf("  For SMEM backend: SharedMem device path (e.g., /dev/shared_mem0)\n");
-    printf("  Example: --shm /rtt_sim\n");
+    printf("  -s, --size <size>\n");
+    printf("      RTT region search size. Decimal and 0x-prefixed values are accepted.\n");
+    printf("      Use 0 to select the backend mapped size. Default: 0x%llx.\n",
+           (unsigned long long)TRACEHUB_DEFAULT_RTT_SIZE);
+    printf("      Example: --size 0\n");
     printf("\n");
-    printf("--rtt-timeout-ms <ms>\n");
-    printf("  Maximum time to wait for RTT control block discovery, in milliseconds.\n");
-    printf("  Use 0 to wait until interrupted (default: 0).\n");
-    printf("  Example: --rtt-timeout-ms 30000\n");
+    printf("  --shm <name>\n");
+    printf("      Backend access path or shared memory name. Default: %s.\n",
+           TRACEHUB_DEFAULT_MEMORY_PATH);
+    printf("      MEMSHM backend: host shared memory name, for example /rtt_sim.\n");
+    printf("      SMEM backend: Linux SharedMem device path, for example /dev/shared_mem0.\n");
+    printf("      Example: --shm /rtt_sim\n");
     printf("\n");
-    printf("--memshm-reset\n");
-    printf("  Reset the POSIX shared memory object before MEMSHM mapping.\n");
-    printf("  This option is only valid for MEMSHM simulation builds.\n");
-    printf("  Do not use it while simulator processes keep running on the same object.\n");
-    printf("  Restart all simulator processes after resetting shared memory.\n");
+    printf("Mode selection:\n");
+    printf("  -c, --console\n");
+    printf("      Single-source console mode using stdin/stdout.\n");
+    printf("      Uses the build-time Terminal channel unless a Linux or RTOS source option is specified.\n");
     printf("\n");
-    printf("--log-dir <dir>\n");
-    printf("  Directory for all timestamped log and record files.\n");
-    printf("  The directory must already exist. Default: current working directory.\n");
-    printf("  Example: --log-dir ./logs\n");
+    printf("  --linux\n");
+    printf("      Select Linux text logs for console or Telnet single-source mode.\n");
     printf("\n");
-    printf("Optional parameters:\n");
-    printf("====================\n");
-    printf("--linux-channel <n>\n");
-    printf("  RTT channel for Linux logs (default: %u).\n", RTT_BRIDGE_DEFAULT_TERMINAL_CHANNEL);
-    printf("  Used by Terminal service to display Linux A53 logs.\n");
-    printf("  Optional: uses default if not specified.\n");
-    printf("  Example: --linux-channel 0\n");
+    printf("  --rtos\n");
+    printf("      Select RTOS text logs for console or Telnet single-source mode.\n");
     printf("\n");
-    printf("--rtos-channel <n>\n");
-    printf("  RTT channel for RTOS logs (default: %u).\n", RTT_BRIDGE_DEFAULT_RTOS_CHANNEL);
-    printf("  Used by Terminal service to display RTOS R5 logs.\n");
-    printf("  Optional: uses default if not specified.\n");
-    printf("  Example: --rtos-channel 1\n");
+    printf("  --linux-channel <n>\n");
+    printf("      RTT text channel for Linux logs. Default: %u.\n",
+           RTT_BRIDGE_DEFAULT_LINUX_CHANNEL);
+    printf("      In console or Telnet mode, this also selects Linux as the single source.\n");
+    printf("      Example: --linux-channel 0\n");
     printf("\n");
-    printf("--systemview-channel <n>\n");
-    printf("  RTT channel for SystemView binary trace data (default: %u).\n", RTT_BRIDGE_DEFAULT_SYSVIEW_CHANNEL);
-    printf("  Must not match any enabled core log channel.\n");
-    printf("  If specified alone: local recording only (no Terminal).\n");
-    printf("  If specified with Terminal options: both services run.\n");
-    printf("  Example: --systemview-channel 2\n");
+    printf("  --rtos-channel <n>\n");
+    printf("      RTT text channel for RTOS logs. Default: %u.\n",
+           RTT_BRIDGE_DEFAULT_RTOS_CHANNEL);
+    printf("      In console or Telnet mode, this also selects RTOS as the single source.\n");
+    printf("      Example: --rtos-channel 1\n");
     printf("\n");
-    printf("--console, -c\n");
-    printf("  Console mode: display single channel on terminal (stdin/stdout).\n");
-    printf("  Optional: if no channel specified, uses --linux-channel 0 by default.\n");
-    printf("  Can specify --linux-channel or --rtos-channel to override.\n");
-    printf("  Example: --console (uses default), or --console --rtos-channel 1\n");
+    printf("  --swimlane\n");
+    printf("      Dual-source Linux/RTOS swimlane mode. This is the default mode.\n");
+    printf("      Both sources are shown in timestamp order using parallel terminal columns.\n");
     printf("\n");
-    printf("--swimlane\n");
-    printf("  Swimlane mode: display dual channels on terminal in parallel columns.\n");
-    printf("  Optional: if channels not specified, uses defaults (linux=0, rtos=1).\n");
-    printf("  Can specify channels explicitly to override defaults.\n");
-    printf("  Example: --swimlane (uses defaults), or --swimlane --linux-channel 0 --rtos-channel 1\n");
+    printf("  -t, --telnet-port <port>\n");
+    printf("      Enable single-source Terminal Telnet service on the specified TCP port.\n");
+    printf("      Uses the build-time Terminal channel unless a Linux or RTOS source option is specified.\n");
+    printf("      Default Terminal port: %u. Example: --telnet-port 2323\n",
+           RTT_BRIDGE_DEFAULT_TERMINAL_PORT);
     printf("\n");
-    printf("--telnet-port, -t <port>\n");
-    printf("  Enable Terminal Telnet service on specified TCP port (default: %u).\n", RTT_BRIDGE_DEFAULT_TERMINAL_PORT);
-    printf("  When enabled, Terminal output goes to Telnet instead of terminal.\n");
-    printf("  Example: --telnet-port 2323\n");
+    printf("SystemView:\n");
+    printf("  --systemview\n");
+    printf("      Enable local SystemView SVDat recording.\n");
     printf("\n");
-    printf("--systemview-port, -S <port>\n");
-    printf("  Enable SystemView network service on specified TCP port (default: %u).\n", RTT_BRIDGE_DEFAULT_SYSVIEW_PORT);
-    printf("  Uses default SystemView channel if --systemview-channel is not specified.\n");
-    printf("  Example: --systemview-port 19111\n");
+    printf("  --systemview-channel <n>\n");
+    printf("      RTT channel for SystemView binary trace data. Default: %u.\n",
+           RTT_BRIDGE_DEFAULT_SYSVIEW_CHANNEL);
+    printf("      Also enables local SystemView SVDat recording.\n");
+    printf("      Must not match any enabled Linux or RTOS text log channel.\n");
+    printf("      Example: --systemview-channel 2\n");
     printf("\n");
-    printf("--terminal-queue-size <bytes>\n");
-    printf("  Terminal TCP backlog size in bytes. Requires --telnet-port. Use 0 for the default 1 MiB.\n");
-    printf("  Example: --telnet-port 2323 --terminal-queue-size 4194304\n");
+    printf("  -S, --systemview-port <port>\n");
+    printf("      Enable SystemView TCP service and local SVDat recording.\n");
+    printf("      Default SystemView port: %u. Example: --systemview-port 19111\n",
+           RTT_BRIDGE_DEFAULT_SYSVIEW_PORT);
     printf("\n");
-    printf("--systemview-queue-size <bytes>\n");
-    printf("  SystemView TCP backlog size in bytes. Requires --systemview-port. Use 0 for the default 1 MiB.\n");
-    printf("  Example: --systemview-port 19111 --systemview-queue-size 0x400000\n");
+    printf("Output and runtime control:\n");
+    printf("  --log-dir <dir>\n");
+    printf("      Directory for timestamped log and record files. The directory must\n");
+    printf("      already exist. Default: current working directory.\n");
+    printf("      Example: --log-dir ./logs\n");
     printf("\n");
-    printf("--swimlane-flush-threshold <count>\n");
-    printf("  Swimlane ready flush threshold. Default: %u entries.\n",
-           (unsigned)LOG_MERGER_DEFAULT_FLUSH_THRESHOLD);
-    printf("  Must be between 1 and %u.\n", (unsigned)LOG_MERGER_DEFAULT_BUFFER_SIZE);
-    printf("  Example: --swimlane-flush-threshold 16\n");
+    printf("  --rtt-timeout-ms <ms>\n");
+    printf("      Maximum time to wait for RTT control block discovery, in milliseconds.\n");
+    printf("      Use 0 to wait until interrupted. Default: 0.\n");
+    printf("      Example: --rtt-timeout-ms 30000\n");
     printf("\n");
-    printf("--swimlane-flush-timeout-ms <ms>\n");
-    printf("  Swimlane ready flush timeout in milliseconds. Default: %u.\n",
-           (unsigned)LOG_MERGER_DEFAULT_FLUSH_TIMEOUT_MS);
-    printf("  Use 0 to disable timeout flushing and wait for source watermarks.\n");
-    printf("  Example: --swimlane-flush-timeout-ms 500\n");
+    printf("  --swimlane-width <columns>\n");
+    printf("      Override the swimlane total terminal width. Use 0 for automatic width resolution.\n");
+    printf("      Requires swimlane mode; no explicit mode also uses swimlane.\n");
+    printf("      Default non-TTY width: %u. Example: --swimlane-width 160\n",
+           (unsigned)SWIMLANE_DEFAULT_TOTAL_WIDTH);
+#if defined(RTTMEM_USE_MEMSHM)
     printf("\n");
-    printf("--core-log-queue-size <bytes>\n");
-    printf("  Per-source core log consumer queue size. Use 0 for the default %u bytes.\n",
-           (unsigned)CORE_LOG_RECORDER_DEFAULT_QUEUE_SIZE);
-    printf("  Non-zero values must be at least %u bytes.\n",
-           (unsigned)CORE_LOG_RECORDER_MIN_QUEUE_SIZE);
-    printf("  Example: --core-log-queue-size 0x400000\n");
+    printf("  --memshm-reset\n");
+    printf("      Reset the MEMSHM object before mapping it. Use only for host simulation.\n");
+    printf("      Do not use while simulator processes are still attached to the same object.\n");
+#endif
+    printf("\n");
+    printf("Build-time defaults:\n");
+    printf("  RTT address:               0x%llx\n",
+           (unsigned long long)TRACEHUB_DEFAULT_RTT_ADDR);
+    printf("  RTT size:                  0x%llx\n",
+           (unsigned long long)TRACEHUB_DEFAULT_RTT_SIZE);
+    printf("  RTT backend path:          %s\n", TRACEHUB_DEFAULT_MEMORY_PATH);
+    printf("  Linux text channel:        %u\n", RTT_BRIDGE_DEFAULT_LINUX_CHANNEL);
+    printf("  RTOS text channel:         %u\n", RTT_BRIDGE_DEFAULT_RTOS_CHANNEL);
+    printf("  Terminal text channel:     %u\n", RTT_BRIDGE_DEFAULT_TERMINAL_CHANNEL);
+    printf("  SystemView channel:        %u\n", RTT_BRIDGE_DEFAULT_SYSVIEW_CHANNEL);
+    printf("  Terminal Telnet port:      %u\n", RTT_BRIDGE_DEFAULT_TERMINAL_PORT);
+    printf("  SystemView TCP port:       %u\n", RTT_BRIDGE_DEFAULT_SYSVIEW_PORT);
+    printf("  Swimlane non-TTY width:    %u\n", (unsigned)SWIMLANE_DEFAULT_TOTAL_WIDTH);
+    printf("  Swimlane timestamp width:  %u\n", (unsigned)SWIMLANE_DEFAULT_TIMESTAMP_WIDTH);
+    printf("  Linux swimlane label:      %s\n", SWIMLANE_DEFAULT_LINUX_LABEL);
+    printf("  RTOS swimlane label:       %s\n", SWIMLANE_DEFAULT_RTOS_LABEL);
     printf("\n");
     printf("Examples:\n");
-    printf("  # 1. Default: Swimlane mode with default channels (linux=0, rtos=1)\n");
-    printf("  tracehub --addr 0x10000000 --size 0 --shm /rtt_sim\n");
+    printf("  # Default dual-source swimlane using build-time RTT defaults\n");
+    printf("  tracehub\n");
     printf("\n");
-    printf("  # 2. Swimlane mode (explicitly, same as default)\n");
-    printf("  tracehub --addr 0x10000000 --size 0 --shm /rtt_sim --swimlane\n");
+    printf("  # Console mode, RTOS logs, host MEMSHM simulation\n");
+    printf("  tracehub --shm /rtt_sim --addr 0x10000000 --size 0 --rtos\n");
     printf("\n");
-    printf("  # 3. Swimlane mode with custom channels\n");
-    printf("  tracehub --addr 0x10000000 --size 0 --shm /rtt_sim --swimlane --linux-channel 0 --rtos-channel 1\n");
+    printf("  # Dual-source swimlane with local SystemView recording and TCP streaming\n");
+    printf("  tracehub --shm /rtt_sim --addr 0x10000000 --size 0 --swimlane --systemview-port 19111\n");
     printf("\n");
-    printf("  # 4. Console mode with default channel (linux=0)\n");
-    printf("  tracehub --addr 0x10000000 --size 0 --shm /rtt_sim --console\n");
+    printf("  # Linux SMEM real-chip path through the SharedMem driver\n");
+    printf("  tracehub --shm /dev/shared_mem0 --addr 0x10040000 --size 0x20000 --swimlane\n");
+#if defined(RTTMEM_USE_MEMSHM)
     printf("\n");
-    printf("  # 5. Console mode with specific channel (RTOS)\n");
-    printf("  tracehub --addr 0x10000000 --size 0 --shm /rtt_sim --console --rtos-channel 1\n");
-    printf("\n");
-    printf("  # 6. Telnet service with default channel (linux=0)\n");
-    printf("  tracehub --addr 0x10000000 --size 0 --shm /rtt_sim --telnet-port 2323\n");
-    printf("\n");
-    printf("  # 7. Telnet service with custom channel (RTOS)\n");
-    printf("  tracehub --addr 0x10000000 --size 0 --shm /rtt_sim --telnet-port 2323 --rtos-channel 1\n");
-    printf("\n");
-    printf("  # 8. Only SystemView local recording (no Terminal)\n");
-    printf("  tracehub --addr 0x10000000 --size 0 --shm /rtt_sim --systemview-channel 2\n");
-    printf("\n");
-    printf("  # 9. SystemView network service with local SVDat recording (no Terminal)\n");
-    printf("  tracehub --addr 0x10000000 --size 0 --shm /rtt_sim --systemview-port 19111\n");
-    printf("\n");
-    printf("  # 10. Swimlane + SystemView local recording\n");
-    printf("  tracehub --addr 0x10000000 --size 0 --shm /rtt_sim --swimlane --systemview-channel 2\n");
-    printf("\n");
-    printf("  # 11. Swimlane + SystemView network and local SVDat recording\n");
-    printf("  tracehub --addr 0x10000000 --size 0 --shm /rtt_sim --swimlane --systemview-port 19111\n");
-    printf("\n");
-    printf("  # 12. Specify channel to enable Terminal with SystemView\n");
-    printf("  tracehub --addr 0x10000000 --size 0 --shm /rtt_sim --linux-channel 0 --systemview-channel 2\n");
-    printf("         (Enables Swimlane with linux=0, rtos=1 (default) + SystemView)\n");
+    printf("  # Reset the MEMSHM simulation object before attaching\n");
+    printf("  tracehub --shm /rtt_sim --addr 0x10000000 --size 0 --memshm-reset --swimlane\n");
+#endif
     printf("\n");
     printf("Note:\n");
+    printf("  - TraceHub runs on Linux, macOS, or Windows hosts.\n");
+    printf("  - SMEM accesses real-chip RTT memory through a Linux SharedMem driver.\n");
+    printf("  - macOS and Windows builds support MEMSHM host simulation only.\n");
+    printf("  - --console, --swimlane, and --telnet-port are mutually exclusive modes.\n");
+    printf("  - --linux and --rtos are single-source selectors and cannot be used with --swimlane.\n");
+    printf("  - In single-source modes, Linux and RTOS source options are mutually exclusive.\n");
     printf("  - The SMEM backend may require root privileges to access mapped memory.\n");
-    printf("  - Data is automatically logged to timestamped files according to enabled services:\n");
-    printf("  - Use --log-dir to choose the directory for generated files.\n");
-    printf("    * main_<timestamp>.log      - Main tool log\n");
-    printf("    * linux_<timestamp>.log     - Linux core log data when Linux source is enabled\n");
-    printf("    * rtos_<timestamp>.log      - RTOS core log data when RTOS source is enabled\n");
-    printf("    * sysview_<timestamp>.SVDat - SystemView binary SVDat data (configured RTT channel)\n");
-    printf("    * swimlane_<timestamp>.log  - Swimlane timestamped log (swimlane mode only)\n");
+    printf("  - Real-chip swimlane logs require both text sources to use the same hardware time base.\n");
+    printf("  - Text log files strip terminal control sequences; live Terminal output preserves target colors.\n");
+    printf("  - Queue sizes, swimlane timestamp width, flush thresholds, and source labels are build-time defaults.\n");
     printf("\n");
     printf("Support: wenshuaisong@gmail.com\n");
     printf("\n");

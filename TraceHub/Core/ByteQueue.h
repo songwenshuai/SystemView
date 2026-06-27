@@ -42,13 +42,13 @@
 *                                                                    *
 **********************************************************************
 ----------------------------------------------------------------------
-File    : LogCollector.h
-Purpose : Log collector for multiple RTT text sources
+File    : ByteQueue.h
+Purpose : Fixed-capacity byte ring queue
 ---------------------------END-OF-HEADER------------------------------
 */
 
-#ifndef TRACEHUB_LOGCOLLECTOR_H            // Guard against multiple inclusion
-#define TRACEHUB_LOGCOLLECTOR_H
+#ifndef TRACEHUB_BYTE_QUEUE_H            // Guard against multiple inclusion
+#define TRACEHUB_BYTE_QUEUE_H
 
 /*********************************************************************
 *
@@ -57,51 +57,11 @@ Purpose : Log collector for multiple RTT text sources
 **********************************************************************
 */
 
-#include <stdint.h>
 #include <stdbool.h>
 #include <stddef.h>
 
-#include "LogEntry.h"
-
 #if defined(__cplusplus)         // Allow usage of this module from C++ files (disable name mangling)
 extern "C" {     /* Make sure we have C-declarations in C++ programs */
-#endif
-
-/*********************************************************************
-*
-*       Defines
-*
-**********************************************************************
-*/
-
-/*********************************************************************
-*
-*       LOG_COLLECTOR_MAX_LINE_LEN
-*  Maximum length of a single log line.
-*
-*/
-#ifndef LOG_COLLECTOR_MAX_LINE_LEN
-  #define LOG_COLLECTOR_MAX_LINE_LEN   2048
-#endif
-
-/*********************************************************************
-*
-*       LOG_COLLECTOR_DEFAULT_PENDING_UNTIMED_SIZE
-*  Default per-source capacity for leading untimestamped startup logs.
-*
-*/
-#ifndef LOG_COLLECTOR_DEFAULT_PENDING_UNTIMED_SIZE
-  #define LOG_COLLECTOR_DEFAULT_PENDING_UNTIMED_SIZE  (64u * 1024u)
-#endif
-
-/*********************************************************************
-*
-*       LOG_COLLECTOR_MIN_PENDING_UNTIMED_SIZE
-*  Minimum capacity for one maximum line plus pending metadata.
-*
-*/
-#ifndef LOG_COLLECTOR_MIN_PENDING_UNTIMED_SIZE
-  #define LOG_COLLECTOR_MIN_PENDING_UNTIMED_SIZE      (LOG_COLLECTOR_MAX_LINE_LEN + 3u)
 #endif
 
 /*********************************************************************
@@ -111,44 +71,18 @@ extern "C" {     /* Make sure we have C-declarations in C++ programs */
 **********************************************************************
 */
 
-/*********************************************************************
-*
-*       LogCollector_Config_t
-*
-*  Description
-*    Configuration structure for log collector.
-*
-*  Fields
-*    linux_channel    RTT up-buffer channel number for Linux logs
-*    rtos_channel     RTT up-buffer channel number for RTOS logs
-*    poll_interval_ms Polling interval in milliseconds
-*/
 typedef struct {
-    unsigned     linux_channel;
-    unsigned     rtos_channel;
-    unsigned     poll_interval_ms;
-} LogCollector_Config_t;
+    char   *buffer;
+    size_t  capacity;
+    size_t  read_pos;
+    size_t  used;
+} ByteQueue_t;
 
-/*********************************************************************
-*
-*       LogCollector_Callback_t
-*
-*  Description
-*    Callback function type for delivering collected log entries.
-*
-*  Parameters
-*    entry      Pointer to collected LogEntry_t
-*    user_data  User-provided context pointer
-*
-*  Return value
-*    0   Continue collection
-*   -1   Stop collection
-*
-*  Ownership
-*    The callback takes ownership of the entry and must call
-*    LogEntry_Destroy(entry) regardless of the return value.
-*/
-typedef int (*LogCollector_Callback_t)(LogEntry_t *entry, void *user_data);
+typedef enum {
+    BYTE_QUEUE_WRITE_OK,
+    BYTE_QUEUE_WRITE_OVERFLOW_WRITTEN,
+    BYTE_QUEUE_WRITE_TOO_LARGE
+} ByteQueue_WriteResult_t;
 
 /*********************************************************************
 *
@@ -157,18 +91,18 @@ typedef int (*LogCollector_Callback_t)(LogEntry_t *entry, void *user_data);
 **********************************************************************
 */
 
-int  LogCollector_Init         (LogCollector_Config_t *config);
-void LogCollector_Cleanup      (void);
-int  LogCollector_Start        (LogCollector_Callback_t callback, void *user_data);
-void LogCollector_Stop         (void);
-int  LogCollector_Poll         (LogCollector_Callback_t callback, void *user_data);
-bool LogCollector_IsRunning    (void);
-bool LogCollector_HasFatalError(void);
+void                    ByteQueue_Init       (ByteQueue_t *queue, char *buffer, size_t capacity);
+bool                    ByteQueue_IsValid    (const ByteQueue_t *queue);
+void                    ByteQueue_Clear      (ByteQueue_t *queue);
+ByteQueue_WriteResult_t ByteQueue_Write      (ByteQueue_t *queue, const char *data, size_t num_bytes);
+size_t                  ByteQueue_Read       (ByteQueue_t *queue, char *buffer, size_t buffer_size);
+size_t                  ByteQueue_GetCapacity(const ByteQueue_t *queue);
+size_t                  ByteQueue_GetUsed    (const ByteQueue_t *queue);
 
 #if defined(__cplusplus)          // Allow usage of this module from C++ files (disable name mangling)
 }                /* Make sure we have C-declarations in C++ programs */
 #endif
 
-#endif // end of include guard: TRACEHUB_LOGCOLLECTOR_H Avoid multiple inclusion
+#endif // end of include guard: TRACEHUB_BYTE_QUEUE_H Avoid multiple inclusion
 
 /*************************** End of file ****************************/

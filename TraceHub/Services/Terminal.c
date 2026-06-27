@@ -57,10 +57,29 @@ Purpose : Terminal service for RTT Channel 0 with Telnet protocol
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <termios.h>
-#include <unistd.h>
 #include <errno.h>
-#include <sys/select.h>
+
+#if defined(_WIN32)
+  #ifndef WIN32_LEAN_AND_MEAN
+    #define WIN32_LEAN_AND_MEAN
+  #endif
+  #include <windows.h>
+  #include <conio.h>
+  #include <io.h>
+  typedef SSIZE_T ssize_t;
+  #ifndef STDIN_FILENO
+    #define STDIN_FILENO 0
+  #endif
+  #ifndef STDOUT_FILENO
+    #define STDOUT_FILENO 1
+  #endif
+  #define read  _read
+  #define write _write
+#else
+  #include <termios.h>
+  #include <unistd.h>
+  #include <sys/select.h>
+#endif
 
 #include "Terminal.h"
 #include "CoreLogRecorder.h"
@@ -69,6 +88,7 @@ Purpose : Terminal service for RTT Channel 0 with Telnet protocol
 #include "SYS.h"
 #include "Log.h"
 #include "TelnetCodec.h"
+#include "ByteQueue.h"
 
 /*********************************************************************
 *
@@ -99,7 +119,9 @@ Purpose : Terminal service for RTT Channel 0 with Telnet protocol
 *  Size of queued RTT output retained for TCP clients.
 *
 */
-#define TERMINAL_DEFAULT_NETWORK_QUEUE_SIZE (1024u * 1024u)
+#ifndef TERMINAL_DEFAULT_NETWORK_QUEUE_SIZE
+  #define TERMINAL_DEFAULT_NETWORK_QUEUE_SIZE (1024u * 1024u)
+#endif
 
 /*********************************************************************
 *
@@ -139,7 +161,6 @@ typedef struct {
     bool                Initialized;
     bool                Running;
     bool                FatalError;
-    bool                LogFileError;
     bool                LockInitialized;
     SYS_SOCKET_HANDLE   hListener;
     SYS_SOCKET_HANDLE   hClient;
@@ -153,9 +174,6 @@ typedef struct {
     bool                RTTRecovering;
     SYS_Mutex           Lock;
 
-    // Log file (internally managed)
-    FILE               *log_file;
-
     // Transmission state management for partial send/receive
     int                 SendNumBytes;
     int                 WriteNumBytes;
@@ -164,12 +182,8 @@ typedef struct {
     char                acSendBuf[TERMINAL_SEND_BUF_SIZE];
     char                acWriteBuf[TERMINAL_RECV_BUF_SIZE];
     char               *pNetworkQueue;
-    size_t              NetworkQueueSize;
-    size_t              NetworkQueueRead;
-    size_t              NetworkQueueUsed;
+    ByteQueue_t         NetworkQueue;
 
-    // VT100 filter state for log file (thread-safe)
-    VT_State_t              vt_state;
     TelnetCodec_State_t     TelnetState;
 
     // Statistics
@@ -194,8 +208,13 @@ static Terminal_State_t _terminal_state;
 **********************************************************************
 */
 
+#if defined(_WIN32)
+static HANDLE _console_input = NULL;
+static DWORD  _orig_console_mode = 0;
+#else
 static struct termios _orig_termios;
-static bool           _termios_saved = false;
+#endif
+static bool   _termios_saved = false;
 
 /*********************************************************************
 *
@@ -211,11 +230,8 @@ static bool           _termios_saved = false;
 *  Function description
 *    Return the configured network queue capacity.
 */
-static size_t _Terminal_GetConfiguredQueueSize(const Terminal_Config_t *pConfig) {
-    if (pConfig == NULL || pConfig->network_queue_size == 0u) {
-        return TERMINAL_DEFAULT_NETWORK_QUEUE_SIZE;
-    }
-    return pConfig->network_queue_size;
+static size_t _Terminal_GetNetworkQueueSize(void) {
+    return TERMINAL_DEFAULT_NETWORK_QUEUE_SIZE;
 }
 
 /*********************************************************************
@@ -231,6 +247,31 @@ static size_t _Terminal_GetConfiguredQueueSize(const Terminal_Config_t *pConfig)
 *   -1   Failed to configure terminal
 */
 static int _Console_SetRawMode(void) {
+#if defined(_WIN32)
+    DWORD raw_mode;
+
+    _console_input = GetStdHandle(STD_INPUT_HANDLE);
+    if (_console_input == INVALID_HANDLE_VALUE || _console_input == NULL) {
+        Log_Error("Console: failed to get console input handle\n");
+        return -1;
+    }
+    if (!GetConsoleMode(_console_input, &_orig_console_mode)) {
+        Log_Error("Console: failed to get console mode: %lu\n", GetLastError());
+        return -1;
+    }
+    _termios_saved = true;
+
+    raw_mode = _orig_console_mode;
+    raw_mode &= ~(ENABLE_LINE_INPUT | ENABLE_ECHO_INPUT);
+    raw_mode |= ENABLE_PROCESSED_INPUT;
+    if (!SetConsoleMode(_console_input, raw_mode)) {
+        Log_Error("Console: failed to set raw mode: %lu\n", GetLastError());
+        return -1;
+    }
+
+    Log_Print("Console: terminal set to raw mode\n");
+    return 0;
+#else
     struct termios raw;
     //
     // Save original terminal settings
@@ -259,6 +300,7 @@ static int _Console_SetRawMode(void) {
 
     Log_Print("Console: terminal set to raw mode\n");
     return 0;
+#endif
 }
 
 /*********************************************************************
@@ -270,7 +312,11 @@ static int _Console_SetRawMode(void) {
 */
 static void _Console_RestoreMode(void) {
     if (_termios_saved) {
+#if defined(_WIN32)
+        SetConsoleMode(_console_input, _orig_console_mode);
+#else
         tcsetattr(STDIN_FILENO, TCSAFLUSH, &_orig_termios);
+#endif
         _termios_saved = false;
         Log_Print("Console: terminal restored to original mode\n");
     }
@@ -289,6 +335,9 @@ static void _Console_RestoreMode(void) {
 *   -1   Error
 */
 static int _Console_CheckInput(void) {
+#if defined(_WIN32)
+    return _kbhit() ? 1 : 0;
+#else
     struct timeval tv = {0, 0};
     fd_set         fds;
 
@@ -296,6 +345,7 @@ static int _Console_CheckInput(void) {
     FD_SET(STDIN_FILENO, &fds);
 
     return select(STDIN_FILENO + 1, &fds, NULL, NULL, &tv);
+#endif
 }
 
 /*********************************************************************
@@ -402,59 +452,6 @@ static void _Terminal_ReportRTTError(Terminal_State_t *pState, const char *opera
 
 /*********************************************************************
 *
-*       _Terminal_MarkLogFileErrorLocked()
-*
-*  Function description
-*    Mark a log file error while the caller has exclusive state access.
-*/
-static bool _Terminal_MarkLogFileErrorLocked(Terminal_State_t *pState) {
-    bool should_report;
-
-    should_report = !pState->LogFileError;
-    pState->LogFileError = true;
-    pState->FatalError = true;
-    pState->Running = false;
-
-    return should_report;
-}
-
-/*********************************************************************
-*
-*       _Terminal_ReportLogFileError()
-*
-*  Function description
-*    Record a log file persistence error.
-*/
-static void _Terminal_ReportLogFileError(Terminal_State_t *pState, const char *operation, int error_code) {
-    bool should_report;
-
-    if (pState == NULL) {
-        return;
-    }
-    if (operation == NULL) {
-        operation = "operation";
-    }
-
-    if (pState->LockInitialized) {
-        SYS_MutexLock(&pState->Lock);
-        should_report = _Terminal_MarkLogFileErrorLocked(pState);
-        SYS_MutexUnlock(&pState->Lock);
-    } else {
-        should_report = _Terminal_MarkLogFileErrorLocked(pState);
-    }
-
-    if (should_report) {
-        if (error_code != 0) {
-            Log_Error("Terminal: log file %s failed: %s\n",
-                      operation, strerror(error_code));
-        } else {
-            Log_Error("Terminal: log file %s failed\n", operation);
-        }
-    }
-}
-
-/*********************************************************************
-*
 *       _Terminal_GetClient()
 *
 *  Function description
@@ -503,8 +500,7 @@ static void _Terminal_ClearNetworkQueueLocked(Terminal_State_t *pState) {
         return;
     }
 
-    pState->NetworkQueueRead = 0u;
-    pState->NetworkQueueUsed = 0u;
+    ByteQueue_Clear(&pState->NetworkQueue);
 }
 
 /*********************************************************************
@@ -653,54 +649,6 @@ static void _Terminal_AddBytesReceived(Terminal_State_t *pState, unsigned NumByt
 
 /*********************************************************************
 *
-*       _Terminal_LogBytes()
-*
-*  Function description
-*    Append terminal bytes to the optional log file.
-*
-*  Return value
-*    0   Success or logging disabled
-*   -1   Log file write failed
-*/
-static int _Terminal_LogBytes(Terminal_State_t *pState, const char *data, unsigned num_bytes) {
-    bool should_report;
-    int  result;
-    int  error_code;
-
-    if ((pState == NULL) || (data == NULL) || (num_bytes == 0u)) {
-        return 0;
-    }
-
-    should_report = false;
-    result = 0;
-    error_code = 0;
-
-    SYS_MutexLock(&pState->Lock);
-    if (pState->log_file != NULL) {
-        errno = 0;
-        result = LOG_TelnetLogToFile(pState->log_file, data, num_bytes, &pState->vt_state);
-        error_code = errno;
-        if (result != 0) {
-            should_report = _Terminal_MarkLogFileErrorLocked(pState);
-        }
-    }
-    SYS_MutexUnlock(&pState->Lock);
-
-    if (should_report) {
-        if (error_code != 0) {
-            fprintf(stderr,
-                    "[Terminal] log file write failed: %s\n",
-                    strerror(error_code));
-        } else {
-            fprintf(stderr, "[Terminal] log file write failed\n");
-        }
-    }
-
-    return (result == 0) ? 0 : -1;
-}
-
-/*********************************************************************
-*
 *       _Terminal_QueueTargetData()
 *
 *  Function description
@@ -713,56 +661,36 @@ static int _Terminal_LogBytes(Terminal_State_t *pState, const char *data, unsign
 *    -1  Single target output batch exceeds queue capacity
 */
 static int _Terminal_QueueTargetData(Terminal_State_t *pState, const char *data, unsigned num_bytes) {
-    size_t free_space;
-    size_t write_pos;
-    size_t first_chunk;
-    bool   queue_overflow;
+    ByteQueue_WriteResult_t queue_result;
 
     if ((pState == NULL) || (data == NULL) || (num_bytes == 0u)) {
         return 0;
     }
-    if (pState->pNetworkQueue == NULL || pState->NetworkQueueSize == 0u) {
+    if (!ByteQueue_IsValid(&pState->NetworkQueue)) {
         _Terminal_ReportRTTError(pState, "network queue");
         return -1;
     }
 
     SYS_MutexLock(&pState->Lock);
 
-    queue_overflow = false;
-    free_space = pState->NetworkQueueSize - pState->NetworkQueueUsed;
-    if ((size_t)num_bytes > free_space) {
-        _Terminal_ClearNetworkQueueLocked(pState);
+    queue_result = ByteQueue_Write(&pState->NetworkQueue, data, (size_t)num_bytes);
+    if (queue_result == BYTE_QUEUE_WRITE_OVERFLOW_WRITTEN) {
         pState->ClientDisconnectRequested = true;
-        queue_overflow = true;
-        free_space = pState->NetworkQueueSize;
     }
 
-    if ((size_t)num_bytes > free_space) {
+    if (queue_result == BYTE_QUEUE_WRITE_TOO_LARGE) {
         SYS_MutexUnlock(&pState->Lock);
         Log_Error("Terminal: target output batch exceeds network queue capacity "
                   "(requested=%u, capacity=%zu)\n",
                   num_bytes,
-                  pState->NetworkQueueSize);
+                  ByteQueue_GetCapacity(&pState->NetworkQueue));
         _Terminal_ReportRTTError(pState, "network queue");
         return -1;
     }
 
-    write_pos = (pState->NetworkQueueRead + pState->NetworkQueueUsed) %
-                pState->NetworkQueueSize;
-    first_chunk = pState->NetworkQueueSize - write_pos;
-    if (first_chunk > (size_t)num_bytes) {
-        first_chunk = (size_t)num_bytes;
-    }
-
-    memcpy(&pState->pNetworkQueue[write_pos], data, first_chunk);
-    if (first_chunk < (size_t)num_bytes) {
-        memcpy(&pState->pNetworkQueue[0], data + first_chunk, (size_t)num_bytes - first_chunk);
-    }
-    pState->NetworkQueueUsed += num_bytes;
-
     SYS_MutexUnlock(&pState->Lock);
 
-    if (queue_overflow) {
+    if (queue_result == BYTE_QUEUE_WRITE_OVERFLOW_WRITTEN) {
         Log_Warn("Terminal: network output queue capacity exceeded; "
                  "dropping network backlog and closing current client\n");
     }
@@ -782,45 +710,19 @@ static int _Terminal_QueueTargetData(Terminal_State_t *pState, const char *data,
 */
 static unsigned _Terminal_DequeueTargetData(Terminal_State_t *pState, char *buffer, unsigned buffer_size) {
     size_t   num_bytes;
-    size_t   first_chunk;
     unsigned result;
 
     if ((pState == NULL) || (buffer == NULL) || (buffer_size == 0u)) {
         return 0u;
     }
-    if (pState->pNetworkQueue == NULL || pState->NetworkQueueSize == 0u) {
+    if (!ByteQueue_IsValid(&pState->NetworkQueue)) {
         return 0u;
     }
 
     SYS_MutexLock(&pState->Lock);
-
-    num_bytes = pState->NetworkQueueUsed;
-    if (num_bytes > (size_t)buffer_size) {
-        num_bytes = (size_t)buffer_size;
-    }
-    if (num_bytes == 0u) {
-        SYS_MutexUnlock(&pState->Lock);
-        return 0u;
-    }
-
-    first_chunk = pState->NetworkQueueSize - pState->NetworkQueueRead;
-    if (first_chunk > num_bytes) {
-        first_chunk = num_bytes;
-    }
-
-    memcpy(buffer, &pState->pNetworkQueue[pState->NetworkQueueRead], first_chunk);
-    if (first_chunk < num_bytes) {
-        memcpy(buffer + first_chunk, &pState->pNetworkQueue[0], num_bytes - first_chunk);
-    }
-
-    pState->NetworkQueueRead = (pState->NetworkQueueRead + num_bytes) %
-                               pState->NetworkQueueSize;
-    pState->NetworkQueueUsed -= num_bytes;
-    if (pState->NetworkQueueUsed == 0u) {
-        pState->NetworkQueueRead = 0u;
-    }
-
+    num_bytes = ByteQueue_Read(&pState->NetworkQueue, buffer, (size_t)buffer_size);
     SYS_MutexUnlock(&pState->Lock);
+
     result = (unsigned)num_bytes;
     return result;
 }
@@ -830,7 +732,7 @@ static unsigned _Terminal_DequeueTargetData(Terminal_State_t *pState, char *buff
 *       _Terminal_RegisterCoreConsumer()
 *
 *  Function description
-*    Register Terminal as the single consumer for its core channel.
+*    Register Terminal as the single consumer when using a core channel.
 */
 static int _Terminal_RegisterCoreConsumer(Terminal_State_t *pState) {
     int result;
@@ -839,6 +741,7 @@ static int _Terminal_RegisterCoreConsumer(Terminal_State_t *pState) {
         return -1;
     }
     if (!CoreLogRecorder_IsCoreChannel(pState->Config.channel)) {
+        pState->CoreConsumerRegistered = false;
         return 0;
     }
 
@@ -904,14 +807,14 @@ static int _Terminal_CheckChannels(Terminal_State_t *pState) {
 *       _Terminal_ReadTargetData()
 *
 *  Function description
-*    Read target output from the core recorder for core channels.
+*    Read target output from the owned upstream path.
 */
 static int _Terminal_ReadTargetData(Terminal_State_t *pState, char *buffer, size_t buffer_size) {
     if ((pState == NULL) || (buffer == NULL) || (buffer_size == 0u)) {
         return -1;
     }
 
-    if (CoreLogRecorder_IsCoreChannel(pState->Config.channel)) {
+    if (pState->CoreConsumerRegistered) {
         return CoreLogRecorder_ReadChannel(pState->Config.channel, buffer, buffer_size);
     }
 
@@ -982,9 +885,6 @@ static void _Terminal_ConsoleThread(void *pArg) {
             }
             _Terminal_ReportRTTRecovered(pState);
             if (NumBytes > 0) {
-                if (_Terminal_LogBytes(pState, pState->pWriteBuf, (unsigned)NumBytes) != 0) {
-                    break;
-                }
                 pState->pWriteBuf     += NumBytes;
                 pState->WriteNumBytes -= NumBytes;
             }
@@ -998,7 +898,7 @@ static void _Terminal_ConsoleThread(void *pArg) {
                                                 pState->acSendBuf,
                                                 sizeof(pState->acSendBuf));
             if (NumBytes < 0) {
-                if (CoreLogRecorder_IsCoreChannel(pState->Config.channel)) {
+                if (pState->CoreConsumerRegistered) {
                     _Terminal_ReportRTTError(pState, "core recorder read");
                     break;
                 }
@@ -1019,9 +919,6 @@ static void _Terminal_ConsoleThread(void *pArg) {
         if (pState->SendNumBytes > 0) {
             ssize_t written = write(STDOUT_FILENO, pState->pSendBuf, pState->SendNumBytes);
             if (written > 0) {
-                if (_Terminal_LogBytes(pState, pState->pSendBuf, (unsigned)written) != 0) {
-                    break;
-                }
                 pState->pSendBuf     += written;
                 pState->SendNumBytes -= (int)written;
                 _Terminal_AddBytesSent(pState, (unsigned)written);
@@ -1058,7 +955,7 @@ static void _Terminal_DrainThread(void *pArg) {
     while (_Terminal_IsRunning(pState)) {
         NumBytes = _Terminal_ReadTargetData(pState, Buffer, sizeof(Buffer));
         if (NumBytes < 0) {
-            if (CoreLogRecorder_IsCoreChannel(pState->Config.channel)) {
+            if (pState->CoreConsumerRegistered) {
                 _Terminal_ReportRTTError(pState, "core recorder read");
                 break;
             }
@@ -1068,9 +965,6 @@ static void _Terminal_DrainThread(void *pArg) {
         }
         _Terminal_ReportRTTRecovered(pState);
         if (NumBytes > 0) {
-            if (_Terminal_LogBytes(pState, Buffer, (unsigned)NumBytes) != 0) {
-                break;
-            }
             if (_Terminal_QueueTargetData(pState, Buffer, (unsigned)NumBytes) != 0) {
                 break;
             }
@@ -1198,15 +1092,17 @@ static void _Terminal_ServiceThread(void *pArg) {
             // Wait for new connection
             //
             Log_Print("Terminal: waiting for new connection on port %u\n", pState->Config.port);
-            hClient = SYS_SOCKET_AcceptEx(pState->hListener, TERMINAL_IDLE_DELAY_MS);
+            Result = SYS_SOCKET_AcceptEx(pState->hListener,
+                                         TERMINAL_IDLE_DELAY_MS,
+                                         &hClient);
 
-            if (hClient < 0 && hClient != SYS_SOCKET_ERR_ACCEPT_TIMEOUT) {
-                Log_Warn("Terminal: failed to accept connection\n");
-                SYS_Sleep(1000);
+            if (Result == SYS_SOCKET_ERR_ACCEPT_TIMEOUT) {
                 continue;
             }
 
-            if (hClient == SYS_SOCKET_ERR_ACCEPT_TIMEOUT) {
+            if (Result != 0) {
+                Log_Warn("Terminal: failed to accept connection\n");
+                SYS_Sleep(1000);
                 continue;
             }
 
@@ -1290,9 +1186,6 @@ static void _Terminal_ServiceThread(void *pArg) {
             }
             _Terminal_ReportRTTRecovered(pState);
             if (NumBytes > 0) {
-                if (_Terminal_LogBytes(pState, pState->pWriteBuf, (unsigned)NumBytes) != 0) {
-                    break;
-                }
                 pState->pWriteBuf     += NumBytes;
                 pState->WriteNumBytes -= NumBytes;
             }
@@ -1365,7 +1258,7 @@ int Terminal_Init(Terminal_Config_t *pConfig) {
     }
     if (_terminal_state.Initialized || _terminal_state.Running ||
         _terminal_state.LockInitialized || _terminal_state.ServiceThreadStarted ||
-        _terminal_state.DrainThreadStarted || (_terminal_state.log_file != NULL)) {
+        _terminal_state.DrainThreadStarted) {
         return -1;
     }
 
@@ -1374,7 +1267,6 @@ int Terminal_Init(Terminal_Config_t *pConfig) {
 
     _terminal_state.hListener = SYS_SOCKET_INVALID_HANDLE;
     _terminal_state.hClient   = SYS_SOCKET_INVALID_HANDLE;
-    _terminal_state.NetworkQueueSize = _Terminal_GetConfiguredQueueSize(pConfig);
 
     Ret = SYS_MutexInit(&_terminal_state.Lock);
     if (Ret != 0) {
@@ -1384,7 +1276,7 @@ int Terminal_Init(Terminal_Config_t *pConfig) {
     _terminal_state.LockInitialized = true;
 
     if (pConfig->enabled && !pConfig->console_mode) {
-        QueueSize = _terminal_state.NetworkQueueSize;
+        QueueSize = _Terminal_GetNetworkQueueSize();
         if (QueueSize < TERMINAL_SEND_BUF_SIZE) {
             Log_Error("Terminal: network queue size must be at least %u bytes\n",
                       (unsigned)TERMINAL_SEND_BUF_SIZE);
@@ -1400,25 +1292,16 @@ int Terminal_Init(Terminal_Config_t *pConfig) {
             memset(&_terminal_state, 0, sizeof(_terminal_state));
             return -1;
         }
-    }
-
-    //
-    // Create log file if logging is enabled
-    //
-    if (pConfig->log_enabled && pConfig->log_prefix != NULL) {
-        _terminal_state.log_file = LOG_CreateTimestampedFile(pConfig->log_prefix);
-        if (_terminal_state.log_file == NULL) {
-            Log_Warn("Terminal: failed to create log file\n");
-        } else {
-            Log_Print("Terminal: log file created\n");
-        }
+        ByteQueue_Init(&_terminal_state.NetworkQueue,
+                       _terminal_state.pNetworkQueue,
+                       QueueSize);
     }
 
     Log_Print("Terminal service initialized: port=%u, channel=%u, enabled=%s, network_queue=%zu\n",
               pConfig->port,
               pConfig->channel,
               pConfig->enabled ? "yes" : "no",
-              _terminal_state.NetworkQueueSize);
+              ByteQueue_GetCapacity(&_terminal_state.NetworkQueue));
 
     _terminal_state.Initialized = true;
     return 0;
@@ -1521,7 +1404,7 @@ int Terminal_Start(void) {
     }
     pState->DrainThreadStarted = true;
     Log_Print("Terminal network queue: %zu bytes, network client failures close the client\n",
-              pState->NetworkQueueSize);
+              ByteQueue_GetCapacity(&pState->NetworkQueue));
 
     Result = SYS_createThread(_Terminal_ServiceThread, NULL, &pState->ServiceThread);
     if (Result < 0) {
@@ -1551,7 +1434,6 @@ int Terminal_Start(void) {
 */
 void Terminal_Stop(void) {
     Terminal_State_t *pState = &_terminal_state;
-    FILE             *log_file;
     bool              Running;
 
     Running = _Terminal_IsRunning(pState);
@@ -1600,18 +1482,6 @@ void Terminal_Stop(void) {
 
     _Terminal_UnregisterCoreConsumer(pState);
 
-    //
-    // Close log file if opened
-    //
-    log_file = pState->log_file;
-    pState->log_file = NULL;
-    if (log_file != NULL) {
-        errno = 0;
-        if (fclose(log_file) != 0) {
-            _Terminal_ReportLogFileError(pState, "close", errno);
-        }
-    }
-
     if (pState->LockInitialized) {
         SYS_MutexDestroy(&pState->Lock);
         pState->LockInitialized = false;
@@ -1619,9 +1489,7 @@ void Terminal_Stop(void) {
 
     free(pState->pNetworkQueue);
     pState->pNetworkQueue = NULL;
-    pState->NetworkQueueSize = 0u;
-    pState->NetworkQueueRead = 0u;
-    pState->NetworkQueueUsed = 0u;
+    ByteQueue_Init(&pState->NetworkQueue, NULL, 0u);
 
     pState->Initialized = false;
     Log_Print("Terminal service stopped\n");
@@ -1647,12 +1515,13 @@ void Terminal_Status(void) {
     printf("  Running:          %s\n", pState->Running ? "yes" : "no");
     printf("  Target Input:     %s\n", pState->TargetInputEnabled ? "enabled" : "disabled");
     printf("  Client Connected: %s\n", pState->hClient != SYS_SOCKET_INVALID_HANDLE ? "yes" : "no");
-    printf("  Network Queue:    %zu/%zu bytes\n", pState->NetworkQueueUsed, pState->NetworkQueueSize);
+    printf("  Network Queue:    %zu/%zu bytes\n",
+           ByteQueue_GetUsed(&pState->NetworkQueue),
+           ByteQueue_GetCapacity(&pState->NetworkQueue));
     printf("  Connections:      %u\n", pState->ConnectionsCount);
     printf("  Bytes Sent:       %u\n", pState->BytesSent);
     printf("  Bytes Received:   %u\n", pState->BytesReceived);
     printf("  Fatal Error:      %s\n", pState->FatalError ? "yes" : "no");
-    printf("  Log File Error:   %s\n", pState->LogFileError ? "yes" : "no");
     if (pState->LockInitialized) {
         SYS_MutexUnlock(&pState->Lock);
     }

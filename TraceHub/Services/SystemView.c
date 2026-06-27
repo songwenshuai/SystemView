@@ -64,6 +64,7 @@ Purpose : SystemView/TRACE service for a configured RTT channel
 #include "Socket.h"
 #include "SYS.h"
 #include "Log.h"
+#include "ByteQueue.h"
 
 /*********************************************************************
 *
@@ -106,11 +107,13 @@ Purpose : SystemView/TRACE service for a configured RTT channel
 
 /*********************************************************************
 *
-*       SYSVIEW_DEFAULT_NETWORK_QUEUE_SIZE
+*       SYSTEMVIEW_DEFAULT_NETWORK_QUEUE_SIZE
 *  Target trace bytes buffered for network clients.
 *
 */
-#define SYSVIEW_DEFAULT_NETWORK_QUEUE_SIZE      (1024u * 1024u)
+#ifndef SYSTEMVIEW_DEFAULT_NETWORK_QUEUE_SIZE
+  #define SYSTEMVIEW_DEFAULT_NETWORK_QUEUE_SIZE      (1024u * 1024u)
+#endif
 
 /*********************************************************************
 *
@@ -190,9 +193,7 @@ typedef struct {
     char                acSendBuf[SYSVIEW_SEND_BUF_SIZE];
     char                acWriteBuf[SYSVIEW_RECV_BUF_SIZE];
     char               *pNetworkQueue;
-    size_t              NetworkQueueSize;
-    size_t              NetworkQueueRead;
-    size_t              NetworkQueueUsed;
+    ByteQueue_t         NetworkQueue;
 
     // Statistics
     unsigned            BytesSent;
@@ -218,16 +219,13 @@ static SystemView_State_t _sysview_state;
 
 /*********************************************************************
 *
-*       _SystemView_GetConfiguredQueueSize()
+*       _SystemView_GetNetworkQueueSize()
 *
 *  Function description
 *    Return the configured network queue capacity.
 */
-static size_t _SystemView_GetConfiguredQueueSize(const SystemView_Config_t *pConfig) {
-    if (pConfig == NULL || pConfig->network_queue_size == 0u) {
-        return SYSVIEW_DEFAULT_NETWORK_QUEUE_SIZE;
-    }
-    return pConfig->network_queue_size;
+static size_t _SystemView_GetNetworkQueueSize(void) {
+    return SYSTEMVIEW_DEFAULT_NETWORK_QUEUE_SIZE;
 }
 
 /*********************************************************************
@@ -418,8 +416,7 @@ static void _SystemView_ClearNetworkQueueLocked(SystemView_State_t *pState) {
         return;
     }
 
-    pState->NetworkQueueRead = 0u;
-    pState->NetworkQueueUsed = 0u;
+    ByteQueue_Clear(&pState->NetworkQueue);
 }
 
 /*********************************************************************
@@ -772,10 +769,7 @@ static bool _SystemView_PerformHandshake(SystemView_State_t *pState, SYS_SOCKET_
 *    -1  Single target trace batch exceeds queue capacity
 */
 static int _SystemView_QueueTargetData(SystemView_State_t *pState, const char *data, unsigned num_bytes) {
-    size_t free_space;
-    size_t write_pos;
-    size_t first_chunk;
-    bool   queue_overflow;
+    ByteQueue_WriteResult_t queue_result;
 
     if ((pState == NULL) || (data == NULL) || (num_bytes == 0u)) {
         return 0;
@@ -787,46 +781,30 @@ static int _SystemView_QueueTargetData(SystemView_State_t *pState, const char *d
         SYS_MutexUnlock(&pState->Lock);
         return 0;
     }
-    if (pState->pNetworkQueue == NULL || pState->NetworkQueueSize == 0u) {
+    if (!ByteQueue_IsValid(&pState->NetworkQueue)) {
         SYS_MutexUnlock(&pState->Lock);
         _SystemView_ReportFatalServiceError(pState, "network queue");
         return -1;
     }
 
-    queue_overflow = false;
-    free_space = pState->NetworkQueueSize - pState->NetworkQueueUsed;
-    if ((size_t)num_bytes > free_space) {
-        _SystemView_ClearNetworkQueueLocked(pState);
+    queue_result = ByteQueue_Write(&pState->NetworkQueue, data, (size_t)num_bytes);
+    if (queue_result == BYTE_QUEUE_WRITE_OVERFLOW_WRITTEN) {
         pState->ClientDisconnectRequested = true;
-        queue_overflow = true;
-        free_space = pState->NetworkQueueSize;
     }
 
-    if ((size_t)num_bytes > free_space) {
+    if (queue_result == BYTE_QUEUE_WRITE_TOO_LARGE) {
         SYS_MutexUnlock(&pState->Lock);
         Log_Error("SystemView: target trace batch exceeds network queue capacity "
                   "(requested=%u, capacity=%zu)\n",
                   num_bytes,
-                  pState->NetworkQueueSize);
+                  ByteQueue_GetCapacity(&pState->NetworkQueue));
         _SystemView_ReportFatalServiceError(pState, "network queue");
         return -1;
     }
 
-    write_pos = (pState->NetworkQueueRead + pState->NetworkQueueUsed) % pState->NetworkQueueSize;
-    first_chunk = pState->NetworkQueueSize - write_pos;
-    if (first_chunk > (size_t)num_bytes) {
-        first_chunk = (size_t)num_bytes;
-    }
-
-    memcpy(&pState->pNetworkQueue[write_pos], data, first_chunk);
-    if (first_chunk < (size_t)num_bytes) {
-        memcpy(&pState->pNetworkQueue[0], data + first_chunk, (size_t)num_bytes - first_chunk);
-    }
-    pState->NetworkQueueUsed += num_bytes;
-
     SYS_MutexUnlock(&pState->Lock);
 
-    if (queue_overflow) {
+    if (queue_result == BYTE_QUEUE_WRITE_OVERFLOW_WRITTEN) {
         if (pState->Config.record_enabled) {
             Log_Warn("SystemView: network trace queue capacity exceeded; "
                      "dropping network backlog and closing current client; "
@@ -852,44 +830,19 @@ static int _SystemView_QueueTargetData(SystemView_State_t *pState, const char *d
 */
 static unsigned _SystemView_DequeueTargetData(SystemView_State_t *pState, char *buffer, unsigned buffer_size) {
     size_t   num_bytes;
-    size_t   first_chunk;
     unsigned result;
 
     if ((pState == NULL) || (buffer == NULL) || (buffer_size == 0u)) {
         return 0u;
     }
-    if (pState->pNetworkQueue == NULL || pState->NetworkQueueSize == 0u) {
+    if (!ByteQueue_IsValid(&pState->NetworkQueue)) {
         return 0u;
     }
 
     SYS_MutexLock(&pState->Lock);
-
-    num_bytes = pState->NetworkQueueUsed;
-    if (num_bytes > (size_t)buffer_size) {
-        num_bytes = (size_t)buffer_size;
-    }
-    if (num_bytes == 0u) {
-        SYS_MutexUnlock(&pState->Lock);
-        return 0u;
-    }
-
-    first_chunk = pState->NetworkQueueSize - pState->NetworkQueueRead;
-    if (first_chunk > num_bytes) {
-        first_chunk = num_bytes;
-    }
-
-    memcpy(buffer, &pState->pNetworkQueue[pState->NetworkQueueRead], first_chunk);
-    if (first_chunk < num_bytes) {
-        memcpy(buffer + first_chunk, &pState->pNetworkQueue[0], num_bytes - first_chunk);
-    }
-
-    pState->NetworkQueueRead = (pState->NetworkQueueRead + num_bytes) % pState->NetworkQueueSize;
-    pState->NetworkQueueUsed -= num_bytes;
-    if (pState->NetworkQueueUsed == 0u) {
-        pState->NetworkQueueRead = 0u;
-    }
-
+    num_bytes = ByteQueue_Read(&pState->NetworkQueue, buffer, (size_t)buffer_size);
     SYS_MutexUnlock(&pState->Lock);
+
     result = (unsigned)num_bytes;
     return result;
 }
@@ -1116,15 +1069,17 @@ static void _SystemView_ServiceThread(void *pArg) {
             // Wait for new connection
             //
             Log_Print("SystemView: waiting for new connection on port %u\n", pState->Config.port);
-            hClient = SYS_SOCKET_AcceptEx(pState->hListener, SYSVIEW_IDLE_DELAY_MS);
+            Result = SYS_SOCKET_AcceptEx(pState->hListener,
+                                         SYSVIEW_IDLE_DELAY_MS,
+                                         &hClient);
 
-            if (hClient < 0 && hClient != SYS_SOCKET_ERR_ACCEPT_TIMEOUT) {
-                Log_Warn("SystemView: failed to accept connection\n");
-                SYS_Sleep(1000);
+            if (Result == SYS_SOCKET_ERR_ACCEPT_TIMEOUT) {
                 continue;
             }
 
-            if (hClient == SYS_SOCKET_ERR_ACCEPT_TIMEOUT) {
+            if (Result != 0) {
+                Log_Warn("SystemView: failed to accept connection\n");
+                SYS_Sleep(1000);
                 continue;
             }
 
@@ -1273,7 +1228,6 @@ int SystemView_Init(SystemView_Config_t *pConfig) {
 
     _sysview_state.hListener = SYS_SOCKET_INVALID_HANDLE;
     _sysview_state.hClient   = SYS_SOCKET_INVALID_HANDLE;
-    _sysview_state.NetworkQueueSize = _SystemView_GetConfiguredQueueSize(pConfig);
 
     Ret = SYS_MutexInit(&_sysview_state.Lock);
     if (Ret != 0) {
@@ -1283,7 +1237,7 @@ int SystemView_Init(SystemView_Config_t *pConfig) {
     _sysview_state.LockInitialized = true;
 
     if (pConfig->enabled && pConfig->network_enabled) {
-        QueueSize = _sysview_state.NetworkQueueSize;
+        QueueSize = _SystemView_GetNetworkQueueSize();
         if (QueueSize < SYSVIEW_SEND_BUF_SIZE) {
             Log_Error("SystemView: network queue size must be at least %u bytes\n",
                       (unsigned)SYSVIEW_SEND_BUF_SIZE);
@@ -1299,6 +1253,9 @@ int SystemView_Init(SystemView_Config_t *pConfig) {
             memset(&_sysview_state, 0, sizeof(_sysview_state));
             return -1;
         }
+        ByteQueue_Init(&_sysview_state.NetworkQueue,
+                       _sysview_state.pNetworkQueue,
+                       QueueSize);
     }
 
     //
@@ -1329,7 +1286,7 @@ int SystemView_Init(SystemView_Config_t *pConfig) {
               pConfig->port,
               pConfig->channel,
               pConfig->enabled ? "yes" : "no",
-              _sysview_state.NetworkQueueSize);
+              ByteQueue_GetCapacity(&_sysview_state.NetworkQueue));
 
     _sysview_state.Initialized = true;
     return 0;
@@ -1381,7 +1338,7 @@ int SystemView_Start(void) {
 
     if (pState->Config.network_enabled) {
         Log_Print("SystemView network queue: %zu bytes, network client failures close the client\n",
-                  pState->NetworkQueueSize);
+                  ByteQueue_GetCapacity(&pState->NetworkQueue));
         //
         // Network service mode: create listening socket
         //
@@ -1493,9 +1450,7 @@ void SystemView_Stop(void) {
 
     free(pState->pNetworkQueue);
     pState->pNetworkQueue = NULL;
-    pState->NetworkQueueSize = 0u;
-    pState->NetworkQueueRead = 0u;
-    pState->NetworkQueueUsed = 0u;
+    ByteQueue_Init(&pState->NetworkQueue, NULL, 0u);
 
     pState->Initialized = false;
     Log_Print("SystemView service stopped\n");
@@ -1524,7 +1479,9 @@ void SystemView_Status(void) {
     printf("  RTT Recovering:   %s\n", pState->RTTRecovering ? "yes" : "no");
     printf("  Client Connected: %s\n", pState->hClient != SYS_SOCKET_INVALID_HANDLE ? "yes" : "no");
     printf("  Handshake Done:   %s\n", pState->HandshakeDone ? "yes" : "no");
-    printf("  Network Queue:    %zu/%zu bytes\n", pState->NetworkQueueUsed, pState->NetworkQueueSize);
+    printf("  Network Queue:    %zu/%zu bytes\n",
+           ByteQueue_GetUsed(&pState->NetworkQueue),
+           ByteQueue_GetCapacity(&pState->NetworkQueue));
     printf("  Connections:      %u\n", pState->ConnectionsCount);
     printf("  Bytes Sent:       %u\n", pState->BytesSent);
     printf("  Bytes Received:   %u\n", pState->BytesReceived);

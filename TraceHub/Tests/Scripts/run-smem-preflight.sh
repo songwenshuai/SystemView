@@ -5,6 +5,8 @@ set -eEuo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
+source "$SCRIPT_DIR/tracehub-log-checks.sh"
+
 BUILD_DIR="$ROOT_DIR/build/HOST_Debug"
 RTT_REGION_ADDR="0x10040000"
 MEM_SIZE="0x20000"
@@ -17,13 +19,13 @@ MODULE_LOADED_BY_SCRIPT=0
 RTT_TIMEOUT_MS=5000
 STARTUP_GRACE_SEC=8
 DURATION_SEC=0
-LINUX_CHANNEL=0
-RTOS_CHANNEL=1
-SYSVIEW_CHANNEL=2
 WORK_DIR=""
 USER_LOG_DIR=""
 TRACEHUB_PID=""
 REQUIRE_DATA=1
+LINUX_CHANNEL=0
+RTOS_CHANNEL=1
+SYSVIEW_CHANNEL=2
 LINUX_MARKER=""
 RTOS_MARKER=""
 RUN_MARKER=""
@@ -39,9 +41,12 @@ window, and the default data artifact assertions.
 
 Options:
   --build-dir DIR          Build directory containing tracehub (default: $BUILD_DIR)
-  -a, --addr ADDR          RTT region backend address (hex, default: $RTT_REGION_ADDR)
-  -s, --size SIZE          RTT region size (hex, default: $MEM_SIZE)
-  -d, --device PATH        SharedMem device path (default: $DEVICE_PATH)
+  --phys-addr ADDR         SharedMem physical address (hex, default: $RTT_REGION_ADDR)
+  --mem-size SIZE          SharedMem size (hex, default: $MEM_SIZE)
+  --device PATH            SharedMem device path (default: $DEVICE_PATH)
+  --linux-channel NUM      Linux RTT log channel (default: $LINUX_CHANNEL)
+  --rtos-channel NUM       RTOS RTT log channel (default: $RTOS_CHANNEL)
+  --systemview-channel NUM SystemView RTT channel (default: $SYSVIEW_CHANNEL)
   -k, --ko PATH            Path to SharedMem.ko (default: /lib/modules/\$(uname -r)/SharedMem.ko)
   --force-reload           Unload an existing SharedMem module before loading
   --use-loaded-module      Use an already loaded SharedMem module without replacing it
@@ -49,9 +54,6 @@ Options:
   --rtt-timeout-ms MS      RTTCB discovery timeout in milliseconds (default: $RTT_TIMEOUT_MS)
   --startup-grace-sec SEC  Seconds to wait for tracehub startup validation (default: $STARTUP_GRACE_SEC)
   --duration-sec SEC       Additional seconds to keep tracehub running after startup validation (default: $DURATION_SEC)
-  --linux-channel CH       Linux RTT up-buffer channel (default: $LINUX_CHANNEL)
-  --rtos-channel CH        RTOS RTT up-buffer channel (default: $RTOS_CHANNEL)
-  --systemview-channel CH  SystemView RTT up-buffer channel (default: $SYSVIEW_CHANNEL)
   --log-dir DIR            Directory for generated logs (default: temporary directory)
   --startup-only           Validate startup and main log creation only
   --require-data           Require linux_*.log, rtos_*.log, and sysview_*.SVDat to be non-empty (default)
@@ -193,6 +195,25 @@ require_log_marker() {
     return 1
 }
 
+require_clean_text_artifacts() {
+    local pattern="$1"
+    local label="$2"
+    local file
+
+    while IFS= read -r file; do
+        if LC_ALL=C tr -d '\011\012' < "$file" | LC_ALL=C grep -q '[[:cntrl:]]'; then
+            printf "%s contains terminal/control bytes: %s\n" "$label" "$file" >&2
+            return 1
+        fi
+        if contains_c1_control_bytes "$file"; then
+            printf "%s contains C1 control bytes: %s\n" "$label" "$file" >&2
+            return 1
+        fi
+    done < <(find "$WORK_DIR" -maxdepth 1 -type f -name "$pattern" -newer "$RUN_MARKER" -size +0c -print)
+
+    return 0
+}
+
 stop_tracehub() {
     if [ -z "$TRACEHUB_PID" ]; then
         return 0
@@ -262,7 +283,7 @@ load_kernel_module() {
     module_rtt_region_addr_dec="$(integer_to_decimal "$RTT_REGION_ADDR")"
     mem_size_dec="$(integer_to_decimal "$MEM_SIZE")"
     if [ "$mem_size_dec" -eq 0 ]; then
-        fail "--size must be non-zero when loading SharedMem"
+        fail "--mem-size must be non-zero when loading SharedMem"
     fi
 
     insmod "$ko_path" phys_addrs="$module_rtt_region_addr_dec" mem_sizes="$mem_size_dec" ||
@@ -275,8 +296,8 @@ load_kernel_module() {
 }
 
 validate_runtime_options() {
-    check_integer_literal "--addr" "$RTT_REGION_ADDR"
-    check_integer_literal "--size" "$MEM_SIZE"
+    check_integer_literal "--phys-addr" "$RTT_REGION_ADDR"
+    check_integer_literal "--mem-size" "$MEM_SIZE"
     check_positive_decimal "--rtt-timeout-ms" "$RTT_TIMEOUT_MS"
     check_positive_decimal "--startup-grace-sec" "$STARTUP_GRACE_SEC"
     check_nonnegative_decimal "--duration-sec" "$DURATION_SEC"
@@ -305,19 +326,34 @@ parse_arguments() {
                 BUILD_DIR="$(resolve_path "$2")"
                 shift 2
                 ;;
-            -a|--addr)
+            --phys-addr)
                 require_option_argument "$1" "${2-}"
                 RTT_REGION_ADDR="$2"
                 shift 2
                 ;;
-            -s|--size)
+            --mem-size)
                 require_option_argument "$1" "${2-}"
                 MEM_SIZE="$2"
                 shift 2
                 ;;
-            -d|--device)
+            --device)
                 require_option_argument "$1" "${2-}"
                 DEVICE_PATH="$2"
+                shift 2
+                ;;
+            --linux-channel)
+                require_option_argument "$1" "${2-}"
+                LINUX_CHANNEL="$2"
+                shift 2
+                ;;
+            --rtos-channel)
+                require_option_argument "$1" "${2-}"
+                RTOS_CHANNEL="$2"
+                shift 2
+                ;;
+            --systemview-channel)
+                require_option_argument "$1" "${2-}"
+                SYSVIEW_CHANNEL="$2"
                 shift 2
                 ;;
             -k|--ko)
@@ -350,21 +386,6 @@ parse_arguments() {
             --duration-sec)
                 require_option_argument "$1" "${2-}"
                 DURATION_SEC="$2"
-                shift 2
-                ;;
-            --linux-channel)
-                require_option_argument "$1" "${2-}"
-                LINUX_CHANNEL="$2"
-                shift 2
-                ;;
-            --rtos-channel)
-                require_option_argument "$1" "${2-}"
-                RTOS_CHANNEL="$2"
-                shift 2
-                ;;
-            --systemview-channel)
-                require_option_argument "$1" "${2-}"
-                SYSVIEW_CHANNEL="$2"
                 shift 2
                 ;;
             --log-dir)
@@ -416,14 +437,25 @@ run_preflight() {
     RUN_MARKER="$WORK_DIR/.smem_preflight_start"
     : > "$RUN_MARKER" || fail "failed to create run marker in $WORK_DIR"
 
+    printf "SMEM preflight assumes the target already satisfies the shared RTT contract:\n" >&2
+    printf "  - exactly one RTTCB owner\n" >&2
+    printf "  - cache-coherent or uncache shared RTT memory\n" >&2
+    printf "  - stable Linux, RTOS, and SystemView channel assignment\n" >&2
+    printf "  - Linux and RTOS timestamps from the same hardware time base\n" >&2
+    printf "  - shared SystemView write lock when multiple cores write one up-buffer\n" >&2
+    if [ "$REQUIRE_DATA" -eq 0 ]; then
+        printf "startup-only mode does not validate target log or SystemView data delivery\n" >&2
+    fi
+
     "$tracehub_bin" \
         --addr "$RTT_REGION_ADDR" \
         --size "$MEM_SIZE" \
-        --device "$DEVICE_PATH" \
+        --shm "$DEVICE_PATH" \
         --rtt-timeout-ms "$RTT_TIMEOUT_MS" \
         --swimlane \
         --linux-channel "$LINUX_CHANNEL" \
         --rtos-channel "$RTOS_CHANNEL" \
+        --systemview \
         --systemview-channel "$SYSVIEW_CHANNEL" \
         --log-dir "$WORK_DIR" \
         > "$WORK_DIR/tracehub.out" 2> "$WORK_DIR/tracehub.err" &
@@ -470,6 +502,9 @@ run_preflight() {
         require_nonempty_artifact 'linux_*.log' "Linux log" || return 1
         require_nonempty_artifact 'rtos_*.log' "RTOS log" || return 1
         require_nonempty_artifact 'sysview_*.SVDat' "SystemView SVDat" || return 1
+        require_clean_text_artifacts 'linux_*.log' "Linux log" || return 1
+        require_clean_text_artifacts 'rtos_*.log' "RTOS log" || return 1
+        require_clean_text_artifacts 'swimlane_*.log' "Swimlane log" || return 1
     fi
     if [ -n "$LINUX_MARKER" ]; then
         require_log_marker 'linux_*.log' "Linux log" "$LINUX_MARKER" || return 1
@@ -479,7 +514,7 @@ run_preflight() {
     fi
 
     printf "SMEM preflight validation passed\n"
-    printf "Validated SharedMem access, RTTCB discovery, channel layout, configured runtime, and default or requested artifact assertions\n"
+    printf "Validated SharedMem access, RTTCB discovery, channel layout, configured runtime, clean text logs, and default or requested artifact assertions\n"
 }
 
 main() {

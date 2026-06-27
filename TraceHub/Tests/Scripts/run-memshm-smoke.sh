@@ -6,6 +6,8 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
 BUILD_DIR="${1:-$ROOT_DIR/build/HOST_Debug}"
 
+source "$SCRIPT_DIR/tracehub-log-checks.sh"
+
 if [[ "$BUILD_DIR" != /* ]]; then
     BUILD_DIR="$ROOT_DIR/$BUILD_DIR"
 fi
@@ -155,6 +157,20 @@ swimlane_order_valid() {
     ' "$swimlane_log"
 }
 
+clean_text_log_valid() {
+    local log_file="$1"
+
+    if LC_ALL=C tr -d '\011\012' < "$log_file" | LC_ALL=C grep -q '[[:cntrl:]]'; then
+        printf "Text log contains terminal/control bytes: %s\n" "$log_file" >&2
+        return 1
+    fi
+    if contains_c1_control_bytes "$log_file"; then
+        printf "Text log contains C1 control bytes: %s\n" "$log_file" >&2
+        return 1
+    fi
+    return 0
+}
+
 smoke_artifacts_ready() {
     local linux_log
     local rtos_log
@@ -171,14 +187,17 @@ smoke_artifacts_ready() {
     [ -n "$swimlane_log" ] || return 1
     [ -n "$sysview_file" ] || return 1
 
-    grep -q "Linux A53" "$linux_log" || return 1
-    grep -q "RTOS R5" "$rtos_log" || return 1
-    grep -q "Linux A53 boot banner without timestamp" "$linux_log" || return 1
-    grep -q "RTOS R5 boot banner without timestamp" "$rtos_log" || return 1
-    grep -q "\[LINUX\].*Linux A53" "$swimlane_log" || return 1
-    grep -q "\[RTOS\].*RTOS R5" "$swimlane_log" || return 1
-    grep -q "\[LINUX\].*Linux A53 boot banner without timestamp" "$swimlane_log" || return 1
-    grep -q "\[RTOS\].*RTOS R5 boot banner without timestamp" "$swimlane_log" || return 1
+    grep -q "Linux: Application event" "$linux_log" || return 1
+    grep -q "RTOS: Task scheduler tick" "$rtos_log" || return 1
+    grep -q "Linux boot banner without timestamp" "$linux_log" || return 1
+    grep -q "RTOS boot banner without timestamp" "$rtos_log" || return 1
+    grep -q "\[LINUX\].*Linux: Application event" "$swimlane_log" || return 1
+    grep -q "\[RTOS\].*RTOS: Task scheduler tick" "$swimlane_log" || return 1
+    grep -q "\[LINUX\].*Linux boot banner without timestamp" "$swimlane_log" || return 1
+    grep -q "\[RTOS\].*RTOS boot banner without timestamp" "$swimlane_log" || return 1
+    clean_text_log_valid "$linux_log" || return 1
+    clean_text_log_valid "$rtos_log" || return 1
+    clean_text_log_valid "$swimlane_log" || return 1
     swimlane_order_valid "$swimlane_log" || return 1
 }
 
@@ -227,7 +246,7 @@ main() {
         > sysview_client.out 2> sysview_client.err
 
     printf "MEMSHM smoke validation passed\n"
-    printf "Validated Linux log, RTOS log, swimlane ordering, SystemView SVDat output, and SystemView TCP delivery\n"
+    printf "Validated clean source text logs, clean swimlane ordering, SystemView SVDat output, and SystemView TCP delivery\n"
 }
 
 main "$@"

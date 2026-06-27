@@ -83,8 +83,8 @@ Purpose : Core log recorder implementation
 */
 
 typedef enum {
-    CORE_LOG_RECORDER_SOURCE_LINUX = 0,
-    CORE_LOG_RECORDER_SOURCE_RTOS,
+    CORE_LOG_RECORDER_LINUX = 0,
+    CORE_LOG_RECORDER_RTOS,
     CORE_LOG_RECORDER_NUM_SOURCES
 } CoreLogRecorder_SourceId_t;
 
@@ -93,16 +93,18 @@ typedef enum {
 *       CoreLogRecorder_Source_t
 *
 *  Description
-*    Per-core file and consumer stream state.
+*    Per-source file and optional consumer stream state.
 */
 typedef struct {
     bool         enabled;
     unsigned     channel;
     const char  *name;
     FILE        *file;
+    LOG_TextCleanState_t file_clean_state;
     bool         lock_initialized;
     SYS_Mutex    lock;
     bool         consumer_registered;
+    bool         consumer_ever_registered;
     bool         seen;
     bool         file_error;
     bool         file_error_logged;
@@ -252,20 +254,6 @@ static unsigned _Recorder_GetPollInterval(void) {
 
 /*********************************************************************
 *
-*       _Recorder_GetConsumerQueueSize()
-*
-*  Function description
-*    Return the configured consumer queue capacity.
-*/
-static size_t _Recorder_GetConsumerQueueSize(const CoreLogRecorder_Config_t *config) {
-    if (config == NULL || config->consumer_queue_size == 0u) {
-        return CORE_LOG_RECORDER_DEFAULT_QUEUE_SIZE;
-    }
-    return config->consumer_queue_size;
-}
-
-/*********************************************************************
-*
 *       _Recorder_FindSource()
 *
 *  Function description
@@ -274,12 +262,12 @@ static size_t _Recorder_GetConsumerQueueSize(const CoreLogRecorder_Config_t *con
 static CoreLogRecorder_Source_t *_Recorder_FindSource(unsigned channel) {
     CoreLogRecorder_Source_t *source;
 
-    source = &_recorder_state.sources[CORE_LOG_RECORDER_SOURCE_LINUX];
+    source = &_recorder_state.sources[CORE_LOG_RECORDER_LINUX];
     if (source->enabled && source->channel == channel) {
         return source;
     }
 
-    source = &_recorder_state.sources[CORE_LOG_RECORDER_SOURCE_RTOS];
+    source = &_recorder_state.sources[CORE_LOG_RECORDER_RTOS];
     if (source->enabled && source->channel == channel) {
         return source;
     }
@@ -407,16 +395,65 @@ static int _Recorder_QueueBytesLocked(CoreLogRecorder_Source_t *source,
 
 /*********************************************************************
 *
+*       _Recorder_ClearConsumerQueueLocked()
+*
+*  Function description
+*    Drop all bytes owned by the transient consumer stream.
+*/
+static void _Recorder_ClearConsumerQueueLocked(CoreLogRecorder_Source_t *source) {
+    if (source == NULL) {
+        return;
+    }
+
+    source->queue_read = 0u;
+    source->queue_used = 0u;
+    source->pending_undelivered_bytes = 0u;
+    source->queue_capacity_failure_pending = false;
+}
+
+/*********************************************************************
+*
+*       _Recorder_AllocateConsumerQueue()
+*
+*  Function description
+*    Allocate the per-source consumer queue.
+*/
+static int _Recorder_AllocateConsumerQueue(CoreLogRecorder_Source_t *source) {
+    char   *queue;
+    size_t  queue_size;
+
+    if (source == NULL || source->queue != NULL || source->queue_size != 0u) {
+        return -1;
+    }
+
+    queue_size = CORE_LOG_RECORDER_DEFAULT_QUEUE_SIZE;
+    if (queue_size < CORE_LOG_RECORDER_MIN_QUEUE_SIZE) {
+        return -1;
+    }
+
+    queue = (char *)malloc(queue_size);
+    if (queue == NULL) {
+        return -1;
+    }
+
+    source->queue = queue;
+    source->queue_size = queue_size;
+    _Recorder_ClearConsumerQueueLocked(source);
+    return 0;
+}
+
+/*********************************************************************
+*
 *       _Recorder_RecordBytes()
 *
 *  Function description
-*    Record bytes to the owned file and publish them to consumers.
+*    Record clean text to the owned file and publish bytes to consumers.
 */
 static void _Recorder_RecordBytes(CoreLogRecorder_SourceId_t source_id,
                                   const char *data, unsigned num_bytes) {
     CoreLogRecorder_Source_t *source;
+    size_t                    clean_len;
     uint64_t                  now_us;
-    size_t                    written;
 
     if (source_id >= CORE_LOG_RECORDER_NUM_SOURCES ||
         data == NULL ||
@@ -437,15 +474,19 @@ static void _Recorder_RecordBytes(CoreLogRecorder_SourceId_t source_id,
         return;
     }
 
-    written = fwrite(data, 1, num_bytes, source->file);
-    if (written != (size_t)num_bytes) {
+    clean_len = 0u;
+    if (LOG_WriteCleanTextToFileEx(source->file,
+                                   data,
+                                   num_bytes,
+                                   &source->file_clean_state,
+                                   &clean_len) != 0) {
         _Recorder_ReportFileErrorLocked(source, "write");
         SYS_MutexUnlock(&source->lock);
         return;
     }
 
     source->flush_pending = true;
-    source->bytes_recorded += num_bytes;
+    source->bytes_recorded += clean_len;
 
     now_us = SYS_GetMonotonicTimeUs();
     if ((source->last_flush_time_us == 0u) ||
@@ -463,9 +504,11 @@ static void _Recorder_RecordBytes(CoreLogRecorder_SourceId_t source_id,
         source->seen = true;
     }
 
-    if (_Recorder_QueueBytesLocked(source, data, num_bytes) != 0) {
-        SYS_MutexUnlock(&source->lock);
-        return;
+    if (!source->consumer_ever_registered || source->consumer_registered) {
+        if (_Recorder_QueueBytesLocked(source, data, num_bytes) != 0) {
+            SYS_MutexUnlock(&source->lock);
+            return;
+        }
     }
 
     SYS_MutexUnlock(&source->lock);
@@ -666,7 +709,7 @@ static void _Recorder_DrainSource(CoreLogRecorder_SourceId_t source_id) {
 *       _Recorder_LinuxThread()
 *
 *  Function description
-*    Thread entry for draining the Linux core log source.
+*    Thread entry for draining Linux core logs.
 *
 *  Parameters
 *    arg  Unused thread context.
@@ -674,7 +717,7 @@ static void _Recorder_DrainSource(CoreLogRecorder_SourceId_t source_id) {
 static void _Recorder_LinuxThread(void *arg) {
     (void)arg;
 
-    _Recorder_DrainSource(CORE_LOG_RECORDER_SOURCE_LINUX);
+    _Recorder_DrainSource(CORE_LOG_RECORDER_LINUX);
 }
 
 /*********************************************************************
@@ -682,7 +725,7 @@ static void _Recorder_LinuxThread(void *arg) {
 *       _Recorder_RTOSThread()
 *
 *  Function description
-*    Thread entry for draining the RTOS core log source.
+*    Thread entry for draining RTOS core logs.
 *
 *  Parameters
 *    arg  Unused thread context.
@@ -690,7 +733,7 @@ static void _Recorder_LinuxThread(void *arg) {
 static void _Recorder_RTOSThread(void *arg) {
     (void)arg;
 
-    _Recorder_DrainSource(CORE_LOG_RECORDER_SOURCE_RTOS);
+    _Recorder_DrainSource(CORE_LOG_RECORDER_RTOS);
 }
 
 /*********************************************************************
@@ -820,6 +863,10 @@ static void _Recorder_FreeSourceQueues(void) {
         source->queue_size = 0u;
         source->queue_read = 0u;
         source->queue_used = 0u;
+        source->consumer_registered = false;
+        source->consumer_ever_registered = false;
+        source->pending_undelivered_bytes = 0u;
+        source->queue_capacity_failure_pending = false;
     }
 }
 
@@ -846,6 +893,7 @@ static int _Recorder_InitSource(CoreLogRecorder_SourceId_t source_id,
     source->channel = channel;
     source->name    = name;
     source->enabled = enabled;
+    LOG_TextCleanStateInit(&source->file_clean_state);
 
     if (!enabled) {
         return 0;
@@ -854,16 +902,14 @@ static int _Recorder_InitSource(CoreLogRecorder_SourceId_t source_id,
         return -1;
     }
 
-    source->queue_size = _recorder_state.config.consumer_queue_size;
-    source->queue = (char *)malloc(source->queue_size);
-    if (source->queue == NULL) {
-        return -1;
-    }
-
     if (SYS_MutexInit(&source->lock) != 0) {
         return -1;
     }
     source->lock_initialized = true;
+
+    if (_Recorder_AllocateConsumerQueue(source) != 0) {
+        return -1;
+    }
 
     source->file = LOG_CreateTimestampedFile(prefix);
     if (source->file == NULL) {
@@ -886,8 +932,7 @@ static int _Recorder_InitSource(CoreLogRecorder_SourceId_t source_id,
 *       CoreLogRecorder_Init()
 *
 *  Function description
-*    Initialize the core log recorder and prepare enabled source queues
-*    and output files.
+*    Initialize the core log recorder and prepare enabled source output files.
 *
 *  Parameters
 *    config  Recorder configuration.
@@ -900,7 +945,6 @@ static int _Recorder_InitSource(CoreLogRecorder_SourceId_t source_id,
 int CoreLogRecorder_Init(const CoreLogRecorder_Config_t *config) {
     const char *linux_prefix;
     const char *rtos_prefix;
-    size_t      consumer_queue_size;
 
     if (config == NULL) {
         return -1;
@@ -919,14 +963,12 @@ int CoreLogRecorder_Init(const CoreLogRecorder_Config_t *config) {
     if (_recorder_state.initialized) {
         CoreLogRecorder_Cleanup();
     }
-    consumer_queue_size = _Recorder_GetConsumerQueueSize(config);
-    if (consumer_queue_size < CORE_LOG_RECORDER_MIN_QUEUE_SIZE) {
+    if (CORE_LOG_RECORDER_DEFAULT_QUEUE_SIZE < CORE_LOG_RECORDER_MIN_QUEUE_SIZE) {
         return -1;
     }
 
     memset(&_recorder_state, 0, sizeof(_recorder_state));
     memcpy(&_recorder_state.config, config, sizeof(CoreLogRecorder_Config_t));
-    _recorder_state.config.consumer_queue_size = consumer_queue_size;
 
     if (SYS_MutexInit(&_recorder_state.lock) != 0) {
         return -1;
@@ -936,7 +978,7 @@ int CoreLogRecorder_Init(const CoreLogRecorder_Config_t *config) {
     linux_prefix = (config->linux_prefix != NULL) ? config->linux_prefix : "linux";
     rtos_prefix  = (config->rtos_prefix  != NULL) ? config->rtos_prefix  : "rtos";
 
-    if (_Recorder_InitSource(CORE_LOG_RECORDER_SOURCE_LINUX,
+    if (_Recorder_InitSource(CORE_LOG_RECORDER_LINUX,
                              config->linux_channel,
                              config->linux_enabled,
                              "Linux",
@@ -944,7 +986,7 @@ int CoreLogRecorder_Init(const CoreLogRecorder_Config_t *config) {
         CoreLogRecorder_Cleanup();
         return -2;
     }
-    if (_Recorder_InitSource(CORE_LOG_RECORDER_SOURCE_RTOS,
+    if (_Recorder_InitSource(CORE_LOG_RECORDER_RTOS,
                              config->rtos_channel,
                              config->rtos_enabled,
                              "RTOS",
@@ -988,7 +1030,7 @@ int CoreLogRecorder_Start(void) {
 
     _Recorder_SetRunning(true);
 
-    if (_Recorder_SourceIsEnabled(CORE_LOG_RECORDER_SOURCE_LINUX)) {
+    if (_Recorder_SourceIsEnabled(CORE_LOG_RECORDER_LINUX)) {
         result = SYS_createThread(_Recorder_LinuxThread, NULL, &_recorder_state.linux_thread);
         if (result < 0) {
             _Recorder_SetRunning(false);
@@ -997,7 +1039,7 @@ int CoreLogRecorder_Start(void) {
         _recorder_state.linux_thread_started = true;
     }
 
-    if (_Recorder_SourceIsEnabled(CORE_LOG_RECORDER_SOURCE_RTOS)) {
+    if (_Recorder_SourceIsEnabled(CORE_LOG_RECORDER_RTOS)) {
         result = SYS_createThread(_Recorder_RTOSThread, NULL, &_recorder_state.rtos_thread);
         if (result < 0) {
             _Recorder_SetRunning(false);
@@ -1096,7 +1138,12 @@ int CoreLogRecorder_RegisterConsumer(unsigned channel) {
         SYS_MutexUnlock(&source->lock);
         return -2;
     }
+    if (source->queue == NULL || source->queue_size == 0u) {
+        SYS_MutexUnlock(&source->lock);
+        return -1;
+    }
     source->consumer_registered = true;
+    source->consumer_ever_registered = true;
     SYS_MutexUnlock(&source->lock);
 
     return 0;
@@ -1126,6 +1173,7 @@ void CoreLogRecorder_UnregisterConsumer(unsigned channel) {
 
     SYS_MutexLock(&source->lock);
     source->consumer_registered = false;
+    _Recorder_ClearConsumerQueueLocked(source);
     SYS_MutexUnlock(&source->lock);
 }
 
@@ -1166,15 +1214,16 @@ int CoreLogRecorder_ReadChannel(unsigned channel, void *buffer, size_t buffer_si
     if (source == NULL || !source->lock_initialized) {
         return -1;
     }
-    if (source->queue == NULL || source->queue_size == 0u) {
-        return -1;
-    }
 
     SYS_MutexLock(&source->lock);
 
     if (!source->consumer_registered) {
         SYS_MutexUnlock(&source->lock);
         return -2;
+    }
+    if (source->queue == NULL || source->queue_size == 0u) {
+        SYS_MutexUnlock(&source->lock);
+        return -1;
     }
 
     num_bytes = source->queue_used;
@@ -1277,7 +1326,7 @@ int CoreLogRecorder_GetStats(CoreLogRecorder_Stats_t *stats) {
 
     for (i = 0u; i < CORE_LOG_RECORDER_NUM_SOURCES; i++) {
         source = &_recorder_state.sources[i];
-        source_stats = (i == CORE_LOG_RECORDER_SOURCE_LINUX) ?
+        source_stats = (i == CORE_LOG_RECORDER_LINUX) ?
                        &stats->linux :
                        &stats->rtos;
 

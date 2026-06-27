@@ -12,10 +12,11 @@
 #   sudo Scripts/run-console.sh [options]
 #
 # Options:
-#   -a, --addr ADDR      RTT region backend address (hex, default: 0x10040000)
-#   -s, --size SIZE      RTT region size (hex, default: 0x20000)
-#   -c, --channel CH     Console RTT channel (default: source default)
-#   --source SOURCE      Core source to display: linux or rtos (default: linux)
+#   --phys-addr ADDR     SharedMem physical address (hex, default: 0x10040000)
+#   --mem-size SIZE      SharedMem size (hex, default: 0x20000)
+#   -c, --channel CH     Console RTT text channel (default: selected log default)
+#   --linux              Display Linux logs (default)
+#   --rtos               Display RTOS logs
 #   --rtt-timeout-ms MS  RTTCB discovery timeout in milliseconds (default: 0)
 #   --log-dir DIR        Directory for generated log and record files
 #   -k, --ko PATH        Path to SharedMem.ko (default: auto-detect)
@@ -24,9 +25,9 @@
 #
 # Examples:
 #   sudo Scripts/run-console.sh
-#   sudo Scripts/run-console.sh --source rtos
-#   sudo Scripts/run-console.sh --source linux --channel 3
-#   sudo Scripts/run-console.sh --addr 0x80000000 --size 0x10000
+#   sudo Scripts/run-console.sh --rtos
+#   sudo Scripts/run-console.sh --linux --channel 3
+#   sudo Scripts/run-console.sh --phys-addr 0x80000000 --mem-size 0x10000
 #
 # ==============================================================================
 
@@ -47,7 +48,9 @@ RTT_REGION_ADDR="0x10040000"
 MEM_SIZE="0x20000"
 CONSOLE_CHANNEL="0"
 CONSOLE_CHANNEL_SPECIFIED=0
-CONSOLE_SOURCE=""
+CONSOLE_LINUX_SELECTED=0
+CONSOLE_RTOS_SELECTED=0
+CONSOLE_LOG_KIND="linux"
 RTT_TIMEOUT_MS="0"
 LOG_DIR=""
 KO_PATH=""
@@ -86,10 +89,11 @@ Console Mode: Use stdin/stdout as virtual serial terminal.
 Press Ctrl+C to exit.
 
 Options:
-  -a, --addr ADDR      RTT region backend address (hex, default: $RTT_REGION_ADDR)
-  -s, --size SIZE      RTT region size (hex, default: $MEM_SIZE)
-  -c, --channel CH     Console RTT channel. Channel 0 selects Linux and channel 1 selects RTOS unless --source is set
-  --source SOURCE      Core source to display: linux or rtos (default: linux)
+  --phys-addr ADDR     SharedMem physical address (hex, default: $RTT_REGION_ADDR)
+  --mem-size SIZE      SharedMem size (hex, default: $MEM_SIZE)
+  -c, --channel CH     Console RTT text channel (default: selected log default)
+  --linux              Display Linux logs (default)
+  --rtos               Display RTOS logs
   --rtt-timeout-ms MS  RTTCB discovery timeout in milliseconds (default: $RTT_TIMEOUT_MS, 0 waits until interrupted)
   --log-dir DIR        Directory for generated log and record files
   -k, --ko PATH        Path to SharedMem.ko (default: auto-detect)
@@ -98,9 +102,9 @@ Options:
 
 Examples:
   sudo $0
-  sudo $0 --source rtos
-  sudo $0 --source linux --channel 3
-  sudo $0 --addr 0x80000000 --size 0x10000
+  sudo $0 --rtos
+  sudo $0 --linux --channel 3
+  sudo $0 --phys-addr 0x80000000 --mem-size 0x10000
 EOF
 }
 
@@ -244,31 +248,22 @@ resolve_tracehub() {
     exit 1
 }
 
-resolve_console_source() {
-    if [ -z "$CONSOLE_SOURCE" ]; then
-        if [ "$CONSOLE_CHANNEL_SPECIFIED" -eq 0 ]; then
-            CONSOLE_SOURCE="linux"
-            CONSOLE_CHANNEL="0"
-        elif [ "$CONSOLE_CHANNEL" = "0" ]; then
-            CONSOLE_SOURCE="linux"
-        elif [ "$CONSOLE_CHANNEL" = "1" ]; then
-            CONSOLE_SOURCE="rtos"
-        else
-            print_error "--channel $CONSOLE_CHANNEL requires --source linux or --source rtos"
-            exit 1
-        fi
-        return
+resolve_console_log() {
+    if [ "$CONSOLE_LINUX_SELECTED" -eq 1 ] && [ "$CONSOLE_RTOS_SELECTED" -eq 1 ]; then
+        print_error "--linux and --rtos are mutually exclusive"
+        exit 1
     fi
 
-    if [ "$CONSOLE_CHANNEL_SPECIFIED" -eq 0 ]; then
-        case "$CONSOLE_SOURCE" in
-            linux)
-                CONSOLE_CHANNEL="0"
-                ;;
-            rtos)
-                CONSOLE_CHANNEL="1"
-                ;;
-        esac
+    if [ "$CONSOLE_RTOS_SELECTED" -eq 1 ]; then
+        CONSOLE_LOG_KIND="rtos"
+        if [ "$CONSOLE_CHANNEL_SPECIFIED" -eq 0 ]; then
+            CONSOLE_CHANNEL="1"
+        fi
+    else
+        CONSOLE_LOG_KIND="linux"
+        if [ "$CONSOLE_CHANNEL_SPECIFIED" -eq 0 ]; then
+            CONSOLE_CHANNEL="0"
+        fi
     fi
 }
 
@@ -278,12 +273,12 @@ resolve_console_source() {
 
 while [[ $# -gt 0 ]]; do
     case $1 in
-        -a|--addr)
+        --phys-addr)
             require_option_argument "$1" "${2-}"
             RTT_REGION_ADDR="$2"
             shift 2
             ;;
-        -s|--size)
+        --mem-size)
             require_option_argument "$1" "${2-}"
             MEM_SIZE="$2"
             shift 2
@@ -294,14 +289,13 @@ while [[ $# -gt 0 ]]; do
             CONSOLE_CHANNEL_SPECIFIED=1
             shift 2
             ;;
-        --source)
-            require_option_argument "$1" "${2-}"
-            CONSOLE_SOURCE="$2"
-            if [[ "$CONSOLE_SOURCE" != "linux" && "$CONSOLE_SOURCE" != "rtos" ]]; then
-                print_error "Invalid source: $CONSOLE_SOURCE (must be linux or rtos)"
-                exit 1
-            fi
-            shift 2
+        --linux)
+            CONSOLE_LINUX_SELECTED=1
+            shift
+            ;;
+        --rtos)
+            CONSOLE_RTOS_SELECTED=1
+            shift
             ;;
         --rtt-timeout-ms)
             require_option_argument "$1" "${2-}"
@@ -343,9 +337,7 @@ check_root "${ORIGINAL_ARGS[@]}"
 
 # Resolve executable before loading the kernel module
 resolve_tracehub
-
-# Resolve console source and channel before loading the kernel module
-resolve_console_source
+resolve_console_log
 
 # Set up cleanup trap
 trap cleanup EXIT
@@ -357,15 +349,15 @@ load_kernel_module
 TRACEHUB_ARGS=(
     "--addr" "$RTT_REGION_ADDR"
     "--size" "$MEM_SIZE"
-    "--device" "/dev/shared_mem0"
+    "--shm" "/dev/shared_mem0"
     "--rtt-timeout-ms" "$RTT_TIMEOUT_MS"
     "--console"
 )
 
-if [ "$CONSOLE_SOURCE" = "linux" ]; then
-    TRACEHUB_ARGS+=("--linux-channel" "$CONSOLE_CHANNEL")
+if [ "$CONSOLE_LOG_KIND" = "linux" ]; then
+    TRACEHUB_ARGS+=("--linux" "--linux-channel" "$CONSOLE_CHANNEL")
 else
-    TRACEHUB_ARGS+=("--rtos-channel" "$CONSOLE_CHANNEL")
+    TRACEHUB_ARGS+=("--rtos" "--rtos-channel" "$CONSOLE_CHANNEL")
 fi
 
 if [ -n "$LOG_DIR" ]; then
@@ -374,7 +366,7 @@ fi
 
 # Run tracehub
 print_section "Console Mode - RTT Virtual Serial Terminal"
-print_info "Console service: source $CONSOLE_SOURCE, channel $CONSOLE_CHANNEL"
+print_info "Console service: $CONSOLE_LOG_KIND log, channel $CONSOLE_CHANNEL"
 echo "" >&2
 
 trap 'forward_signal INT' INT

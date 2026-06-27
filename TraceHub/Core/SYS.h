@@ -64,7 +64,15 @@ Purpose : System abstraction layer for thread and timing functions
 #include <string.h>
 #include <stdarg.h>         // For va_list.
 #include <stddef.h>         // for size_t
-#include <pthread.h>        // For pthread_mutex_t (SYS_Mutex)
+
+#if defined(_WIN32)
+  #ifndef WIN32_LEAN_AND_MEAN
+    #define WIN32_LEAN_AND_MEAN
+  #endif
+  #include <windows.h>
+#else
+  #include <pthread.h>        // For pthread_mutex_t (SYS_Mutex)
+#endif
 
 #if defined(__cplusplus)         // Allow usage of this module from C++ files (disable name mangling)
 extern "C" {     /* Make sure we have C-declarations in C++ programs */
@@ -83,9 +91,12 @@ extern "C" {     /* Make sure we have C-declarations in C++ programs */
 *
 *  Description
 *    Handle for system thread objects.
-*    Platform-specific implementation (pthread_t on Linux).
 */
+#if defined(_WIN32)
+typedef HANDLE SYS_Thread;
+#else
 typedef pthread_t SYS_Thread;
+#endif
 
 /*********************************************************************
 *
@@ -93,9 +104,14 @@ typedef pthread_t SYS_Thread;
 *
 *  Description
 *    Mutex object for thread synchronization.
-*    Platform-specific implementation (pthread_mutex_t on Linux).
 */
+#if defined(_WIN32)
+typedef SRWLOCK SYS_Mutex;
+  #define SYS_MUTEX_INITIALIZER SRWLOCK_INIT
+#else
 typedef pthread_mutex_t SYS_Mutex;
+  #define SYS_MUTEX_INITIALIZER PTHREAD_MUTEX_INITIALIZER
+#endif
 
 /*********************************************************************
 *

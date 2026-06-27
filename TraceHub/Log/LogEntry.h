@@ -84,6 +84,26 @@ extern "C" {     /* Make sure we have C-declarations in C++ programs */
 
 /*********************************************************************
 *
+*       LOG_SOURCE_DEFAULT_LINUX_LABEL
+*  Default label for the Linux log source.
+*
+*/
+#ifndef LOG_SOURCE_DEFAULT_LINUX_LABEL
+  #define LOG_SOURCE_DEFAULT_LINUX_LABEL     "LINUX"
+#endif
+
+/*********************************************************************
+*
+*       LOG_SOURCE_DEFAULT_RTOS_LABEL
+*  Default label for the RTOS log source.
+*
+*/
+#ifndef LOG_SOURCE_DEFAULT_RTOS_LABEL
+  #define LOG_SOURCE_DEFAULT_RTOS_LABEL      "RTOS"
+#endif
+
+/*********************************************************************
+*
 *       Types
 *
 **********************************************************************
@@ -97,8 +117,8 @@ extern "C" {     /* Make sure we have C-declarations in C++ programs */
 *    Log source identifier for swimlane display.
 *
 *  Values
-*    LOG_SOURCE_LINUX  Log from Linux A53 core
-*    LOG_SOURCE_RTOS   Log from RTOS R5 core
+*    LOG_SOURCE_LINUX  Linux log source
+*    LOG_SOURCE_RTOS   RTOS log source
 */
 typedef enum {
     LOG_SOURCE_LINUX = 0,
@@ -115,7 +135,7 @@ typedef enum {
 *
 *  Fields
 *    timestamp_us  Unified microsecond timestamp
-*    source        Log source (LINUX or RTOS)
+*    source        Log source identifier
 *    sequence      Source-local sequence used to order equal timestamps
 *    content       Log content string (dynamically allocated)
 *    content_len   Length of content string

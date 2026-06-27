@@ -43,7 +43,7 @@
 **********************************************************************
 ----------------------------------------------------------------------
 File    : RTTSimRTOS.c
-Purpose : Simulate RTOS R5 core writing logs to RTT channel 1
+Purpose : Simulate RTOS logs written to RTT channel 1
           and SystemView multi-core events to RTT channel 2.
           RTOS only VALIDATES RTT CB - never initializes.
           Waits for Linux app to initialize RTTCB first.
@@ -163,7 +163,7 @@ int main(int argc, char *argv[]) {
     (void)argv;
 
     printf("==============================================\n");
-    printf("  RTT RTOS R5 Simulator (VALIDATE ONLY)\n");
+    printf("  RTT RTOS Simulator (VALIDATE ONLY)\n");
     printf("==============================================\n");
     printf("  Role:          Consumer (never initializes RTTCB)\n");
     printf("  Shared Memory: %s\n", SIM_SHM_NAME);
@@ -252,7 +252,7 @@ int main(int argc, char *argv[]) {
     sysview_config.num_channels     = SIM_NUM_CHANNELS;
     sysview_config.core_id          = 1u;
     sysview_config.lock_owner       = false;
-    sysview_config.core_name        = "R5";
+    sysview_config.core_name        = "RTOS";
     sysview_config.application_name = "tracehub-multicore-sim";
     sysview_config.device_name      = "MEMSHM heterogeneous target";
     sysview_config.os_name          = "RTOS";
@@ -269,7 +269,7 @@ int main(int argc, char *argv[]) {
         return 1;
     }
     snprintf(log_msg, sizeof(log_msg),
-             "RTOS R5 boot banner without timestamp\r\n");
+             "RTOS boot banner without timestamp\r\n");
     message_len = (unsigned)strlen(log_msg);
     bytes_written = SEGGER_RTT_WriteNoLock(rtt_address, SIM_RTOS_CHANNEL,
                                            log_msg, message_len);
@@ -297,7 +297,7 @@ int main(int argc, char *argv[]) {
         // Format RTOS log message
         //
         snprintf(log_msg, sizeof(log_msg),
-                 "[%" PRIu64 "] \033[33mRTOS R5\033[0m: Task scheduler tick #%u, heap free: %u bytes\r\n",
+                 "[%" PRIu64 "] \033[33mRTOS\033[0m: Task scheduler tick #%u, heap free: %u bytes\r\n",
                  timestamp_us, next_log_count, 8192 - (next_log_count % 1024));
         message_len = (unsigned)strlen(log_msg);
         //
@@ -321,7 +321,7 @@ int main(int argc, char *argv[]) {
 
         sysview_cycle_count++;
         sysview_bytes = RTT_SIM_SYSVIEW_RecordCycle(sysview_cycle_count, load_percent);
-        printf("SystemView [ch%d R5]: event cycle #%u (%u bytes)\n",
+        printf("SystemView [ch%d RTOS]: event cycle #%u (%u bytes)\n",
                SIM_SYSVIEW_CHANNEL, sysview_cycle_count, sysview_bytes);
 
         SYS_Sleep(SIM_LOG_INTERVAL_MS);

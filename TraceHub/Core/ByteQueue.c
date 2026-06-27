@@ -42,13 +42,10 @@
 *                                                                    *
 **********************************************************************
 ----------------------------------------------------------------------
-File    : LogCollector.h
-Purpose : Log collector for multiple RTT text sources
+File    : ByteQueue.c
+Purpose : Fixed-capacity byte ring queue
 ---------------------------END-OF-HEADER------------------------------
 */
-
-#ifndef TRACEHUB_LOGCOLLECTOR_H            // Guard against multiple inclusion
-#define TRACEHUB_LOGCOLLECTOR_H
 
 /*********************************************************************
 *
@@ -57,118 +54,152 @@ Purpose : Log collector for multiple RTT text sources
 **********************************************************************
 */
 
-#include <stdint.h>
-#include <stdbool.h>
-#include <stddef.h>
+#include <string.h>
 
-#include "LogEntry.h"
-
-#if defined(__cplusplus)         // Allow usage of this module from C++ files (disable name mangling)
-extern "C" {     /* Make sure we have C-declarations in C++ programs */
-#endif
+#include "ByteQueue.h"
 
 /*********************************************************************
 *
-*       Defines
+*       Public code
 *
 **********************************************************************
 */
 
 /*********************************************************************
 *
-*       LOG_COLLECTOR_MAX_LINE_LEN
-*  Maximum length of a single log line.
-*
+*       ByteQueue_Init()
 */
-#ifndef LOG_COLLECTOR_MAX_LINE_LEN
-  #define LOG_COLLECTOR_MAX_LINE_LEN   2048
-#endif
+void ByteQueue_Init(ByteQueue_t *queue, char *buffer, size_t capacity) {
+    if (queue == NULL) {
+        return;
+    }
+
+    queue->buffer   = buffer;
+    queue->capacity = capacity;
+    queue->read_pos = 0u;
+    queue->used     = 0u;
+}
 
 /*********************************************************************
 *
-*       LOG_COLLECTOR_DEFAULT_PENDING_UNTIMED_SIZE
-*  Default per-source capacity for leading untimestamped startup logs.
-*
+*       ByteQueue_IsValid()
 */
-#ifndef LOG_COLLECTOR_DEFAULT_PENDING_UNTIMED_SIZE
-  #define LOG_COLLECTOR_DEFAULT_PENDING_UNTIMED_SIZE  (64u * 1024u)
-#endif
+bool ByteQueue_IsValid(const ByteQueue_t *queue) {
+    return (queue != NULL) && (queue->buffer != NULL) && (queue->capacity > 0u);
+}
 
 /*********************************************************************
 *
-*       LOG_COLLECTOR_MIN_PENDING_UNTIMED_SIZE
-*  Minimum capacity for one maximum line plus pending metadata.
-*
+*       ByteQueue_Clear()
 */
-#ifndef LOG_COLLECTOR_MIN_PENDING_UNTIMED_SIZE
-  #define LOG_COLLECTOR_MIN_PENDING_UNTIMED_SIZE      (LOG_COLLECTOR_MAX_LINE_LEN + 3u)
-#endif
+void ByteQueue_Clear(ByteQueue_t *queue) {
+    if (queue == NULL) {
+        return;
+    }
+
+    queue->read_pos = 0u;
+    queue->used     = 0u;
+}
 
 /*********************************************************************
 *
-*       Types
-*
-**********************************************************************
+*       ByteQueue_Write()
 */
+ByteQueue_WriteResult_t ByteQueue_Write(ByteQueue_t *queue, const char *data, size_t num_bytes) {
+    size_t                  write_pos;
+    size_t                  first_chunk;
+    ByteQueue_WriteResult_t result;
+
+    if (num_bytes == 0u) {
+        return BYTE_QUEUE_WRITE_OK;
+    }
+    if (data == NULL) {
+        return BYTE_QUEUE_WRITE_TOO_LARGE;
+    }
+    if (!ByteQueue_IsValid(queue) || (num_bytes > queue->capacity)) {
+        return BYTE_QUEUE_WRITE_TOO_LARGE;
+    }
+
+    result = BYTE_QUEUE_WRITE_OK;
+    if (num_bytes > (queue->capacity - queue->used)) {
+        ByteQueue_Clear(queue);
+        result = BYTE_QUEUE_WRITE_OVERFLOW_WRITTEN;
+    }
+
+    write_pos = (queue->read_pos + queue->used) % queue->capacity;
+    first_chunk = queue->capacity - write_pos;
+    if (first_chunk > num_bytes) {
+        first_chunk = num_bytes;
+    }
+
+    memcpy(&queue->buffer[write_pos], data, first_chunk);
+    if (first_chunk < num_bytes) {
+        memcpy(&queue->buffer[0], data + first_chunk, num_bytes - first_chunk);
+    }
+    queue->used += num_bytes;
+
+    return result;
+}
 
 /*********************************************************************
 *
-*       LogCollector_Config_t
-*
-*  Description
-*    Configuration structure for log collector.
-*
-*  Fields
-*    linux_channel    RTT up-buffer channel number for Linux logs
-*    rtos_channel     RTT up-buffer channel number for RTOS logs
-*    poll_interval_ms Polling interval in milliseconds
+*       ByteQueue_Read()
 */
-typedef struct {
-    unsigned     linux_channel;
-    unsigned     rtos_channel;
-    unsigned     poll_interval_ms;
-} LogCollector_Config_t;
+size_t ByteQueue_Read(ByteQueue_t *queue, char *buffer, size_t buffer_size) {
+    size_t num_bytes;
+    size_t first_chunk;
+
+    if (!ByteQueue_IsValid(queue) || (buffer == NULL) || (buffer_size == 0u)) {
+        return 0u;
+    }
+
+    num_bytes = queue->used;
+    if (num_bytes > buffer_size) {
+        num_bytes = buffer_size;
+    }
+    if (num_bytes == 0u) {
+        return 0u;
+    }
+
+    first_chunk = queue->capacity - queue->read_pos;
+    if (first_chunk > num_bytes) {
+        first_chunk = num_bytes;
+    }
+
+    memcpy(buffer, &queue->buffer[queue->read_pos], first_chunk);
+    if (first_chunk < num_bytes) {
+        memcpy(buffer + first_chunk, &queue->buffer[0], num_bytes - first_chunk);
+    }
+
+    queue->read_pos = (queue->read_pos + num_bytes) % queue->capacity;
+    queue->used -= num_bytes;
+    if (queue->used == 0u) {
+        queue->read_pos = 0u;
+    }
+
+    return num_bytes;
+}
 
 /*********************************************************************
 *
-*       LogCollector_Callback_t
-*
-*  Description
-*    Callback function type for delivering collected log entries.
-*
-*  Parameters
-*    entry      Pointer to collected LogEntry_t
-*    user_data  User-provided context pointer
-*
-*  Return value
-*    0   Continue collection
-*   -1   Stop collection
-*
-*  Ownership
-*    The callback takes ownership of the entry and must call
-*    LogEntry_Destroy(entry) regardless of the return value.
+*       ByteQueue_GetCapacity()
 */
-typedef int (*LogCollector_Callback_t)(LogEntry_t *entry, void *user_data);
+size_t ByteQueue_GetCapacity(const ByteQueue_t *queue) {
+    if (queue == NULL) {
+        return 0u;
+    }
+    return queue->capacity;
+}
 
 /*********************************************************************
 *
-*       API functions
-*
-**********************************************************************
+*       ByteQueue_GetUsed()
 */
-
-int  LogCollector_Init         (LogCollector_Config_t *config);
-void LogCollector_Cleanup      (void);
-int  LogCollector_Start        (LogCollector_Callback_t callback, void *user_data);
-void LogCollector_Stop         (void);
-int  LogCollector_Poll         (LogCollector_Callback_t callback, void *user_data);
-bool LogCollector_IsRunning    (void);
-bool LogCollector_HasFatalError(void);
-
-#if defined(__cplusplus)          // Allow usage of this module from C++ files (disable name mangling)
-}                /* Make sure we have C-declarations in C++ programs */
-#endif
-
-#endif // end of include guard: TRACEHUB_LOGCOLLECTOR_H Avoid multiple inclusion
+size_t ByteQueue_GetUsed(const ByteQueue_t *queue) {
+    if (queue == NULL) {
+        return 0u;
+    }
+    return queue->used;
+}
 
 /*************************** End of file ****************************/

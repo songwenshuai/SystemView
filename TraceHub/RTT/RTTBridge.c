@@ -88,7 +88,7 @@ Purpose : RTT Bridge core state and configuration management
 */
 
 static RTTBridge_State_t _bridge_state;
-static SYS_Mutex         _bridge_lock = PTHREAD_MUTEX_INITIALIZER;
+static SYS_Mutex         _bridge_lock = SYS_MUTEX_INITIALIZER;
 
 /*********************************************************************
 *
@@ -458,7 +458,7 @@ int RTTBridge_Init(RTTBridge_Config_t *config) {
         return -1;
     }
     // Find RTT control block with retry mechanism.
-    // This allows the bridge to wait for target (RTOS) to initialize RTT CB.
+    // This allows the bridge to wait for the target to initialize RTT CB.
     //
     Log_Print("Searching for RTT control block (will retry if not found)...\n");
 
@@ -830,54 +830,6 @@ void RTTBridge_SetRunning(bool running) {
 
     _bridge_state.running = running;
     _Bridge_UnlockState();
-}
-
-/*********************************************************************
-*
-*       RTTBridge_GetLogFile()
-*
-*  Function description
-*    Get the configured log file path.
-*
-*  Return value
-*    Log file path, or NULL if not configured.
-*/
-const char* RTTBridge_GetLogFile(void) {
-    const char *log_file;
-
-    _Bridge_LockState();
-    if (!_bridge_state.initialized) {
-        _Bridge_UnlockState();
-        return NULL;
-    }
-
-    log_file = _bridge_state.config.log_file;
-    _Bridge_UnlockState();
-    return log_file;
-}
-
-/*********************************************************************
-*
-*       RTTBridge_GetLogFileHandle()
-*
-*  Function description
-*    Get the configured log file handle.
-*
-*  Return value
-*    Log file handle, or NULL if not configured.
-*/
-FILE* RTTBridge_GetLogFileHandle(void) {
-    FILE *log_file_handle;
-
-    _Bridge_LockState();
-    if (!_bridge_state.initialized) {
-        _Bridge_UnlockState();
-        return NULL;
-    }
-
-    log_file_handle = _bridge_state.config.log_file_handle;
-    _Bridge_UnlockState();
-    return log_file_handle;
 }
 
 /*********************************************************************

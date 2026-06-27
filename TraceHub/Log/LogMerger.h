@@ -119,16 +119,12 @@ extern "C" {     /* Make sure we have C-declarations in C++ programs */
 *
 *  Fields
 *    buffer_size      Size of internal sorting buffer
-*    flush_threshold  Flush when buffer reaches this size
-*    flush_timeout_ms Flush when buffered entries wait past this timeout; 0 disables timeout flushing
 *    required_source  Sources that must contribute ordering watermarks
 *    log_enabled      Enable logging merged entries to file
 *    log_prefix       Prefix for log file name (e.g., "swimlane")
 */
 typedef struct {
     unsigned     buffer_size;
-    unsigned     flush_threshold;
-    unsigned     flush_timeout_ms;
     bool         required_source[LOG_SOURCE_MAX];
     bool         log_enabled;
     const char  *log_prefix;

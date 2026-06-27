@@ -48,6 +48,7 @@ VERBOSE=0
 RUN_AFTER_BUILD=0
 JOBS=$(nproc 2>/dev/null || echo 4)
 MEMORY_BACKEND=""
+BUILD_UNIT_TESTS=""
 BUILD_SIM_TESTS=""
 TOOLCHAIN_FILE=""
 APP_BIN="tracehub"
@@ -234,6 +235,12 @@ fi
 # Select target and host platform
 HOST_OS="$(uname -s)"
 HOST_MACHINE="$(uname -m)"
+HOST_IS_WINDOWS=0
+case "$HOST_OS" in
+    MINGW*|MSYS*|CYGWIN*)
+        HOST_IS_WINDOWS=1
+        ;;
+esac
 
 if [ -z "$MEMORY_BACKEND" ]; then
     if [[ "$TARGET_ARCH" == "HOST" ]]; then
@@ -250,9 +257,19 @@ if [[ "$HOST_OS" == "Darwin" && "$TARGET_ARCH" == "HOST" && "$MEMORY_BACKEND" ==
 fi
 
 if [[ "$MEMORY_BACKEND" == "memshm" ]]; then
-    BUILD_SIM_TESTS="ON"
+    if [ "$HOST_IS_WINDOWS" -eq 1 ]; then
+        BUILD_SIM_TESTS="OFF"
+    else
+        BUILD_SIM_TESTS="ON"
+    fi
 else
     BUILD_SIM_TESTS="OFF"
+fi
+
+if [[ "$TARGET_ARCH" == "HOST" ]]; then
+    BUILD_UNIT_TESTS="ON"
+else
+    BUILD_UNIT_TESTS="OFF"
 fi
 
 # Validate toolchain file
@@ -292,6 +309,7 @@ echo "Build Options:"
 echo "  Clean Build:       $([ $CLEAN_BUILD -eq 1 ] && echo "ON" || echo "OFF")"
 echo "  Verbose:           $([ $VERBOSE -eq 1 ] && echo "ON" || echo "OFF")"
 echo "  Memory Backend:    ${MEMORY_BACKEND:-CMake default}"
+echo "  Unit Tests:        $BUILD_UNIT_TESTS"
 echo "  Simulation Tests:  $BUILD_SIM_TESTS"
 echo ""
 echo "Build Target:"
@@ -338,6 +356,7 @@ CMAKE_ARGS=(
     "-S" "$SCRIPT_DIR"
     "-DCMAKE_BUILD_TYPE=$BUILD_TYPE"
     "-DCMAKE_INSTALL_PREFIX=$INSTALL_PREFIX"
+    "-DBUILD_UNIT_TESTS=$BUILD_UNIT_TESTS"
     "-DBUILD_SIM_TESTS=$BUILD_SIM_TESTS"
     "-GNinja"
 )

@@ -43,7 +43,7 @@
 **********************************************************************
 ----------------------------------------------------------------------
 File    : Socket.c
-Purpose : TCP socket abstraction layer for Linux platform
+Purpose : TCP socket abstraction layer for host platforms
 ---------------------------END-OF-HEADER------------------------------
 */
 
@@ -65,17 +65,28 @@ Purpose : TCP socket abstraction layer for Linux platform
 #include <inttypes.h>
 #include <time.h>
 
-#include <getopt.h>
-#include <pthread.h>
-#include <arpa/inet.h>
-#include <netinet/in.h>
-#include <netinet/tcp.h>
-#include <sys/time.h>
-#include <sys/ioctl.h>
-#include <sys/socket.h>
-#include <unistd.h>
+#if defined(_WIN32)
+  #ifndef WIN32_LEAN_AND_MEAN
+    #define WIN32_LEAN_AND_MEAN
+  #endif
+  #include <winsock2.h>
+  #include <ws2tcpip.h>
+  #include <windows.h>
+#else
+  #include <arpa/inet.h>
+  #include <netinet/in.h>
+  #include <netinet/tcp.h>
+  #include <sys/time.h>
+  #include <sys/ioctl.h>
+  #include <sys/socket.h>
+  #include <unistd.h>
+#endif
 
 #include "Socket.h"
+
+#if !defined(_WIN32)
+typedef int SOCKET;
+#endif
 
 /*********************************************************************
 *
@@ -85,10 +96,99 @@ Purpose : TCP socket abstraction layer for Linux platform
 */
 
 static uint64_t _Socket_GetTickCountMs(void) {
+#if defined(_WIN32)
+  return (uint64_t)GetTickCount64();
+#else
   struct timespec Time;
 
   clock_gettime(CLOCK_MONOTONIC, &Time);
   return ((uint64_t)Time.tv_sec * 1000u) + ((uint64_t)Time.tv_nsec / 1000000u);
+#endif
+}
+
+#if defined(_WIN32)
+static BOOL CALLBACK _Socket_InitOnce(PINIT_ONCE init_once, PVOID parameter, PVOID *context) {
+  WSADATA     wsa_data;
+
+  (void)init_once;
+  (void)parameter;
+  (void)context;
+
+  return (WSAStartup(MAKEWORD(2, 2), &wsa_data) == 0) ? TRUE : FALSE;
+}
+#endif
+
+static int _Socket_EnsureInitialized(void) {
+#if defined(_WIN32)
+  static INIT_ONCE init_once = INIT_ONCE_STATIC_INIT;
+
+  if (!InitOnceExecuteOnce(&init_once, _Socket_InitOnce, NULL, NULL)) {
+    return -1;
+  }
+#endif
+  return 0;
+}
+
+static int _Socket_LastError(void) {
+#if defined(_WIN32)
+  return WSAGetLastError();
+#else
+  return errno;
+#endif
+}
+
+static int _Socket_MapSendError(int error_code) {
+#if defined(_WIN32)
+  if (error_code == WSAEWOULDBLOCK) {
+    return SYS_SOCKET_ERR_WOULDBLOCK;
+  }
+  return SYS_SOCKET_ERR_UNSPECIFIED;
+#else
+  switch (error_code) {
+#if EAGAIN != EWOULDBLOCK
+  case EAGAIN:
+#endif
+  case EWOULDBLOCK:
+    return SYS_SOCKET_ERR_WOULDBLOCK;
+  default:
+    return SYS_SOCKET_ERR_UNSPECIFIED;
+  }
+#endif
+}
+
+static int _Socket_MapReceiveError(int error_code) {
+#if defined(_WIN32)
+  switch (error_code) {
+  case WSAEINTR:
+    return SYS_SOCKET_ERR_INTERRUPT;
+  case WSAEWOULDBLOCK:
+    return SYS_SOCKET_ERR_WOULDBLOCK;
+  case WSAENETRESET:
+  case WSAECONNRESET:
+    return SYS_SOCKET_ERR_CONNRESET;
+  case WSAETIMEDOUT:
+    return SYS_SOCKET_ERR_TIMEDOUT;
+  default:
+    return SYS_SOCKET_ERR_UNSPECIFIED;
+  }
+#else
+  switch (error_code) {
+  case EINTR:
+    return SYS_SOCKET_ERR_INTERRUPT;
+#if EAGAIN != EWOULDBLOCK
+  case EAGAIN:
+#endif
+  case EWOULDBLOCK:
+    return SYS_SOCKET_ERR_WOULDBLOCK;
+  case ENETRESET:
+  case ECONNRESET:
+    return SYS_SOCKET_ERR_CONNRESET;
+  case ETIMEDOUT:
+    return SYS_SOCKET_ERR_TIMEDOUT;
+  default:
+    return SYS_SOCKET_ERR_UNSPECIFIED;
+  }
+#endif
 }
 
 /*********************************************************************
@@ -106,15 +206,19 @@ static uint64_t _Socket_GetTickCountMs(void) {
 *    Creates an IPv4 TCP socket.
 *
 *  Return value
-*    >= 0:  Socket handle
-*     < 0:  SYS_SOCKET_INVALID_HANDLE on error
+*    Valid socket handle on success; SYS_SOCKET_INVALID_HANDLE on error
 *
 *  Notes
 *    (1) TCP_NODELAY is enabled to disable Nagle's algorithm for lower latency
 */
 SYS_SOCKET_HANDLE SYS_SOCKET_OpenTCP(void) {
-  SYS_SOCKET_HANDLE sock;
+  SOCKET sock;
   const int optval = SOCKOPT_ENABLE_VALUE;
+
+  if (_Socket_EnsureInitialized() != 0) {
+    return SYS_SOCKET_INVALID_HANDLE;
+  }
+
   //
   // Create socket
   //
@@ -132,6 +236,21 @@ SYS_SOCKET_HANDLE SYS_SOCKET_OpenTCP(void) {
     return SYS_SOCKET_INVALID_HANDLE;
   }
   return (SYS_SOCKET_HANDLE)sock;
+}
+
+/*********************************************************************
+*
+*       SYS_SOCKET_IsValidHandle
+*
+*  Function description
+*    Check whether a socket handle is valid on the current host platform.
+*/
+bool SYS_SOCKET_IsValidHandle(SYS_SOCKET_HANDLE hSocket) {
+#if defined(_WIN32)
+  return hSocket != SYS_SOCKET_INVALID_HANDLE;
+#else
+  return hSocket >= 0;
+#endif
 }
 
 /*********************************************************************
@@ -154,12 +273,16 @@ SYS_SOCKET_HANDLE SYS_SOCKET_OpenTCP(void) {
 int SYS_SOCKET_ListenAtTCPAddr(SYS_SOCKET_HANDLE hSocket, unsigned IPAddr, unsigned Port, unsigned NumConnectionsQueued) {
   struct sockaddr_in addr;
   int r;
+
+  if (!SYS_SOCKET_IsValidHandle(hSocket) || (NumConnectionsQueued > (unsigned)INT_MAX)) {
+    return -1;
+  }
   //
   // Set SO_REUSEADDR to allow quick restart without "address already in use" error
   //
   {
     const int optval = SOCKOPT_ENABLE_VALUE;
-    r = setsockopt(hSocket, SOL_SOCKET, SO_REUSEADDR, (char*)&optval, sizeof(int));
+    r = setsockopt((SOCKET)hSocket, SOL_SOCKET, SO_REUSEADDR, (char*)&optval, sizeof(int));
   }
   if (r != 0) {
     return -1;
@@ -174,14 +297,14 @@ int SYS_SOCKET_ListenAtTCPAddr(SYS_SOCKET_HANDLE hSocket, unsigned IPAddr, unsig
   //
   // Bind socket to address and port
   //
-  r = bind(hSocket, (struct sockaddr*)&addr, sizeof(addr));
+  r = bind((SOCKET)hSocket, (struct sockaddr*)&addr, sizeof(addr));
   if (r != 0) {
     return -1;
   }
   //
   // Put socket into listening state
   //
-  r = listen(hSocket, NumConnectionsQueued);
+  r = listen((SOCKET)hSocket, (int)NumConnectionsQueued);
   if (r != 0) {
     return -1;
   }
@@ -200,9 +323,12 @@ int SYS_SOCKET_ListenAtTCPAddr(SYS_SOCKET_HANDLE hSocket, unsigned IPAddr, unsig
 *    How      Shutdown mode (SYS_SOCKET_SHUT_RD, SYS_SOCKET_SHUT_WR, or SYS_SOCKET_SHUT_RDWR)
 */
 void SYS_SOCKET_Shutdown(SYS_SOCKET_HANDLE hSocket, int How) {
-  SYS_SOCKET_HANDLE Sock;
+  SOCKET Sock;
 
-  Sock = (SYS_SOCKET_HANDLE)hSocket;
+  if (!SYS_SOCKET_IsValidHandle(hSocket)) {
+    return;
+  }
+  Sock = (SOCKET)hSocket;
   switch (How) {
     case SYS_SOCKET_SHUT_RD:
       shutdown(Sock, 0);
@@ -227,10 +353,17 @@ void SYS_SOCKET_Shutdown(SYS_SOCKET_HANDLE hSocket, int How) {
 *    hSocket  Handle to socket that has been returned by SYS_SOCKET_OpenTCP() / SYS_SOCKET_OpenUDP()
 */
 void SYS_SOCKET_Close(SYS_SOCKET_HANDLE hSocket) {
+  if (!SYS_SOCKET_IsValidHandle(hSocket)) {
+    return;
+  }
   //
   // Close socket
   //
+#if defined(_WIN32)
+  closesocket((SOCKET)hSocket);
+#else
   close(hSocket);
+#endif
 }
 
 /*********************************************************************
@@ -249,17 +382,24 @@ void SYS_SOCKET_Close(SYS_SOCKET_HANDLE hSocket) {
 *     < 0  Error
 */
 int SYS_SOCKET_IsReadable(SYS_SOCKET_HANDLE hSocket, int TimeoutMs) {
-  SYS_SOCKET_HANDLE Sock;
+  SOCKET Sock;
   struct timeval tv;
   fd_set rfds;
   int v;
 
-  Sock = (SYS_SOCKET_HANDLE)hSocket;
+  if (!SYS_SOCKET_IsValidHandle(hSocket) || (TimeoutMs < 0)) {
+    return -1;
+  }
+  Sock = (SOCKET)hSocket;
   FD_ZERO(&rfds);       // Zero init file descriptor list
   FD_SET(Sock, &rfds);  // Add socket to file descriptor list to be monitored by select()
   tv.tv_sec = (long)(TimeoutMs / 1000);
   tv.tv_usec = (TimeoutMs % 1000) * 1000;
-  v = select((hSocket + 1), &rfds, NULL, NULL, &tv);   // > 0: in case of success, == 0: Timeout, < 0: Error
+#if defined(_WIN32)
+  v = select(0, &rfds, NULL, NULL, &tv);
+#else
+  v = select((int)(hSocket + 1), &rfds, NULL, NULL, &tv);   // > 0: in case of success, == 0: Timeout, < 0: Error
+#endif
   return v;
 }
 
@@ -278,16 +418,24 @@ int SYS_SOCKET_IsReadable(SYS_SOCKET_HANDLE hSocket, int TimeoutMs) {
 *    == 0  O.K., socket not writeable yet
 */
 int SYS_SOCKET_IsWriteable(SYS_SOCKET_HANDLE hSocket, int TimeoutMs) {
-  SYS_SOCKET_HANDLE Sock;
+  SOCKET Sock;
   struct timeval tv;
   fd_set wfds;
   int v;
-  Sock = (SYS_SOCKET_HANDLE)hSocket;
+
+  if (!SYS_SOCKET_IsValidHandle(hSocket) || (TimeoutMs < 0)) {
+    return -1;
+  }
+  Sock = (SOCKET)hSocket;
   FD_ZERO(&wfds);       // Zero init file descriptor list
   FD_SET(Sock, &wfds);  // Add socket to file descriptor list to be monitored by select()
   tv.tv_sec = (long)(TimeoutMs / 1000);
   tv.tv_usec = (TimeoutMs % 1000) * 1000;
-  v = select((hSocket + 1), NULL, &wfds, NULL, &tv);   // > 0: in case of success, == 0: Timeout, < 0: Error
+#if defined(_WIN32)
+  v = select(0, NULL, &wfds, NULL, &tv);
+#else
+  v = select((int)(hSocket + 1), NULL, &wfds, NULL, &tv);   // > 0: in case of success, == 0: Timeout, < 0: Error
+#endif
   return v;
 }
 
@@ -302,35 +450,48 @@ int SYS_SOCKET_IsWriteable(SYS_SOCKET_HANDLE hSocket, int TimeoutMs) {
 *    hSocket   Handle to socket that has been returned by SYS_SOCKET_OpenTCP() / SYS_SOCKET_OpenUDP()
 *    TimeoutMs Timeout in ms for waiting
 *
+*    phClient  Destination for the accepted socket handle
+*
 *  Return value
-*    >= 0  Handle to socket of new connection that has been established
-*     < 0  Error   (SYS_SOCKET_INVALID_HANDLE)
-*      -2  Timeout (SYS_SOCKET_ERR_ACCEPT_TIMEOUT)
+*    == 0  Connection accepted
+*     < 0  Error code (SYS_SOCKET_ERR_*)
 */
-SYS_SOCKET_HANDLE SYS_SOCKET_AcceptEx(SYS_SOCKET_HANDLE hSocket, int TimeoutMs) {
-  SYS_SOCKET_HANDLE SockChild;
+int SYS_SOCKET_AcceptEx(SYS_SOCKET_HANDLE hSocket, int TimeoutMs, SYS_SOCKET_HANDLE *phClient) {
+  SOCKET SockChild;
   struct sockaddr_in  sockAddr;
   const int nodelay = SOCKOPT_ENABLE_VALUE;
   int r;
+#if defined(_WIN32)
   int len;
+#else
+  socklen_t len;
+#endif
+
+  if (phClient != NULL) {
+    *phClient = SYS_SOCKET_INVALID_HANDLE;
+  }
   //
   // Validate socket handle
   //
-  if (hSocket < 0) {
-    return SYS_SOCKET_INVALID_HANDLE;
+  if (!SYS_SOCKET_IsValidHandle(hSocket) || phClient == NULL) {
+    return SYS_SOCKET_ERR_UNSPECIFIED;
   }
   //
   // accept() itself does not allow using timeouts
   // Therefore we check readability first and then call accept() which should not block then
   //
-  len = sizeof(struct sockaddr_in);
+#if defined(_WIN32)
+  len = (int)sizeof(sockAddr);
+#else
+  len = (socklen_t)sizeof(sockAddr);
+#endif
   r = SYS_SOCKET_IsReadable(hSocket, TimeoutMs);
   if (r < 0) {
-    return SYS_SOCKET_INVALID_HANDLE; // error
+    return SYS_SOCKET_ERR_UNSPECIFIED;
   } else if (r == 0) {
-    return SYS_SOCKET_ERR_ACCEPT_TIMEOUT; // timeout
+    return SYS_SOCKET_ERR_ACCEPT_TIMEOUT;
   } else {
-    SockChild = accept(hSocket, (struct sockaddr*)&sockAddr, (socklen_t *)&len);
+    SockChild = accept((SOCKET)hSocket, (struct sockaddr*)&sockAddr, &len);
     if (SockChild != INVALID_SOCKET) {
       //
       // Disable Nagle's algorithm to speed things up
@@ -341,10 +502,11 @@ SYS_SOCKET_HANDLE SYS_SOCKET_AcceptEx(SYS_SOCKET_HANDLE hSocket, int TimeoutMs) 
       setsockopt(SockChild, SOL_SOCKET, SO_NOSIGPIPE, (char*)&nodelay, sizeof(int));
 #endif
     } else {
-      return SYS_SOCKET_INVALID_HANDLE;
+      return SYS_SOCKET_ERR_UNSPECIFIED;
     }
   }
-  return (SYS_SOCKET_HANDLE)SockChild;
+  *phClient = (SYS_SOCKET_HANDLE)SockChild;
+  return 0;
 }
 
 /*********************************************************************
@@ -359,7 +521,11 @@ SYS_SOCKET_HANDLE SYS_SOCKET_AcceptEx(SYS_SOCKET_HANDLE hSocket, int TimeoutMs) 
 */
 void SYS_SOCKET_EnableKeepalive(SYS_SOCKET_HANDLE hSocket) {
   int on = 1;
-  setsockopt(hSocket, SOL_SOCKET, SO_KEEPALIVE, &on, sizeof(int));
+
+  if (!SYS_SOCKET_IsValidHandle(hSocket)) {
+    return;
+  }
+  setsockopt((SOCKET)hSocket, SOL_SOCKET, SO_KEEPALIVE, (char *)&on, sizeof(int));
 }
 
 /*********************************************************************
@@ -379,20 +545,31 @@ void SYS_SOCKET_EnableKeepalive(SYS_SOCKET_HANDLE hSocket) {
 */
 int SYS_SOCKET_IsReady(SYS_SOCKET_HANDLE hSocket) {
   int error;
+#if defined(_WIN32)
+  int len;
+#else
   socklen_t len;
+#endif
 
-  if (hSocket < 0) {
+  if (!SYS_SOCKET_IsValidHandle(hSocket)) {
     return SYS_SOCKET_ERR_UNSPECIFIED;
   }
 
   error = 0;
   len = sizeof(error);
-  if (getsockopt(hSocket, SOL_SOCKET, SO_ERROR, &error, &len) != 0) {
+  if (getsockopt((SOCKET)hSocket, SOL_SOCKET, SO_ERROR, (char *)&error, &len) != 0) {
     return SYS_SOCKET_ERR_UNSPECIFIED;
   }
+#if defined(_WIN32)
+  if ((error == WSAEINPROGRESS) || (error == WSAEALREADY) ||
+      (error == WSAEWOULDBLOCK)) {
+    return 0;
+  }
+#else
   if ((error == EINPROGRESS) || (error == EALREADY)) {
     return 0;
   }
+#endif
   if (error != 0) {
     return -error;
   }
@@ -415,7 +592,15 @@ int SYS_SOCKET_IsReady(SYS_SOCKET_HANDLE hSocket) {
 */
 void SYS_SOCKET_SetNonBlocking(SYS_SOCKET_HANDLE hSocket) {
   unsigned long mode = NONBLOCKING_VALUE;
+
+  if (!SYS_SOCKET_IsValidHandle(hSocket)) {
+    return;
+  }
+#if defined(_WIN32)
+  ioctlsocket((SOCKET)hSocket, FIONBIO, &mode);
+#else
   ioctl(hSocket, FIONBIO, &mode);
+#endif
 }
 
 /*********************************************************************
@@ -446,17 +631,17 @@ int SYS_SOCKET_Send(SYS_SOCKET_HANDLE hSocket, const void* pData, unsigned NumBy
   int r;
   int Err;
   int Flags;
-  SYS_SOCKET_HANDLE Sock;
+  SOCKET Sock;
   //
   // Validate input parameters
   //
-  if (pData == NULL) {
+  if (!SYS_SOCKET_IsValidHandle(hSocket) || (pData == NULL) || (NumBytes > (unsigned)INT_MAX)) {
     return SYS_SOCKET_ERR_UNSPECIFIED;
   }
   //
   // Perform send operation
   //
-  Sock = (SYS_SOCKET_HANDLE)hSocket;
+  Sock = (SOCKET)hSocket;
   //
   // Use per-call non-blocking and SIGPIPE suppression flags when available.
   //
@@ -467,20 +652,10 @@ int SYS_SOCKET_Send(SYS_SOCKET_HANDLE hSocket, const void* pData, unsigned NumBy
 #ifdef MSG_NOSIGNAL
   Flags |= MSG_NOSIGNAL;
 #endif
-  r = send(Sock, pData, NumBytes, Flags);
+  r = send(Sock, (const char *)pData, (int)NumBytes, Flags);
   if (r < 0) {
-    Err = errno;
-    switch (Err) {
-#if EAGAIN != EWOULDBLOCK
-    case EAGAIN:
-#endif
-    case EWOULDBLOCK:
-      r = SYS_SOCKET_ERR_WOULDBLOCK;
-      break;
-    default:
-      r = SYS_SOCKET_ERR_UNSPECIFIED;
-      break;
-    }
+    Err = _Socket_LastError();
+    r = _Socket_MapSendError(Err);
   }
   return r;
 }
@@ -510,7 +685,7 @@ int SYS_SOCKET_SendAll(SYS_SOCKET_HANDLE hSocket, const void* pData, unsigned Nu
   int                  WaitMs;
   int                  r;
 
-  if ((hSocket < 0) || (pData == NULL) || (TimeoutMs < 0) || (NumBytes > (unsigned)INT_MAX)) {
+  if (!SYS_SOCKET_IsValidHandle(hSocket) || (pData == NULL) || (TimeoutMs < 0) || (NumBytes > (unsigned)INT_MAX)) {
     return SYS_SOCKET_ERR_UNSPECIFIED;
   }
   if (NumBytes == 0u) {
@@ -589,32 +764,17 @@ int SYS_SOCKET_SendAll(SYS_SOCKET_HANDLE hSocket, const void* pData, unsigned Nu
 int SYS_SOCKET_Receive(SYS_SOCKET_HANDLE hSocket, void* pData, unsigned MaxNumBytes) {
   int r;
   int Err;
-  SYS_SOCKET_HANDLE Sock;
+  SOCKET Sock;
 
-  Sock = (SYS_SOCKET_HANDLE)hSocket;
-  r = recv(Sock, (char*)pData, MaxNumBytes, 0);
+  if (!SYS_SOCKET_IsValidHandle(hSocket) || (pData == NULL) || (MaxNumBytes > (unsigned)INT_MAX)) {
+    return SYS_SOCKET_ERR_UNSPECIFIED;
+  }
+
+  Sock = (SOCKET)hSocket;
+  r = recv(Sock, (char*)pData, (int)MaxNumBytes, 0);
   if (r < 0) {
-    Err = errno;
-    switch (Err) {
-    case EINTR:
-      r = SYS_SOCKET_ERR_INTERRUPT;
-      break;
-#if EAGAIN != EWOULDBLOCK
-    case EAGAIN:
-#endif
-    case EWOULDBLOCK:
-      r = SYS_SOCKET_ERR_WOULDBLOCK;
-      break;
-    case ENETRESET:
-    case ECONNRESET:
-      r = SYS_SOCKET_ERR_CONNRESET;
-      break;
-    case ETIMEDOUT:
-      r = SYS_SOCKET_ERR_TIMEDOUT;
-      break;
-    default:
-      r = SYS_SOCKET_ERR_UNSPECIFIED;
-    }
+    Err = _Socket_LastError();
+    r = _Socket_MapReceiveError(Err);
   }
   return r;
 }

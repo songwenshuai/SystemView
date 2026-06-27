@@ -43,7 +43,7 @@
 **********************************************************************
 ----------------------------------------------------------------------
 File    : CoreLogRecorder.h
-Purpose : Core log recorder for Linux and RTOS RTT up-buffers
+Purpose : Core log recorder for RTT text sources
 ---------------------------END-OF-HEADER------------------------------
 */
 
@@ -110,7 +110,6 @@ typedef struct {
     unsigned     linux_channel;
     unsigned     rtos_channel;
     unsigned     poll_interval_ms;
-    size_t       consumer_queue_size;
     const char  *linux_prefix;
     const char  *rtos_prefix;
     bool         linux_enabled;
@@ -122,7 +121,9 @@ typedef struct {
 *       CoreLogRecorder_SourceStats_t
 *
 *  Description
-*    Per-core recorder statistics.
+*    Per-source recorder statistics.
+*    bytes_recorded counts clean text bytes written to the source log file.
+*    bytes_consumed counts raw bytes read from the RTT up-buffer.
 */
 typedef struct {
     unsigned channel;
@@ -140,7 +141,7 @@ typedef struct {
 *       CoreLogRecorder_Stats_t
 *
 *  Description
-*    Recorder statistics for both core log sources.
+*    Recorder statistics for both text log sources.
 */
 typedef struct {
     CoreLogRecorder_SourceStats_t linux;

@@ -55,6 +55,7 @@ Purpose : Log collector implementation for dual RTT channels
 */
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "LogCollector.h"
@@ -75,12 +76,9 @@ Purpose : Log collector implementation for dual RTT channels
 #define LOG_COLLECT_RESULT_STOP         (-3)
 #define LOG_COLLECT_RESULT_PENDING_OVERFLOW (-4)
 
-#ifndef LOG_COLLECTOR_PENDING_UNTIMED_LEN
-  #define LOG_COLLECTOR_PENDING_UNTIMED_LEN (LOG_COLLECTOR_MAX_LINE_LEN * 8u)
-#endif
-
 #define LOG_COLLECTOR_PENDING_FLAG_CONTINUATION  (1u << 0)
 #define LOG_COLLECTOR_PENDING_FLAG_CONTINUES     (1u << 1)
+#define LOG_COLLECTOR_PENDING_RECORD_OVERHEAD    3u
 
 /*********************************************************************
 *
@@ -122,8 +120,9 @@ typedef struct {
     bool                    rtos_last_timestamp_valid;
     uint64_t                global_last_timestamp;
     bool                    global_last_timestamp_valid;
-    char                    linux_pending_untimed[LOG_COLLECTOR_PENDING_UNTIMED_LEN];
-    char                    rtos_pending_untimed[LOG_COLLECTOR_PENDING_UNTIMED_LEN];
+    char                   *linux_pending_untimed;
+    char                   *rtos_pending_untimed;
+    size_t                  pending_untimed_size;
     size_t                  linux_pending_untimed_len;
     size_t                  rtos_pending_untimed_len;
     bool                    linux_fragmenting_line;
@@ -142,6 +141,52 @@ typedef struct {
 */
 
 static LogCollector_State_t _collector_state;
+
+/*********************************************************************
+*
+*       _Collector_FreePendingBuffers()
+*
+*  Function description
+*    Release pending untimestamped buffers owned by the collector.
+*/
+static void _Collector_FreePendingBuffers(void) {
+    free(_collector_state.linux_pending_untimed);
+    free(_collector_state.rtos_pending_untimed);
+    _collector_state.linux_pending_untimed = NULL;
+    _collector_state.rtos_pending_untimed = NULL;
+    _collector_state.pending_untimed_size = 0u;
+    _collector_state.linux_pending_untimed_len = 0u;
+    _collector_state.rtos_pending_untimed_len = 0u;
+}
+
+/*********************************************************************
+*
+*       _Collector_AllocatePendingBuffers()
+*
+*  Function description
+*    Allocate per-source pending untimestamped buffers.
+*/
+static int _Collector_AllocatePendingBuffers(size_t size) {
+    if (size < LOG_COLLECTOR_MIN_PENDING_UNTIMED_SIZE) {
+        return -1;
+    }
+
+    _collector_state.linux_pending_untimed = (char *)malloc(size);
+    if (_collector_state.linux_pending_untimed == NULL) {
+        return -1;
+    }
+
+    _collector_state.rtos_pending_untimed = (char *)malloc(size);
+    if (_collector_state.rtos_pending_untimed == NULL) {
+        _Collector_FreePendingBuffers();
+        return -1;
+    }
+
+    _collector_state.pending_untimed_size = size;
+    _collector_state.linux_pending_untimed[0] = '\0';
+    _collector_state.rtos_pending_untimed[0] = '\0';
+    return 0;
+}
 
 /*********************************************************************
 *
@@ -491,7 +536,7 @@ static void _Collector_ReportCallbackStop(LogSource_t source) {
 static void _Collector_ReportFlushError(int result) {
     const char *reason;
 
-    if (result == 0 || result == LOG_COLLECT_RESULT_PENDING_OVERFLOW) {
+    if (result >= 0 || result == LOG_COLLECT_RESULT_PENDING_OVERFLOW) {
         return;
     }
 
@@ -510,27 +555,37 @@ static void _Collector_ReportFlushError(int result) {
 
 /*********************************************************************
 *
-*       _Collector_RegisterConsumers()
+*       _Collector_EnsureConsumersRegistered()
 *
 *  Function description
-*    Register LogCollector as the single consumer for both core channels.
+*    Ensure LogCollector owns the consumer registrations for both core
+*    channels.
 */
-static int _Collector_RegisterConsumers(void) {
-    int result;
+static int _Collector_EnsureConsumersRegistered(void) {
+    int  result;
+    bool linux_registered_here;
 
-    result = CoreLogRecorder_RegisterConsumer(_collector_state.config.linux_channel);
-    if (result != 0) {
-        return -1;
+    linux_registered_here = false;
+    if (!_collector_state.linux_consumer_registered) {
+        result = CoreLogRecorder_RegisterConsumer(_collector_state.config.linux_channel);
+        if (result != 0) {
+            return -1;
+        }
+        _collector_state.linux_consumer_registered = true;
+        linux_registered_here = true;
     }
-    _collector_state.linux_consumer_registered = true;
 
-    result = CoreLogRecorder_RegisterConsumer(_collector_state.config.rtos_channel);
-    if (result != 0) {
-        CoreLogRecorder_UnregisterConsumer(_collector_state.config.linux_channel);
-        _collector_state.linux_consumer_registered = false;
-        return -1;
+    if (!_collector_state.rtos_consumer_registered) {
+        result = CoreLogRecorder_RegisterConsumer(_collector_state.config.rtos_channel);
+        if (result != 0) {
+            if (linux_registered_here) {
+                CoreLogRecorder_UnregisterConsumer(_collector_state.config.linux_channel);
+                _collector_state.linux_consumer_registered = false;
+            }
+            return -1;
+        }
+        _collector_state.rtos_consumer_registered = true;
     }
-    _collector_state.rtos_consumer_registered = true;
 
     return 0;
 }
@@ -555,12 +610,12 @@ static void _Collector_UnregisterConsumers(void) {
 
 /*********************************************************************
 *
-*       _Collector_StopPollWithResult()
+*       _Collector_StopCollectionWithResult()
 *
 *  Function description
-*    Release poll consumers and return a terminal poll result.
+*    Release collector consumers and return a terminal collection result.
 */
-static int _Collector_StopPollWithResult(int result) {
+static int _Collector_StopCollectionWithResult(int result) {
     if (result == LOG_COLLECT_RESULT_INVALID_RTT ||
         result == LOG_COLLECT_RESULT_PENDING_OVERFLOW) {
         _Collector_SetFatalErrorResult(result);
@@ -662,7 +717,7 @@ static int _DeliverLogEntry(uint64_t timestamp, LogSource_t source,
 *       _AppendPendingUntimedLine()
 *
 *  Function description
-*    Store an untimestamped line until the source's first timestamp appears.
+*    Stage an untimestamped line until the source timeline is known.
 */
 static int _AppendPendingUntimedLine(LogSource_t source,
                                      char *pending_buffer,
@@ -672,21 +727,19 @@ static int _AppendPendingUntimedLine(LogSource_t source,
                                      size_t content_len,
                                      bool fragment_continuation,
                                      bool fragment_continues) {
-    size_t required_len;
     unsigned char flags;
 
     if (pending_buffer == NULL || pending_len == NULL ||
         content == NULL || content_len == 0u ||
-        pending_buffer_size < 3u) {
+        pending_buffer_size < LOG_COLLECTOR_PENDING_RECORD_OVERHEAD) {
         return -1;
     }
 
-    required_len = *pending_len + content_len + 2u;
-    if (required_len >= pending_buffer_size) {
+    if (*pending_len > pending_buffer_size - LOG_COLLECTOR_PENDING_RECORD_OVERHEAD ||
+        content_len > pending_buffer_size - *pending_len - LOG_COLLECTOR_PENDING_RECORD_OVERHEAD) {
         _Collector_RecordPendingUntimedOverflow(source, pending_buffer_size - 1u);
         return LOG_COLLECT_RESULT_PENDING_OVERFLOW;
     }
-
     flags = 0u;
     if (fragment_continuation) {
         flags |= LOG_COLLECTOR_PENDING_FLAG_CONTINUATION;
@@ -711,7 +764,7 @@ static int _AppendPendingUntimedLine(LogSource_t source,
 *       _FlushPendingUntimedLines()
 *
 *  Function description
-*    Deliver leading untimestamped lines with the source's first timestamp.
+*    Deliver staged untimestamped lines with the supplied timestamp.
 */
 static int _FlushPendingUntimedLines(LogSource_t source,
                                      char *pending_buffer,
@@ -778,9 +831,8 @@ static int _FlushPendingUntimedLines(LogSource_t source,
 *       _FlushPendingUntimedFallback()
 *
 *  Function description
-*    Deliver leading untimestamped lines for a source that never emitted a
-*    timestamp. Uses a deterministic fallback timestamp instead of dropping
-*    visible output from the swimlane.
+*    Deliver staged untimestamped lines with a deterministic inferred
+*    timestamp during shutdown cleanup.
 */
 static int _FlushPendingUntimedFallback(LogSource_t source,
                                         char *pending_buffer,
@@ -816,7 +868,7 @@ static int _FlushPendingUntimedFallback(LogSource_t source,
 
     *timestamp = fallback_timestamp;
     *timestamp_valid = true;
-    return 0;
+    return result;
 }
 
 /*********************************************************************
@@ -890,15 +942,15 @@ static void _Collector_ReportUnflushedUntimedLines(LogSource_t source,
 *
 *  Function description
 *    Process a single log line and deliver via callback.
-*    Strips a timestamp prefix when present. Leading lines without a timestamp
-*    are held until the source's first timestamp is known. Later lines without
-*    a timestamp use an inferred timestamp that cannot move behind timestamps
-*    already observed from other sources.
+*    Strips a timestamp prefix when present. Leading lines without timestamps
+*    are staged until the source reports its first timestamp. Later
+*    untimestamped lines use an inferred timestamp that cannot move behind
+*    timestamps already observed from other sources.
 *
 *  Parameters
 *    line       Log line string (null-terminated)
 *    line_len   Length of log line
-*    source          Log source identifier (LINUX or RTOS)
+*    source          Log source identifier
 *    last_timestamp  Current source timestamp storage
 *    timestamp_valid Current source timestamp validity
 *    pending_buffer  Leading untimestamped line buffer
@@ -981,17 +1033,22 @@ static int _ProcessLogLine(const char *line, size_t line_len, LogSource_t source
     if (content_len == 0) {
         return -1;
     }
-    // Delay leading untimestamped lines until the first source timestamp is known.
+    // Keep leading untimestamped lines behind the first source timestamp so
+    // late-starting sources do not publish synthetic time before their real
+    // timeline is known.
     //
     if (parse_result == LOG_LINE_TIMESTAMP_PARSE_NONE && !*timestamp_valid) {
-        return _AppendPendingUntimedLine(source,
-                                         pending_buffer,
-                                         pending_size,
-                                         pending_len,
-                                         content,
-                                         content_len,
-                                         fragment_continuation,
-                                         fragment_continues);
+        _Collector_LockEmission();
+        result = _AppendPendingUntimedLine(source,
+                                           pending_buffer,
+                                           pending_size,
+                                           pending_len,
+                                           content,
+                                           content_len,
+                                           fragment_continuation,
+                                           fragment_continues);
+        _Collector_UnlockEmission();
+        return result;
     }
     _Collector_LockEmission();
     if (parse_result == LOG_LINE_TIMESTAMP_PARSE_PRESENT) {
@@ -1052,7 +1109,7 @@ static int _ProcessLogLine(const char *line, size_t line_len, LogSource_t source
 *  Parameters
 *    line       Complete line bytes without the line ending
 *    line_len   Length of line
-*    source     Log source identifier (LINUX or RTOS)
+*    source     Log source identifier
 *    timestamp  Current source timestamp storage
 *    timestamp_valid Current source timestamp validity
 *    pending_buffer  Leading untimestamped line buffer
@@ -1187,18 +1244,20 @@ static int _FlushPendingLine(LogSource_t source, char *buffer, size_t buffer_siz
 *    Flush pending line fragments for all sources.
 *
 *  Return value
-*    0                               Success
+*    >= 0                            Number of entries flushed
 *    LOG_COLLECT_RESULT_INVALID_RTT  Invalid pending buffer state
 *    LOG_COLLECT_RESULT_STOP         Callback requested stop
 *    LOG_COLLECT_RESULT_PENDING_OVERFLOW Pending untimestamped data overflow
 */
 static int _FlushPendingLines(LogCollector_Callback_t callback, void *user_data) {
     int result;
+    int delivered;
 
     if (callback == NULL) {
         return 0;
     }
 
+    delivered = 0;
     result = _FlushPendingLine(LOG_SOURCE_LINUX,
                                _collector_state.linux_buffer,
                                sizeof(_collector_state.linux_buffer),
@@ -1207,28 +1266,35 @@ static int _FlushPendingLines(LogCollector_Callback_t callback, void *user_data)
                                &_collector_state.linux_last_timestamp,
                                &_collector_state.linux_last_timestamp_valid,
                                _collector_state.linux_pending_untimed,
-                               sizeof(_collector_state.linux_pending_untimed),
+                               _collector_state.pending_untimed_size,
                                &_collector_state.linux_pending_untimed_len,
                                &_collector_state.linux_sequence,
                                callback,
                                user_data);
-    if (result != 0) {
+    if (result < 0) {
         return result;
     }
+    delivered += result;
 
-    return _FlushPendingLine(LOG_SOURCE_RTOS,
-                             _collector_state.rtos_buffer,
-                             sizeof(_collector_state.rtos_buffer),
-                             &_collector_state.rtos_buffer_len,
-                             &_collector_state.rtos_fragmenting_line,
-                             &_collector_state.rtos_last_timestamp,
-                             &_collector_state.rtos_last_timestamp_valid,
-                             _collector_state.rtos_pending_untimed,
-                             sizeof(_collector_state.rtos_pending_untimed),
-                             &_collector_state.rtos_pending_untimed_len,
-                             &_collector_state.rtos_sequence,
-                             callback,
-                             user_data);
+    result = _FlushPendingLine(LOG_SOURCE_RTOS,
+                               _collector_state.rtos_buffer,
+                               sizeof(_collector_state.rtos_buffer),
+                               &_collector_state.rtos_buffer_len,
+                               &_collector_state.rtos_fragmenting_line,
+                               &_collector_state.rtos_last_timestamp,
+                               &_collector_state.rtos_last_timestamp_valid,
+                               _collector_state.rtos_pending_untimed,
+                               _collector_state.pending_untimed_size,
+                               &_collector_state.rtos_pending_untimed_len,
+                               &_collector_state.rtos_sequence,
+                               callback,
+                               user_data);
+    if (result < 0) {
+        return result;
+    }
+    delivered += result;
+
+    return delivered;
 }
 
 /*********************************************************************
@@ -1242,7 +1308,7 @@ static int _FlushPendingLines(LogCollector_Callback_t callback, void *user_data)
 *
 *  Parameters
 *    channel      RTT channel number
-*    source       Log source identifier (LINUX or RTOS)
+*    source       Log source identifier
 *    buffer       Pending line buffer
 *    buffer_size  Size of pending line buffer
 *    buffer_len   Current pending line length
@@ -1390,7 +1456,7 @@ static int _CollectFromChannel(unsigned channel, LogSource_t source,
 *       _LinuxCollectionThread()
 *
 *  Function description
-*    Background thread for Linux channel log collection.
+*    Background thread for Linux log collection.
 *    Consumes recorded Linux bytes and converts complete lines to entries.
 *
 *  Parameters
@@ -1416,7 +1482,7 @@ static void _LinuxCollectionThread(void *arg) {
             &_collector_state.linux_last_timestamp,
             &_collector_state.linux_last_timestamp_valid,
             _collector_state.linux_pending_untimed,
-            sizeof(_collector_state.linux_pending_untimed),
+            _collector_state.pending_untimed_size,
             &_collector_state.linux_pending_untimed_len,
             &_collector_state.linux_sequence,
             callback,
@@ -1442,7 +1508,7 @@ static void _LinuxCollectionThread(void *arg) {
 *       _RTOSCollectionThread()
 *
 *  Function description
-*    Background thread for RTOS channel log collection.
+*    Background thread for RTOS log collection.
 *    Consumes recorded RTOS bytes and converts complete lines to entries.
 *
 *  Parameters
@@ -1468,7 +1534,7 @@ static void _RTOSCollectionThread(void *arg) {
             &_collector_state.rtos_last_timestamp,
             &_collector_state.rtos_last_timestamp_valid,
             _collector_state.rtos_pending_untimed,
-            sizeof(_collector_state.rtos_pending_untimed),
+            _collector_state.pending_untimed_size,
             &_collector_state.rtos_pending_untimed_len,
             &_collector_state.rtos_sequence,
             callback,
@@ -1511,7 +1577,8 @@ static void _RTOSCollectionThread(void *arg) {
 *   -1   Invalid configuration
 */
 int LogCollector_Init(LogCollector_Config_t *config) {
-    int result;
+    int    result;
+    size_t pending_untimed_size;
     //
     // Validate configuration
     //
@@ -1524,16 +1591,26 @@ int LogCollector_Init(LogCollector_Config_t *config) {
     if (_collector_state.initialized) {
         LogCollector_Cleanup();
     }
+    pending_untimed_size = LOG_COLLECTOR_DEFAULT_PENDING_UNTIMED_SIZE;
+    if (pending_untimed_size < LOG_COLLECTOR_MIN_PENDING_UNTIMED_SIZE) {
+        return -1;
+    }
     //
     // Initialize state
     //
     memset(&_collector_state, 0, sizeof(_collector_state));
     memcpy(&_collector_state.config, config, sizeof(LogCollector_Config_t));
+    if (_Collector_AllocatePendingBuffers(pending_untimed_size) != 0) {
+        memset(&_collector_state, 0, sizeof(_collector_state));
+        return -1;
+    }
     //
     // Initialize locks
     //
     result = SYS_MutexInit(&_collector_state.lock);
     if (result != 0) {
+        _Collector_FreePendingBuffers();
+        memset(&_collector_state, 0, sizeof(_collector_state));
         return -1;
     }
     _collector_state.lock_initialized = true;
@@ -1541,6 +1618,8 @@ int LogCollector_Init(LogCollector_Config_t *config) {
     if (result != 0) {
         SYS_MutexDestroy(&_collector_state.lock);
         _collector_state.lock_initialized = false;
+        _Collector_FreePendingBuffers();
+        memset(&_collector_state, 0, sizeof(_collector_state));
         return -1;
     }
     _collector_state.emit_lock_initialized = true;
@@ -1585,6 +1664,7 @@ void LogCollector_Cleanup(void) {
         SYS_MutexDestroy(&_collector_state.lock);
         _collector_state.lock_initialized = false;
     }
+    _Collector_FreePendingBuffers();
     //
     // Reset state
     //
@@ -1627,7 +1707,7 @@ int LogCollector_Start(LogCollector_Callback_t callback, void *user_data) {
         _collector_state.rtos_thread_started) {
         return -2;
     }
-    if (_Collector_RegisterConsumers() != 0) {
+    if (_Collector_EnsureConsumersRegistered() != 0) {
         return -2;
     }
     //
@@ -1641,10 +1721,10 @@ int LogCollector_Start(LogCollector_Callback_t callback, void *user_data) {
     _collector_state.rtos_last_timestamp_valid  = false;
     _collector_state.global_last_timestamp = 0u;
     _collector_state.global_last_timestamp_valid = false;
-    _collector_state.linux_pending_untimed_len  = 0u;
-    _collector_state.rtos_pending_untimed_len   = 0u;
-    _collector_state.linux_pending_untimed[0]   = '\0';
-    _collector_state.rtos_pending_untimed[0]    = '\0';
+    _collector_state.linux_pending_untimed_len = 0u;
+    _collector_state.rtos_pending_untimed_len  = 0u;
+    _collector_state.linux_pending_untimed[0]  = '\0';
+    _collector_state.rtos_pending_untimed[0]   = '\0';
     _collector_state.linux_fragmenting_line = false;
     _collector_state.rtos_fragmenting_line  = false;
     _collector_state.linux_sequence = 0u;
@@ -1734,6 +1814,8 @@ void LogCollector_Stop(void) {
 *  Function description
 *    Poll for available log entries and call callback for each entry.
 *    This is a synchronous, non-threaded collection mode.
+*    Successful polls keep collector consumer registrations until
+*    LogCollector_Stop() or LogCollector_Cleanup().
 *
 *  Parameters
 *    callback   Callback function for delivering log entries
@@ -1767,7 +1849,7 @@ int LogCollector_Poll(LogCollector_Callback_t callback, void *user_data) {
         _collector_state.rtos_thread_started) {
         return -1;
     }
-    if (_Collector_RegisterConsumers() != 0) {
+    if (_Collector_EnsureConsumersRegistered() != 0) {
         _Collector_SetFatalError();
         return LOG_COLLECT_RESULT_INVALID_RTT;
     }
@@ -1783,20 +1865,20 @@ int LogCollector_Poll(LogCollector_Callback_t callback, void *user_data) {
         &_collector_state.linux_last_timestamp,
         &_collector_state.linux_last_timestamp_valid,
         _collector_state.linux_pending_untimed,
-        sizeof(_collector_state.linux_pending_untimed),
+        _collector_state.pending_untimed_size,
         &_collector_state.linux_pending_untimed_len,
         &_collector_state.linux_sequence,
         callback,
         user_data
     );
     if (result == LOG_COLLECT_RESULT_INVALID_RTT) {
-        return _Collector_StopPollWithResult(LOG_COLLECT_RESULT_INVALID_RTT);
+        return _Collector_StopCollectionWithResult(LOG_COLLECT_RESULT_INVALID_RTT);
     }
     if (result == LOG_COLLECT_RESULT_STOP) {
-        return _Collector_StopPollWithResult(LOG_COLLECT_RESULT_STOP);
+        return _Collector_StopCollectionWithResult(LOG_COLLECT_RESULT_STOP);
     }
     if (result == LOG_COLLECT_RESULT_PENDING_OVERFLOW) {
-        return _Collector_StopPollWithResult(LOG_COLLECT_RESULT_PENDING_OVERFLOW);
+        return _Collector_StopCollectionWithResult(LOG_COLLECT_RESULT_PENDING_OVERFLOW);
     }
     if (result > 0) {
         count += result;
@@ -1814,26 +1896,25 @@ int LogCollector_Poll(LogCollector_Callback_t callback, void *user_data) {
         &_collector_state.rtos_last_timestamp,
         &_collector_state.rtos_last_timestamp_valid,
         _collector_state.rtos_pending_untimed,
-        sizeof(_collector_state.rtos_pending_untimed),
+        _collector_state.pending_untimed_size,
         &_collector_state.rtos_pending_untimed_len,
         &_collector_state.rtos_sequence,
         callback,
         user_data
     );
     if (result == LOG_COLLECT_RESULT_INVALID_RTT) {
-        return _Collector_StopPollWithResult(LOG_COLLECT_RESULT_INVALID_RTT);
+        return _Collector_StopCollectionWithResult(LOG_COLLECT_RESULT_INVALID_RTT);
     }
     if (result == LOG_COLLECT_RESULT_STOP) {
-        return _Collector_StopPollWithResult(LOG_COLLECT_RESULT_STOP);
+        return _Collector_StopCollectionWithResult(LOG_COLLECT_RESULT_STOP);
     }
     if (result == LOG_COLLECT_RESULT_PENDING_OVERFLOW) {
-        return _Collector_StopPollWithResult(LOG_COLLECT_RESULT_PENDING_OVERFLOW);
+        return _Collector_StopCollectionWithResult(LOG_COLLECT_RESULT_PENDING_OVERFLOW);
     }
     if (result > 0) {
         count += result;
     }
 
-    _Collector_UnregisterConsumers();
     return count;
 }
 

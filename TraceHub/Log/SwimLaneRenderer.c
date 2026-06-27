@@ -66,8 +66,22 @@ Purpose : Swimlane-style log renderer implementation
 #include <string.h>
 #include <stdlib.h>
 #include <limits.h>
+#include <stdint.h>
 #include <wchar.h>
 #include <locale.h>
+
+#if defined(_WIN32)
+  #ifndef WIN32_LEAN_AND_MEAN
+    #define WIN32_LEAN_AND_MEAN
+  #endif
+  #include <windows.h>
+  #include <io.h>
+  #define fileno _fileno
+  #define isatty _isatty
+#else
+  #include <unistd.h>
+  #include <sys/ioctl.h>
+#endif
 
 #include "SwimLaneRenderer.h"
 #include "LogEntry.h"
@@ -110,6 +124,12 @@ Purpose : Swimlane-style log renderer implementation
 static SwimLane_State_t _swimlane_state;
 static SYS_Mutex        _swimlane_mutex;
 static bool             _mutex_initialized = false;
+static unsigned         _timestamp_width;
+static unsigned         _linux_width;
+static unsigned         _rtos_width;
+static const char      *_linux_label;
+static const char      *_rtos_label;
+static bool             _stream_is_tty;
 
 /*********************************************************************
 *
@@ -117,6 +137,309 @@ static bool             _mutex_initialized = false;
 *
 **********************************************************************
 */
+
+/*********************************************************************
+*
+*       _AddUnsigned()
+*
+*  Function description
+*    Add two unsigned values with overflow detection.
+*/
+static int _AddUnsigned(unsigned a, unsigned b, unsigned *result) {
+    if (result == NULL) {
+        return -1;
+    }
+    if (a > UINT_MAX - b) {
+        return -1;
+    }
+
+    *result = a + b;
+    return 0;
+}
+
+/*********************************************************************
+*
+*       _GetMinimumTotalWidth()
+*
+*  Function description
+*    Calculate the minimum renderable swimlane total width.
+*/
+static int _GetMinimumTotalWidth(unsigned timestamp_width, unsigned *min_total_width) {
+    unsigned min_source_width;
+    unsigned total_width;
+
+    if (min_total_width == NULL) {
+        return -1;
+    }
+    if (_AddUnsigned(SWIMLANE_MIN_SOURCE_WIDTH,
+                     SWIMLANE_MIN_SOURCE_WIDTH,
+                     &min_source_width) != 0 ||
+        _AddUnsigned(timestamp_width,
+                     SWIMLANE_SEPARATOR_WIDTH,
+                     &total_width) != 0 ||
+        _AddUnsigned(total_width,
+                     min_source_width,
+                     &total_width) != 0) {
+        return -1;
+    }
+
+    *min_total_width = total_width;
+    return 0;
+}
+
+#if defined(_WIN32)
+/*********************************************************************
+*
+*       _WideCharInRange()
+*
+*  Function description
+*    Return whether a wide character value falls in an inclusive range.
+*/
+static bool _WideCharInRange(uint32_t value, uint32_t first, uint32_t last) {
+    return value >= first && value <= last;
+}
+
+/*********************************************************************
+*
+*       _WideCharIsCombining()
+*
+*  Function description
+*    Return whether a wide character has zero terminal column width.
+*/
+static bool _WideCharIsCombining(uint32_t value) {
+    return _WideCharInRange(value, 0x0300u, 0x036Fu) ||
+           _WideCharInRange(value, 0x0483u, 0x0489u) ||
+           _WideCharInRange(value, 0x0591u, 0x05BDu) ||
+           value == 0x05BFu ||
+           _WideCharInRange(value, 0x05C1u, 0x05C2u) ||
+           _WideCharInRange(value, 0x05C4u, 0x05C5u) ||
+           value == 0x05C7u ||
+           _WideCharInRange(value, 0x0610u, 0x061Au) ||
+           _WideCharInRange(value, 0x064Bu, 0x065Fu) ||
+           value == 0x0670u ||
+           _WideCharInRange(value, 0x06D6u, 0x06DCu) ||
+           _WideCharInRange(value, 0x06DFu, 0x06E4u) ||
+           _WideCharInRange(value, 0x06E7u, 0x06E8u) ||
+           _WideCharInRange(value, 0x06EAu, 0x06EDu) ||
+           _WideCharInRange(value, 0x0711u, 0x0711u) ||
+           _WideCharInRange(value, 0x0730u, 0x074Au) ||
+           _WideCharInRange(value, 0x07A6u, 0x07B0u) ||
+           _WideCharInRange(value, 0x07EBu, 0x07F3u) ||
+           _WideCharInRange(value, 0x0816u, 0x0819u) ||
+           _WideCharInRange(value, 0x081Bu, 0x0823u) ||
+           _WideCharInRange(value, 0x0825u, 0x0827u) ||
+           _WideCharInRange(value, 0x0829u, 0x082Du) ||
+           _WideCharInRange(value, 0x0859u, 0x085Bu) ||
+           _WideCharInRange(value, 0x08D3u, 0x08E1u) ||
+           _WideCharInRange(value, 0x08E3u, 0x0902u) ||
+           value == 0x093Au ||
+           value == 0x093Cu ||
+           _WideCharInRange(value, 0x0941u, 0x0948u) ||
+           value == 0x094Du ||
+           _WideCharInRange(value, 0x0951u, 0x0957u) ||
+           _WideCharInRange(value, 0x0962u, 0x0963u) ||
+           _WideCharInRange(value, 0x200Bu, 0x200Fu) ||
+           _WideCharInRange(value, 0x202Au, 0x202Eu) ||
+           _WideCharInRange(value, 0x2060u, 0x206Fu) ||
+           _WideCharInRange(value, 0xFE00u, 0xFE0Fu) ||
+           _WideCharInRange(value, 0xFE20u, 0xFE2Fu);
+}
+
+/*********************************************************************
+*
+*       _WideCharIsWide()
+*
+*  Function description
+*    Return whether a wide character normally occupies two columns.
+*/
+static bool _WideCharIsWide(uint32_t value) {
+    return _WideCharInRange(value, 0x1100u, 0x115Fu) ||
+           _WideCharInRange(value, 0x2329u, 0x232Au) ||
+           _WideCharInRange(value, 0x2E80u, 0xA4CFu) ||
+           _WideCharInRange(value, 0xAC00u, 0xD7A3u) ||
+           _WideCharInRange(value, 0xF900u, 0xFAFFu) ||
+           _WideCharInRange(value, 0xFE10u, 0xFE19u) ||
+           _WideCharInRange(value, 0xFE30u, 0xFE6Fu) ||
+           _WideCharInRange(value, 0xFF00u, 0xFF60u) ||
+           _WideCharInRange(value, 0xFFE0u, 0xFFE6u) ||
+           _WideCharInRange(value, 0x20000u, 0x3FFFDu);
+}
+#endif
+
+/*********************************************************************
+*
+*       _GetWideCharDisplayWidth()
+*
+*  Function description
+*    Return terminal column width for one wide character.
+*/
+static int _GetWideCharDisplayWidth(wchar_t wc) {
+#if defined(_WIN32)
+    uint32_t value;
+
+    value = (uint32_t)wc;
+    if (value == 0u) {
+        return 0;
+    }
+    if (value < 0x20u || _WideCharInRange(value, 0x7Fu, 0x9Fu)) {
+        return -1;
+    }
+    if (_WideCharIsCombining(value)) {
+        return 0;
+    }
+    if (_WideCharIsWide(value)) {
+        return 2;
+    }
+    return 1;
+#else
+    return wcwidth(wc);
+#endif
+}
+
+/*********************************************************************
+*
+*       _GetStreamTerminalWidth()
+*
+*  Function description
+*    Read terminal width for a stream when it is connected to a TTY.
+*/
+static int _GetStreamTerminalWidth(FILE *stream, unsigned *width, bool *is_tty) {
+    int fd;
+
+    if (width == NULL || is_tty == NULL) {
+        return -1;
+    }
+
+    *width = 0u;
+    *is_tty = false;
+    if (stream == NULL) {
+        return 0;
+    }
+
+    fd = fileno(stream);
+    if (fd < 0 || !isatty(fd)) {
+        return 0;
+    }
+    *is_tty = true;
+
+#if defined(_WIN32)
+    {
+        CONSOLE_SCREEN_BUFFER_INFO info;
+        HANDLE handle;
+
+        handle = (HANDLE)_get_osfhandle(fd);
+        if (handle == INVALID_HANDLE_VALUE ||
+            !GetConsoleScreenBufferInfo(handle, &info)) {
+            return 0;
+        }
+        *width = (unsigned)(info.srWindow.Right - info.srWindow.Left + 1);
+        return 0;
+    }
+#else
+    {
+        struct winsize ws;
+
+        if (ioctl(fd, TIOCGWINSZ, &ws) != 0 || ws.ws_col == 0u) {
+            return 0;
+        }
+        *width = (unsigned)ws.ws_col;
+        return 0;
+    }
+#endif
+}
+
+/*********************************************************************
+*
+*       _ResolveColumnWidths()
+*
+*  Function description
+*    Resolve Linux and RTOS column widths from total width. Abnormally narrow
+*    terminal widths are clamped to the minimum renderable layout.
+*/
+static int _ResolveColumnWidths(unsigned total_width,
+                                unsigned timestamp_width,
+                                bool clamp_narrow,
+                                unsigned *linux_width,
+                                unsigned *rtos_width) {
+    unsigned min_total_width;
+    unsigned source_width;
+
+    if (linux_width == NULL || rtos_width == NULL) {
+        return -1;
+    }
+    if (_GetMinimumTotalWidth(timestamp_width, &min_total_width) != 0) {
+        return -1;
+    }
+    if (total_width < min_total_width) {
+        if (!clamp_narrow) {
+            return -1;
+        }
+        total_width = min_total_width;
+    }
+
+    source_width = total_width - timestamp_width - SWIMLANE_SEPARATOR_WIDTH;
+    *linux_width = source_width / 2u;
+    *rtos_width = source_width - *linux_width;
+
+    if (*linux_width < SWIMLANE_MIN_SOURCE_WIDTH ||
+        *rtos_width < SWIMLANE_MIN_SOURCE_WIDTH) {
+        return -1;
+    }
+
+    return 0;
+}
+
+/*********************************************************************
+*
+*       _ResolveLayout()
+*
+*  Function description
+*    Resolve renderer layout from the output stream, explicit configuration,
+*    and compile-time defaults.
+*/
+static int _ResolveLayout(const SwimLane_Config_t *config) {
+    unsigned terminal_width;
+    unsigned total_width;
+    bool     explicit_width;
+    bool     clamp_narrow;
+    bool     is_tty;
+
+    if (config == NULL) {
+        return -1;
+    }
+    if (SWIMLANE_DEFAULT_TIMESTAMP_WIDTH < SWIMLANE_MIN_TIMESTAMP_WIDTH) {
+        return -1;
+    }
+    if (_GetStreamTerminalWidth(config->output_stream, &terminal_width, &is_tty) != 0) {
+        return -1;
+    }
+    _stream_is_tty = is_tty;
+
+    explicit_width = config->total_width != 0u;
+    if (explicit_width) {
+        total_width = config->total_width;
+    } else {
+        total_width = (terminal_width > 0u) ?
+                      terminal_width :
+                      SWIMLANE_DEFAULT_TOTAL_WIDTH;
+    }
+    if (total_width > (unsigned)INT_MAX) {
+        return -1;
+    }
+    clamp_narrow = !explicit_width && (terminal_width > 0u);
+    _timestamp_width = SWIMLANE_DEFAULT_TIMESTAMP_WIDTH;
+    if (_ResolveColumnWidths(total_width,
+                             _timestamp_width,
+                             clamp_narrow,
+                             &_linux_width,
+                             &_rtos_width) != 0) {
+        return -1;
+    }
+    _linux_label = SWIMLANE_DEFAULT_LINUX_LABEL;
+    _rtos_label  = SWIMLANE_DEFAULT_RTOS_LABEL;
+
+    return 0;
+}
 
 /*********************************************************************
 *
@@ -287,7 +610,7 @@ static unsigned _Utf8BytesForWidth(const char *str, unsigned max_bytes,
         //
         // Get display width of the character
         //
-        w = wcwidth(wc);
+        w = _GetWideCharDisplayWidth(wc);
         if (w < 0) {
             //
             // Non-printable control character: treat as width 1
@@ -500,7 +823,6 @@ static void _PrintTimestampCell(FILE *stream, uint64_t timestamp_us, unsigned wi
 *   -2   Failed to initialize mutex
 */
 int SwimLane_Init(SwimLane_Config_t *config) {
-    unsigned total_width;
     //
     // Validate configuration
     //
@@ -508,25 +830,6 @@ int SwimLane_Init(SwimLane_Config_t *config) {
         return -1;
     }
     if (_swimlane_state.initialized || _mutex_initialized) {
-        return -1;
-    }
-    if (config->timestamp_width == 0 || config->linux_width == 0 || config->rtos_width == 0) {
-        return -1;
-    }
-    if (config->timestamp_width > (unsigned)INT_MAX ||
-        config->linux_width > (unsigned)INT_MAX ||
-        config->rtos_width > (unsigned)INT_MAX) {
-        return -1;
-    }
-    if (config->timestamp_width > (unsigned)INT_MAX - 6u) {
-        return -1;
-    }
-    total_width = config->timestamp_width + 6u;
-    if (config->linux_width > (unsigned)INT_MAX - total_width) {
-        return -1;
-    }
-    total_width += config->linux_width;
-    if (config->rtos_width > (unsigned)INT_MAX - total_width) {
         return -1;
     }
     //
@@ -541,12 +844,17 @@ int SwimLane_Init(SwimLane_Config_t *config) {
     //
     memset(&_swimlane_state, 0, sizeof(_swimlane_state));
     memcpy(&_swimlane_state.config, config, sizeof(SwimLane_Config_t));
-    //
-    // Set default output stream if not specified
-    //
     if (_swimlane_state.config.output_stream == NULL) {
         _swimlane_state.config.output_stream = stdout;
     }
+    if (_ResolveLayout(&_swimlane_state.config) != 0) {
+        SYS_MutexDestroy(&_swimlane_mutex);
+        _mutex_initialized = false;
+        memset(&_swimlane_state, 0, sizeof(_swimlane_state));
+        return -1;
+    }
+    _swimlane_state.config.color_enabled =
+        _swimlane_state.config.color_enabled && _stream_is_tty;
     //
     // Mark as initialized
     //
@@ -575,6 +883,12 @@ void SwimLane_Cleanup(void) {
     // Reset state
     //
     memset(&_swimlane_state, 0, sizeof(_swimlane_state));
+    _timestamp_width = 0u;
+    _linux_width = 0u;
+    _rtos_width = 0u;
+    _linux_label = NULL;
+    _rtos_label = NULL;
+    _stream_is_tty = false;
     //
     // Destroy mutex
     //
@@ -619,10 +933,10 @@ static int _SwimLane_RenderHeaderUnlocked(void) {
     // Get configuration
     //
     stream       = _swimlane_state.config.output_stream;
-    ts_width     = _swimlane_state.config.timestamp_width;
-    linux_width  = _swimlane_state.config.linux_width;
-    rtos_width   = _swimlane_state.config.rtos_width;
-    total_width  = ts_width + 3 + linux_width + 3 + rtos_width;
+    ts_width     = _timestamp_width;
+    linux_width = _linux_width;
+    rtos_width  = _rtos_width;
+    total_width = ts_width + 3 + linux_width + 3 + rtos_width;
     //
     // Print top separator
     //
@@ -653,12 +967,12 @@ static int _SwimLane_RenderHeaderUnlocked(void) {
         //
         // Linux column header
         //
-        _PrintCell(stream, "LINUX CORE (A53)", linux_width, NULL, 0);
+        _PrintCell(stream, _linux_label, linux_width, NULL, 0);
         fprintf(stream, " | ");
         //
         // RTOS column header
         //
-        _PrintCell(stream, "RTOS CORE (R5)", rtos_width, NULL, 0);
+        _PrintCell(stream, _rtos_label, rtos_width, NULL, 0);
         fprintf(stream, "\n");
         //
         // Reset color
@@ -745,9 +1059,7 @@ static int _SwimLane_RenderSeparatorUnlocked(void) {
     // Get configuration
     //
     stream      = _swimlane_state.config.output_stream;
-    total_width = _swimlane_state.config.timestamp_width + 3 +
-                  _swimlane_state.config.linux_width + 3 +
-                  _swimlane_state.config.rtos_width;
+    total_width = _timestamp_width + 3 + _linux_width + 3 + _rtos_width;
     //
     // Print separator line
     //
@@ -852,9 +1164,9 @@ int SwimLane_RenderEntry(const LogEntry_t *entry) {
     // Get configuration
     //
     stream       = _swimlane_state.config.output_stream;
-    ts_width     = _swimlane_state.config.timestamp_width;
-    linux_width  = _swimlane_state.config.linux_width;
-    rtos_width   = _swimlane_state.config.rtos_width;
+    ts_width     = _timestamp_width;
+    linux_width = _linux_width;
+    rtos_width  = _rtos_width;
     //
     // Get entry fields
     //
@@ -882,7 +1194,7 @@ int SwimLane_RenderEntry(const LogEntry_t *entry) {
         _PrintTimestampCell(stream, timestamp, ts_width, show_timestamp);
         fprintf(stream, " | ");
         //
-        // Print Linux or RTOS column based on source
+        // Print the column selected by the entry source.
         //
         if (source == LOG_SOURCE_LINUX) {
             //

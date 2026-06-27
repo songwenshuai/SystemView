@@ -86,22 +86,62 @@ extern "C" {     /* Make sure we have C-declarations in C++ programs */
 
 /*********************************************************************
 *
-*       SWIMLANE_DEFAULT_LINUX_WIDTH
-*  Default width of Linux column in characters.
+*       SWIMLANE_DEFAULT_TOTAL_WIDTH
+*  Default total renderer width when stdout is not a terminal.
 *
 */
-#ifndef SWIMLANE_DEFAULT_LINUX_WIDTH
-  #define SWIMLANE_DEFAULT_LINUX_WIDTH       128
+#ifndef SWIMLANE_DEFAULT_TOTAL_WIDTH
+  #define SWIMLANE_DEFAULT_TOTAL_WIDTH       120
 #endif
 
 /*********************************************************************
 *
-*       SWIMLANE_DEFAULT_RTOS_WIDTH
-*  Default width of RTOS column in characters.
+*       SWIMLANE_SEPARATOR_WIDTH
+*  Fixed width consumed by inter-column separators.
 *
 */
-#ifndef SWIMLANE_DEFAULT_RTOS_WIDTH
-  #define SWIMLANE_DEFAULT_RTOS_WIDTH        128
+#ifndef SWIMLANE_SEPARATOR_WIDTH
+  #define SWIMLANE_SEPARATOR_WIDTH           6
+#endif
+
+/*********************************************************************
+*
+*       SWIMLANE_MIN_TIMESTAMP_WIDTH
+*  Minimum timestamp column width accepted by the renderer.
+*
+*/
+#ifndef SWIMLANE_MIN_TIMESTAMP_WIDTH
+  #define SWIMLANE_MIN_TIMESTAMP_WIDTH       10
+#endif
+
+/*********************************************************************
+*
+*       SWIMLANE_MIN_SOURCE_WIDTH
+*  Minimum per-source column width accepted by the renderer.
+*
+*/
+#ifndef SWIMLANE_MIN_SOURCE_WIDTH
+  #define SWIMLANE_MIN_SOURCE_WIDTH          16
+#endif
+
+/*********************************************************************
+*
+*       SWIMLANE_DEFAULT_LINUX_LABEL
+*  Default label for the Linux swimlane column.
+*
+*/
+#ifndef SWIMLANE_DEFAULT_LINUX_LABEL
+  #define SWIMLANE_DEFAULT_LINUX_LABEL       LOG_SOURCE_DEFAULT_LINUX_LABEL
+#endif
+
+/*********************************************************************
+*
+*       SWIMLANE_DEFAULT_RTOS_LABEL
+*  Default label for the RTOS swimlane column.
+*
+*/
+#ifndef SWIMLANE_DEFAULT_RTOS_LABEL
+  #define SWIMLANE_DEFAULT_RTOS_LABEL        LOG_SOURCE_DEFAULT_RTOS_LABEL
 #endif
 
 /*********************************************************************
@@ -119,18 +159,14 @@ extern "C" {     /* Make sure we have C-declarations in C++ programs */
 *    Configuration structure for swimlane renderer.
 *
 *  Fields
-*    timestamp_width   Width of timestamp column (default 12)
-*    linux_width       Width of Linux column (default 128)
-*    rtos_width        Width of RTOS column (default 128)
+*    total_width       Total renderer width, 0 for automatic resolution
 *    show_header       Show column headers flag
 *    show_separator    Show row separator lines flag
 *    color_enabled     Enable ANSI color output flag
 *    output_stream     Output stream (default stdout)
 */
 typedef struct {
-    unsigned    timestamp_width;
-    unsigned    linux_width;
-    unsigned    rtos_width;
+    unsigned    total_width;
     bool        show_header;
     bool        show_separator;
     bool        color_enabled;

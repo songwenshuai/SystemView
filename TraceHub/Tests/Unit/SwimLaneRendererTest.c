@@ -42,13 +42,14 @@
 *                                                                    *
 **********************************************************************
 ----------------------------------------------------------------------
-File    : LogCollector.h
-Purpose : Log collector for multiple RTT text sources
+File    : SwimLaneRendererTest.c
+Purpose : Unit checks for swimlane layout resolution
 ---------------------------END-OF-HEADER------------------------------
 */
 
-#ifndef TRACEHUB_LOGCOLLECTOR_H            // Guard against multiple inclusion
-#define TRACEHUB_LOGCOLLECTOR_H
+#ifndef _XOPEN_SOURCE
+#define _XOPEN_SOURCE 700
+#endif
 
 /*********************************************************************
 *
@@ -57,15 +58,11 @@ Purpose : Log collector for multiple RTT text sources
 **********************************************************************
 */
 
-#include <stdint.h>
-#include <stdbool.h>
-#include <stddef.h>
+#include <limits.h>
+#include <stdio.h>
+#include <string.h>
 
-#include "LogEntry.h"
-
-#if defined(__cplusplus)         // Allow usage of this module from C++ files (disable name mangling)
-extern "C" {     /* Make sure we have C-declarations in C++ programs */
-#endif
+#include "SYS.h"
 
 /*********************************************************************
 *
@@ -74,101 +71,129 @@ extern "C" {     /* Make sure we have C-declarations in C++ programs */
 **********************************************************************
 */
 
-/*********************************************************************
-*
-*       LOG_COLLECTOR_MAX_LINE_LEN
-*  Maximum length of a single log line.
-*
-*/
-#ifndef LOG_COLLECTOR_MAX_LINE_LEN
-  #define LOG_COLLECTOR_MAX_LINE_LEN   2048
-#endif
+#define TEST_ASSERT(expr)                                                   \
+    do {                                                                    \
+        if (!(expr)) {                                                       \
+            fprintf(stderr, "%s:%d: assertion failed: %s\n",                \
+                    __FILE__, __LINE__, #expr);                             \
+            return -1;                                                      \
+        }                                                                   \
+    } while (0)
 
 /*********************************************************************
 *
-*       LOG_COLLECTOR_DEFAULT_PENDING_UNTIMED_SIZE
-*  Default per-source capacity for leading untimestamped startup logs.
-*
-*/
-#ifndef LOG_COLLECTOR_DEFAULT_PENDING_UNTIMED_SIZE
-  #define LOG_COLLECTOR_DEFAULT_PENDING_UNTIMED_SIZE  (64u * 1024u)
-#endif
-
-/*********************************************************************
-*
-*       LOG_COLLECTOR_MIN_PENDING_UNTIMED_SIZE
-*  Minimum capacity for one maximum line plus pending metadata.
-*
-*/
-#ifndef LOG_COLLECTOR_MIN_PENDING_UNTIMED_SIZE
-  #define LOG_COLLECTOR_MIN_PENDING_UNTIMED_SIZE      (LOG_COLLECTOR_MAX_LINE_LEN + 3u)
-#endif
-
-/*********************************************************************
-*
-*       Types
+*       Runtime dependency stubs
 *
 **********************************************************************
 */
 
-/*********************************************************************
-*
-*       LogCollector_Config_t
-*
-*  Description
-*    Configuration structure for log collector.
-*
-*  Fields
-*    linux_channel    RTT up-buffer channel number for Linux logs
-*    rtos_channel     RTT up-buffer channel number for RTOS logs
-*    poll_interval_ms Polling interval in milliseconds
-*/
-typedef struct {
-    unsigned     linux_channel;
-    unsigned     rtos_channel;
-    unsigned     poll_interval_ms;
-} LogCollector_Config_t;
+int SYS_MutexInit(SYS_Mutex *mutex) {
+    (void)mutex;
+    return 0;
+}
+
+int SYS_MutexLock(SYS_Mutex *mutex) {
+    (void)mutex;
+    return 0;
+}
+
+int SYS_MutexUnlock(SYS_Mutex *mutex) {
+    (void)mutex;
+    return 0;
+}
+
+int SYS_MutexDestroy(SYS_Mutex *mutex) {
+    (void)mutex;
+    return 0;
+}
+
+#include "SwimLaneRenderer.c"
 
 /*********************************************************************
 *
-*       LogCollector_Callback_t
+*       Static functions
 *
-*  Description
-*    Callback function type for delivering collected log entries.
+**********************************************************************
+*/
+
+static int _TestNarrowWidthClampsToMinimumLayout(void) {
+    unsigned linux_width;
+    unsigned rtos_width;
+
+    TEST_ASSERT(_ResolveColumnWidths(1u,
+                                     SWIMLANE_DEFAULT_TIMESTAMP_WIDTH,
+                                     true,
+                                     &linux_width,
+                                     &rtos_width) == 0);
+    TEST_ASSERT(linux_width >= SWIMLANE_MIN_SOURCE_WIDTH);
+    TEST_ASSERT(rtos_width >= SWIMLANE_MIN_SOURCE_WIDTH);
+    return 0;
+}
+
+static int _TestExplicitNarrowWidthFails(void) {
+    unsigned linux_width;
+    unsigned rtos_width;
+
+    TEST_ASSERT(_ResolveColumnWidths(1u,
+                                     SWIMLANE_DEFAULT_TIMESTAMP_WIDTH,
+                                     false,
+                                     &linux_width,
+                                     &rtos_width) != 0);
+    return 0;
+}
+
+static int _TestNormalWidthUsesAvailableColumns(void) {
+    unsigned linux_width;
+    unsigned rtos_width;
+    unsigned source_width;
+
+    TEST_ASSERT(_ResolveColumnWidths(120u,
+                                     SWIMLANE_DEFAULT_TIMESTAMP_WIDTH,
+                                     false,
+                                     &linux_width,
+                                     &rtos_width) == 0);
+
+    source_width = 120u - SWIMLANE_DEFAULT_TIMESTAMP_WIDTH - SWIMLANE_SEPARATOR_WIDTH;
+    TEST_ASSERT(linux_width + rtos_width == source_width);
+    TEST_ASSERT(linux_width == source_width / 2u);
+    TEST_ASSERT(rtos_width == source_width - linux_width);
+    return 0;
+}
+
+static int _TestExplicitOversizedWidthFails(void) {
+    SwimLane_Config_t config;
+
+    memset(&config, 0, sizeof(config));
+    config.total_width = UINT_MAX;
+    TEST_ASSERT(_ResolveLayout(&config) != 0);
+    return 0;
+}
+
+/*********************************************************************
 *
-*  Parameters
-*    entry      Pointer to collected LogEntry_t
-*    user_data  User-provided context pointer
+*       main()
+*
+*  Function description
+*    Run SwimLane renderer unit tests.
 *
 *  Return value
-*    0   Continue collection
-*   -1   Stop collection
-*
-*  Ownership
-*    The callback takes ownership of the entry and must call
-*    LogEntry_Destroy(entry) regardless of the return value.
+*    0  All tests passed.
+*    1  A test failed.
 */
-typedef int (*LogCollector_Callback_t)(LogEntry_t *entry, void *user_data);
-
-/*********************************************************************
-*
-*       API functions
-*
-**********************************************************************
-*/
-
-int  LogCollector_Init         (LogCollector_Config_t *config);
-void LogCollector_Cleanup      (void);
-int  LogCollector_Start        (LogCollector_Callback_t callback, void *user_data);
-void LogCollector_Stop         (void);
-int  LogCollector_Poll         (LogCollector_Callback_t callback, void *user_data);
-bool LogCollector_IsRunning    (void);
-bool LogCollector_HasFatalError(void);
-
-#if defined(__cplusplus)          // Allow usage of this module from C++ files (disable name mangling)
-}                /* Make sure we have C-declarations in C++ programs */
-#endif
-
-#endif // end of include guard: TRACEHUB_LOGCOLLECTOR_H Avoid multiple inclusion
+int main(void) {
+    if (_TestNarrowWidthClampsToMinimumLayout() != 0) {
+        return 1;
+    }
+    if (_TestExplicitNarrowWidthFails() != 0) {
+        return 1;
+    }
+    if (_TestNormalWidthUsesAvailableColumns() != 0) {
+        return 1;
+    }
+    if (_TestExplicitOversizedWidthFails() != 0) {
+        return 1;
+    }
+    return 0;
+}
 
 /*************************** End of file ****************************/

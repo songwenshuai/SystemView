@@ -98,11 +98,15 @@ typedef struct {
     uint64_t             source_watermark[LOG_SOURCE_MAX];
     unsigned             source_last_tick[LOG_SOURCE_MAX];
     bool                 source_seen[LOG_SOURCE_MAX];
+    unsigned             flush_threshold;
+    unsigned             flush_timeout_ms;
+    const char          *source_label[LOG_SOURCE_MAX];
     uint64_t             last_delivered_timestamp;
     LogSource_t          last_delivered_source;
     uint64_t             last_delivered_sequence;
     bool                 last_delivered_valid;
     FILE                *log_file;
+    LOG_TextCleanState_t log_clean_state[LOG_SOURCE_MAX];
     SYS_Mutex            operation_mutex;
     bool                 operation_mutex_initialized;
     SYS_Mutex            mutex;
@@ -338,7 +342,7 @@ static bool _GetReadyWatermark(uint64_t *watermark) {
 
     result = UINT64_MAX;
     now = SYS_GetTickCount();
-    timeout_ms = _merger_state.config.flush_timeout_ms;
+    timeout_ms = _merger_state.flush_timeout_ms;
     have_active_source = false;
     buffer_wait_expired = timeout_ms > 0u &&
                           _merger_state.first_buffered_tick != 0u &&
@@ -481,7 +485,7 @@ static int _WaitForCapacityReadyEntries(LogEntry_t ***entries, unsigned *count,
     *entries = NULL;
     *count   = 0u;
 
-    timeout_ms = _merger_state.config.flush_timeout_ms;
+    timeout_ms = _merger_state.flush_timeout_ms;
     if (timeout_ms == 0u) {
         return 0;
     }
@@ -553,7 +557,7 @@ static bool _EntryIsBeforeLastDelivered(const LogEntry_t *entry) {
         return false;
     }
 
-    return sequence < _merger_state.last_delivered_sequence;
+    return sequence <= _merger_state.last_delivered_sequence;
 }
 
 /*********************************************************************
@@ -565,7 +569,7 @@ static bool _EntryIsBeforeLastDelivered(const LogEntry_t *entry) {
 *
 *  Return value
 *    0   Success
-*   -1   Entry would violate already delivered ordering
+*   -1   Entry source is disabled or would violate already delivered ordering
 */
 static int _UpdateSourceWatermark(const LogEntry_t *entry) {
     uint64_t    timestamp;
@@ -602,7 +606,7 @@ static int _UpdateSourceWatermark(const LogEntry_t *entry) {
 *  Return value
 *     0  Success
 *    -1  Buffer full
-*    -2  Entry would violate already delivered ordering
+*    -2  Entry source is disabled or would violate already delivered ordering
 */
 static int _InsertEntryAndUpdateWatermark(LogEntry_t *entry) {
     unsigned now;
@@ -736,8 +740,8 @@ int LogMerger_Init(LogMerger_Config_t *config) {
     if (config->buffer_size == 0) {
         return -1;
     }
-    if (config->flush_threshold == 0 ||
-        config->flush_threshold > config->buffer_size) {
+    if (LOG_MERGER_DEFAULT_FLUSH_THRESHOLD == 0u ||
+        LOG_MERGER_DEFAULT_FLUSH_THRESHOLD > config->buffer_size) {
         return -1;
     }
     has_required_source = false;
@@ -755,6 +759,13 @@ int LogMerger_Init(LogMerger_Config_t *config) {
     //
     memset(&_merger_state, 0, sizeof(_merger_state));
     memcpy(&_merger_state.config, config, sizeof(LogMerger_Config_t));
+    _merger_state.flush_threshold = LOG_MERGER_DEFAULT_FLUSH_THRESHOLD;
+    _merger_state.flush_timeout_ms = LOG_MERGER_DEFAULT_FLUSH_TIMEOUT_MS;
+    _merger_state.source_label[LOG_SOURCE_LINUX] = LOG_SOURCE_DEFAULT_LINUX_LABEL;
+    _merger_state.source_label[LOG_SOURCE_RTOS]  = LOG_SOURCE_DEFAULT_RTOS_LABEL;
+    for (i = 0; i < LOG_SOURCE_MAX; i++) {
+        LOG_TextCleanStateInit(&_merger_state.log_clean_state[i]);
+    }
     //
     // Initialize mutexes for thread safety
     //
@@ -1143,12 +1154,12 @@ int LogMerger_Process(LogEntry_t *entry, LogMerger_Output_t output, void *user_d
     now = SYS_GetTickCount();
     buffer_age_expired = _merger_state.first_buffered_tick != 0u &&
                          (unsigned)(now - _merger_state.first_buffered_tick) >=
-                         _merger_state.config.flush_timeout_ms;
+                         _merger_state.flush_timeout_ms;
     insert_idle_expired = _merger_state.last_insert_tick != 0u &&
                           (unsigned)(now - _merger_state.last_insert_tick) >=
-                          _merger_state.config.flush_timeout_ms;
+                          _merger_state.flush_timeout_ms;
     if (_merger_state.entry_count > 0 &&
-        _merger_state.config.flush_timeout_ms > 0 &&
+        _merger_state.flush_timeout_ms > 0 &&
         (buffer_age_expired || insert_idle_expired)) {
         if (_DetachReadyEntriesLimited(&temp_buffer, &count, entry) != 0) {
             SYS_MutexUnlock(&_merger_state.mutex);
@@ -1234,7 +1245,7 @@ int LogMerger_Process(LogEntry_t *entry, LogMerger_Output_t output, void *user_d
     //
     // Check if we should flush based on threshold
     //
-    need_flush = (_merger_state.entry_count >= _merger_state.config.flush_threshold);
+    need_flush = (_merger_state.entry_count >= _merger_state.flush_threshold);
     if (need_flush) {
         if (_DetachReadyEntries(&temp_buffer, &count) != 0) {
             SYS_MutexUnlock(&_merger_state.mutex);
@@ -1300,6 +1311,7 @@ unsigned LogMerger_GetBufferedCount(void) {
 *   -1   Log file write failed.
 */
 int LogMerger_WriteEntry(const LogEntry_t *entry) {
+    LogSource_t  source;
     const char *source_name;
     int         result;
     int         error_code;
@@ -1317,12 +1329,19 @@ int LogMerger_WriteEntry(const LogEntry_t *entry) {
         return 0;
     }
 
-    source_name = (LogEntry_GetSource(entry) == LOG_SOURCE_LINUX) ? "LINUX" : "RTOS";
+    source = LogEntry_GetSource(entry);
+    if (source >= LOG_SOURCE_MAX) {
+        SYS_MutexUnlock(&_merger_state.mutex);
+        return -1;
+    }
+
+    source_name = _merger_state.source_label[source];
     errno = 0;
     result = LOG_SwimLaneLogToFile(_merger_state.log_file,
                                    LogEntry_GetTimestamp(entry),
                                    source_name,
-                                   LogEntry_GetContent(entry));
+                                   LogEntry_GetContent(entry),
+                                   &_merger_state.log_clean_state[source]);
     error_code = errno;
     if (result != 0) {
         _ReportLogFileErrorLocked("write", error_code);

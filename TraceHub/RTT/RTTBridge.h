@@ -60,7 +60,6 @@ Purpose : RTT Bridge core state and configuration management
 #include <stdbool.h>
 #include <stdint.h>
 #include <stddef.h>
-#include <stdio.h>
 #include <signal.h>
 
 #include "SYS.h"
@@ -108,22 +107,32 @@ extern "C" {     /* Make sure we have C-declarations in C++ programs */
 
 /*********************************************************************
 *
-*       RTT_BRIDGE_DEFAULT_TERMINAL_CHANNEL
-*  Default RTT channel for Terminal.
+*       RTT_BRIDGE_DEFAULT_LINUX_CHANNEL
+*  Default RTT channel for Linux logs.
 *
 */
-#ifndef RTT_BRIDGE_DEFAULT_TERMINAL_CHANNEL
-  #define RTT_BRIDGE_DEFAULT_TERMINAL_CHANNEL    0
+#ifndef RTT_BRIDGE_DEFAULT_LINUX_CHANNEL
+  #define RTT_BRIDGE_DEFAULT_LINUX_CHANNEL       0
 #endif
 
 /*********************************************************************
 *
 *       RTT_BRIDGE_DEFAULT_RTOS_CHANNEL
-*  Default RTT channel for RTOS core logs.
+*  Default RTT channel for RTOS logs.
 *
 */
 #ifndef RTT_BRIDGE_DEFAULT_RTOS_CHANNEL
   #define RTT_BRIDGE_DEFAULT_RTOS_CHANNEL        1
+#endif
+
+/*********************************************************************
+*
+*       RTT_BRIDGE_DEFAULT_TERMINAL_CHANNEL
+*  Default RTT channel for single-source Terminal mode.
+*
+*/
+#ifndef RTT_BRIDGE_DEFAULT_TERMINAL_CHANNEL
+  #define RTT_BRIDGE_DEFAULT_TERMINAL_CHANNEL    RTT_BRIDGE_DEFAULT_LINUX_CHANNEL
 #endif
 
 /*********************************************************************
@@ -175,8 +184,6 @@ extern "C" {     /* Make sure we have C-declarations in C++ programs */
 *    rtt_address        Backend address of RTT region
 *    rtt_region_size    RTT region size to map, search, and validate
 *    poll_interval_ms   Polling interval in milliseconds (default 10ms)
-*    log_file           Optional log file path for recording RTT data (deprecated, use log_file_handle)
-*    log_file_handle    Optional file handle for recording RTT data
 *    run_flag           Optional process run flag; zero requests initialization abort
 *    rtt_search_timeout_ms Maximum time to wait for RTTCB discovery, 0 means no timeout
 *    reset_memory       Reset backend memory before mapping when supported
@@ -187,8 +194,6 @@ typedef struct {
     uint64_t        rtt_address;
     size_t          rtt_region_size;
     unsigned        poll_interval_ms;
-    const char     *log_file;
-    FILE           *log_file_handle;
     volatile sig_atomic_t *run_flag;
     unsigned        rtt_search_timeout_ms;
     bool            reset_memory;
@@ -244,8 +249,6 @@ int                       RTTBridge_WaitForRTTInitialized    (uintptr_t address,
 int                       RTTBridge_WaitForRTTUpChannelReady (uintptr_t address, size_t region_size, unsigned channel, unsigned timeout_ms, unsigned retry_interval_ms);
 bool                      RTTBridge_IsRunning                (void);
 void                      RTTBridge_SetRunning               (bool running);
-const char *              RTTBridge_GetLogFile               (void);
-FILE *                    RTTBridge_GetLogFileHandle         (void);
 void                      RTTBridge_IncrementPolls           (void);
 void                      RTTBridge_IncrementErrors          (void);
 void                      RTTBridge_Status                   (void);

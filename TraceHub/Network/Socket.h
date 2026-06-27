@@ -43,7 +43,7 @@
 **********************************************************************
 ----------------------------------------------------------------------
 File    : Socket.h
-Purpose : TCP socket abstraction layer for Linux platform
+Purpose : TCP socket abstraction layer for host platforms
 ---------------------------END-OF-HEADER------------------------------
 */
 
@@ -64,7 +64,15 @@ Purpose : TCP socket abstraction layer for Linux platform
 #include <string.h>
 #include <stdarg.h>         // For va_list.
 #include <stddef.h>         // for size_t
-#include <sys/socket.h>     // For SOL_SOCKET and SO_BROADCAST
+#if defined(_WIN32)
+  #ifndef WIN32_LEAN_AND_MEAN
+    #define WIN32_LEAN_AND_MEAN
+  #endif
+  #include <winsock2.h>
+  #include <ws2tcpip.h>
+#else
+  #include <sys/socket.h>     // For SOL_SOCKET and SO_BROADCAST
+#endif
 
 #if defined(__cplusplus)         // Allow usage of this module from C++ files (disable name mangling)
 extern "C" {     /* Make sure we have C-declarations in C++ programs */
@@ -78,20 +86,21 @@ extern "C" {     /* Make sure we have C-declarations in C++ programs */
 */
 
 //
-// Linux/POSIX socket constants.
+// Platform socket constants.
 //
 #define _SOL_SOCKET         SOL_SOCKET
 #define _SO_BROADCAST       SO_BROADCAST
 
 //
-// Invalid socket handle value.
+// Invalid socket value returned by platform socket APIs.
 //
-#define SYS_SOCKET_INVALID_HANDLE      (-1)
-
-//
-// POSIX-compatible invalid socket value (for use with socket() return check).
-//
-#define INVALID_SOCKET                 (-1)
+#if defined(_WIN32)
+  #ifndef INVALID_SOCKET
+    #define INVALID_SOCKET             (SOCKET)(~0)
+  #endif
+#else
+  #define INVALID_SOCKET               (-1)
+#endif
 
 //
 // Socket error codes.
@@ -138,11 +147,15 @@ extern "C" {     /* Make sure we have C-declarations in C++ programs */
 *       SYS_SOCKET_HANDLE
 *
 *  Description
-*    Socket handle type for POSIX systems.
-*    On Linux, this is a file descriptor (int type).
-*    Negative values indicate errors or invalid handles.
+*    Socket handle type for host platforms.
 */
+#if defined(_WIN32)
+typedef uintptr_t SYS_SOCKET_HANDLE;
+  #define SYS_SOCKET_INVALID_HANDLE    ((SYS_SOCKET_HANDLE)UINTPTR_MAX)
+#else
 typedef int SYS_SOCKET_HANDLE;
+  #define SYS_SOCKET_INVALID_HANDLE    ((SYS_SOCKET_HANDLE)-1)
+#endif
 
 /*********************************************************************
 *
@@ -152,12 +165,13 @@ typedef int SYS_SOCKET_HANDLE;
 */
 
 SYS_SOCKET_HANDLE SYS_SOCKET_OpenTCP        (void);
+bool              SYS_SOCKET_IsValidHandle  (SYS_SOCKET_HANDLE hSocket);
 int               SYS_SOCKET_ListenAtTCPAddr(SYS_SOCKET_HANDLE hSocket, unsigned IPAddr, unsigned Port, unsigned NumConnectionsQueued);
 void              SYS_SOCKET_Shutdown       (SYS_SOCKET_HANDLE hSocket, int How);
 void              SYS_SOCKET_Close          (SYS_SOCKET_HANDLE hSocket);
 int               SYS_SOCKET_IsReadable     (SYS_SOCKET_HANDLE hSocket, int TimeoutMs);
 int               SYS_SOCKET_IsWriteable    (SYS_SOCKET_HANDLE hSocket, int TimeoutMs);
-SYS_SOCKET_HANDLE SYS_SOCKET_AcceptEx       (SYS_SOCKET_HANDLE hSocket, int TimeoutMs);
+int               SYS_SOCKET_AcceptEx       (SYS_SOCKET_HANDLE hSocket, int TimeoutMs, SYS_SOCKET_HANDLE *phClient);
 void              SYS_SOCKET_EnableKeepalive(SYS_SOCKET_HANDLE hSocket);
 int               SYS_SOCKET_IsReady        (SYS_SOCKET_HANDLE hSocket);
 void              SYS_SOCKET_SetNonBlocking (SYS_SOCKET_HANDLE hSocket);

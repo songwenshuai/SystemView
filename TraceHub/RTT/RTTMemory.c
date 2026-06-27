@@ -61,6 +61,21 @@ Purpose : Backend-agnostic memory access dispatcher for RTT operations
 
 /*********************************************************************
 *
+*       Compile-time backend checks
+*
+**********************************************************************
+*/
+
+#if defined(RTTMEM_USE_MEMSHM) && defined(RTTMEM_USE_SMEM)
+  #error "Select exactly one RTT memory backend"
+#endif
+
+#if (defined(__APPLE__) || defined(_WIN32)) && !defined(RTTMEM_USE_MEMSHM)
+  #error "macOS and Windows TraceHub builds require RTTMEM_USE_MEMSHM; SMEM requires the Linux SharedMem driver"
+#endif
+
+/*********************************************************************
+*
 *       Static data
 *
 **********************************************************************
@@ -168,7 +183,7 @@ bool RTTMem_GetResetOnInit(void) {
 *
 *  Function description
 *    Install the default backend based on compile-time configuration.
-*    - RTTMEM_USE_MEMSHM: Use POSIX shared memory backend
+*    - RTTMEM_USE_MEMSHM: Use host shared memory backend
 *    - RTTMEM_USE_SMEM:   Use SharedMem driver backend (default)
 *
 *  Return value
