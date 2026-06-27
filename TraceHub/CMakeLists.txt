@@ -227,8 +227,15 @@ set(SOURCES
     ${TRACEHUB_RTT_DIR}/RTTBridge.c
     ${TRACEHUB_LOG_DIR}/CoreLogRecorder.c
     ${TRACEHUB_NETWORK_DIR}/TelnetCodec.c
-    ${TRACEHUB_SERVICES_DIR}/Terminal.c
-    ${TRACEHUB_SERVICES_DIR}/SystemView.c
+    ${TRACEHUB_SERVICES_DIR}/TerminalService.c
+    ${TRACEHUB_SERVICES_DIR}/TerminalState.c
+    ${TRACEHUB_SERVICES_DIR}/TerminalConsole.c
+    ${TRACEHUB_SERVICES_DIR}/TerminalRuntime.c
+    ${TRACEHUB_SERVICES_DIR}/SystemViewService.c
+    ${TRACEHUB_SERVICES_DIR}/SystemViewState.c
+    ${TRACEHUB_SERVICES_DIR}/SystemViewHandshake.c
+    ${TRACEHUB_SERVICES_DIR}/SystemViewRecord.c
+    ${TRACEHUB_SERVICES_DIR}/SystemViewRuntime.c
     ${TRACEHUB_LOG_DIR}/LogEntry.c
     ${TRACEHUB_LOG_DIR}/LogLineParser.c
     ${TRACEHUB_LOG_DIR}/LogCollectorState.c

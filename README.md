@@ -610,7 +610,7 @@ SwimLane_GetRowCount()     - 获取已渲染总行数
 
 ### Terminal 服务
 
-**文件**: `Services/Terminal.h` / `Services/Terminal.c`
+**文件**: `Services/Terminal.h` / `Services/Terminal_internal.h` / `Services/TerminalService.c` / `Services/TerminalState.c` / `Services/TerminalConsole.c` / `Services/TerminalRuntime.c`
 
 Terminal 服务提供三种互斥的显示模式：
 
@@ -697,7 +697,7 @@ SystemView-only 模式只读取配置的 SystemView RTT 通道并生成 `sysview
 
 ### SystemView 服务
 
-**文件**: `Services/SystemView.h` / `Services/SystemView.c`
+**文件**: `Services/SystemView.h` / `Services/SystemView_internal.h` / `Services/SystemViewService.c` / `Services/SystemViewState.c` / `Services/SystemViewHandshake.c` / `Services/SystemViewRecord.c` / `Services/SystemViewRuntime.c`
 
 SystemView 服务读取 RTT 二进制 trace 数据，支持两种工作模式：
 
