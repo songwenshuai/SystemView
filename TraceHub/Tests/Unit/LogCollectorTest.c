@@ -63,6 +63,7 @@ Purpose : Unit checks for log collector timestamp assignment
 #include "CoreLogRecorder.h"
 #include "RTTBridge.h"
 #include "SYS.h"
+#include "LogCollector_internal.h"
 
 /*********************************************************************
 *
@@ -227,8 +228,6 @@ void SYS_GetTimestampStr(char *buf, size_t size) {
     }
 }
 
-#include "LogCollector.c"
-
 /*********************************************************************
 *
 *       Types
@@ -277,14 +276,13 @@ static void _DestroyStoredEntries(TestCollectorOutput_t *output) {
 }
 
 static void _ResetCollectorState(void) {
-    free(_collector_state.linux_pending_untimed);
-    free(_collector_state.rtos_pending_untimed);
-    memset(&_collector_state, 0, sizeof(_collector_state));
+    LogCollectorState_ResetStorage();
     _ResetCoreRecorderStub();
 }
 
 static int _TestDefaultPendingUntimedCapacity(void) {
     LogCollector_Config_t config;
+    LogCollector_State_t *state;
 
     _ResetCollectorState();
     memset(&config, 0, sizeof(config));
@@ -293,52 +291,52 @@ static int _TestDefaultPendingUntimedCapacity(void) {
     config.poll_interval_ms = 1u;
 
     TEST_ASSERT(LogCollector_Init(&config) == 0);
-    TEST_ASSERT(_collector_state.linux_pending_untimed != NULL);
-    TEST_ASSERT(_collector_state.rtos_pending_untimed != NULL);
-    TEST_ASSERT(_collector_state.pending_untimed_size == LOG_COLLECTOR_DEFAULT_PENDING_UNTIMED_SIZE);
+    state = LogCollectorState_Get();
+    TEST_ASSERT(state->sources[LOG_SOURCE_LINUX].pending_untimed != NULL);
+    TEST_ASSERT(state->sources[LOG_SOURCE_RTOS].pending_untimed != NULL);
+    TEST_ASSERT(state->pending_untimed_size == LOG_COLLECTOR_DEFAULT_PENDING_UNTIMED_SIZE);
 
     LogCollector_Cleanup();
-    TEST_ASSERT(_collector_state.linux_pending_untimed == NULL);
-    TEST_ASSERT(_collector_state.rtos_pending_untimed == NULL);
-    TEST_ASSERT(_collector_state.pending_untimed_size == 0u);
+    TEST_ASSERT(state->sources[LOG_SOURCE_LINUX].pending_untimed == NULL);
+    TEST_ASSERT(state->sources[LOG_SOURCE_RTOS].pending_untimed == NULL);
+    TEST_ASSERT(state->pending_untimed_size == 0u);
     return 0;
 }
 
 static int _TestPendingUntimedCapacityKeepsTrailingSentinel(void) {
-    char   pending[8];
-    char   content[6];
-    size_t pending_len;
-    size_t valid_content_len;
-    int    result;
+    LogCollector_SourceState_t source_state;
+    char                       pending[8];
+    char                       content[6];
+    size_t                     pending_len;
+    size_t                     valid_content_len;
+    int                        result;
 
     _ResetCollectorState();
+    memset(&source_state, 0, sizeof(source_state));
     memset(pending, 0, sizeof(pending));
     memset(content, 'A', sizeof(content));
 
-    pending_len = 0u;
+    source_state.source = LOG_SOURCE_LINUX;
+    source_state.pending_untimed = pending;
+    source_state.pending_untimed_size = sizeof(pending);
     valid_content_len = sizeof(pending) - LOG_COLLECTOR_PENDING_RECORD_OVERHEAD;
-    result = _AppendPendingUntimedLine(LOG_SOURCE_LINUX,
-                                       pending,
-                                       sizeof(pending),
-                                       &pending_len,
-                                       content,
-                                       valid_content_len,
-                                       false,
-                                       false);
+    result = LogCollectorSource_AppendPendingUntimedLine(&source_state,
+                                                         content,
+                                                         valid_content_len,
+                                                         false,
+                                                         false);
+    pending_len = source_state.pending_untimed_len;
     TEST_ASSERT(result == 0);
     TEST_ASSERT(pending_len == valid_content_len + LOG_COLLECTOR_PENDING_RECORD_OVERHEAD - 1u);
     TEST_ASSERT(pending[pending_len] == '\0');
 
     memset(pending, 0, sizeof(pending));
-    pending_len = 0u;
-    result = _AppendPendingUntimedLine(LOG_SOURCE_LINUX,
-                                       pending,
-                                       sizeof(pending),
-                                       &pending_len,
-                                       content,
-                                       valid_content_len + 1u,
-                                       false,
-                                       false);
+    source_state.pending_untimed_len = 0u;
+    result = LogCollectorSource_AppendPendingUntimedLine(&source_state,
+                                                         content,
+                                                         valid_content_len + 1u,
+                                                         false,
+                                                         false);
     TEST_ASSERT(result == LOG_COLLECT_RESULT_PENDING_OVERFLOW);
 
     _ResetCollectorState();
@@ -387,65 +385,46 @@ static int _TestPollKeepsConsumersRegisteredBetweenCalls(void) {
 }
 
 static int _ProcessTestLine(const char *line,
-                            LogSource_t source,
-                            uint64_t *last_timestamp,
-                            bool *timestamp_valid,
-                            char *pending_buffer,
-                            size_t pending_size,
-                            size_t *pending_len,
-                            uint64_t *sequence,
+                            LogCollector_SourceState_t *source_state,
                             TestCollectorOutput_t *output) {
-    return _ProcessLogLine(line,
-                           strlen(line),
-                           source,
-                           last_timestamp,
-                           timestamp_valid,
-                           pending_buffer,
-                           pending_size,
-                           pending_len,
-                           sequence,
-                           false,
-                           false,
-                           _StoreEntry,
-                           output);
+    return LogCollectorSource_ProcessLogLine(source_state,
+                                             line,
+                                             strlen(line),
+                                             false,
+                                             false,
+                                             _StoreEntry,
+                                             output);
 }
 
 static int _TestUntimedLineDoesNotUseStaleSourceTimestamp(void) {
-    TestCollectorOutput_t output;
-    char                  pending[128];
-    size_t                pending_len;
-    uint64_t              source_timestamp;
-    uint64_t              sequence;
-    bool                  timestamp_valid;
-    int                   result;
+    TestCollectorOutput_t      output;
+    LogCollector_SourceState_t source_state;
+    char                       pending[128];
+    int                        result;
 
     _ResetCollectorState();
     memset(&output, 0, sizeof(output));
+    memset(&source_state, 0, sizeof(source_state));
     memset(pending, 0, sizeof(pending));
 
-    pending_len = 0u;
-    source_timestamp = 100u;
-    sequence = 0u;
-    timestamp_valid = true;
+    source_state.source = LOG_SOURCE_RTOS;
+    source_state.pending_untimed = pending;
+    source_state.pending_untimed_size = sizeof(pending);
+    source_state.last_timestamp = 100u;
+    source_state.last_timestamp_valid = true;
 
-    _Collector_RecordObservedTimestamp(500u);
+    LogCollectorState_RecordObservedTimestamp(500u);
 
     result = _ProcessTestLine("RTOS boot banner without timestamp",
-                              LOG_SOURCE_RTOS,
-                              &source_timestamp,
-                              &timestamp_valid,
-                              pending,
-                              sizeof(pending),
-                              &pending_len,
-                              &sequence,
+                              &source_state,
                               &output);
 
     TEST_ASSERT(result == 1);
     TEST_ASSERT(output.count == 1u);
     TEST_ASSERT(LogEntry_GetTimestamp(output.entries[0]) == 501u);
-    TEST_ASSERT(source_timestamp == 501u);
-    TEST_ASSERT(timestamp_valid);
-    TEST_ASSERT(sequence == 1u);
+    TEST_ASSERT(source_state.last_timestamp == 501u);
+    TEST_ASSERT(source_state.last_timestamp_valid);
+    TEST_ASSERT(source_state.sequence == 1u);
     TEST_ASSERT(strcmp(LogEntry_GetContent(output.entries[0]),
                        "RTOS boot banner without timestamp") == 0);
 
@@ -454,91 +433,69 @@ static int _TestUntimedLineDoesNotUseStaleSourceTimestamp(void) {
 }
 
 static int _TestUntimedLineKeepsCurrentTimestampWhenItIsNotStale(void) {
-    TestCollectorOutput_t output;
-    char                  pending[128];
-    size_t                pending_len;
-    uint64_t              source_timestamp;
-    uint64_t              sequence;
-    bool                  timestamp_valid;
-    int                   result;
+    TestCollectorOutput_t      output;
+    LogCollector_SourceState_t source_state;
+    char                       pending[128];
+    int                        result;
 
     _ResetCollectorState();
     memset(&output, 0, sizeof(output));
+    memset(&source_state, 0, sizeof(source_state));
     memset(pending, 0, sizeof(pending));
 
-    pending_len = 0u;
-    source_timestamp = 600u;
-    sequence = 0u;
-    timestamp_valid = true;
+    source_state.source = LOG_SOURCE_LINUX;
+    source_state.pending_untimed = pending;
+    source_state.pending_untimed_size = sizeof(pending);
+    source_state.last_timestamp = 600u;
+    source_state.last_timestamp_valid = true;
 
-    _Collector_RecordObservedTimestamp(500u);
+    LogCollectorState_RecordObservedTimestamp(500u);
 
     result = _ProcessTestLine("same epoch line",
-                              LOG_SOURCE_LINUX,
-                              &source_timestamp,
-                              &timestamp_valid,
-                              pending,
-                              sizeof(pending),
-                              &pending_len,
-                              &sequence,
+                              &source_state,
                               &output);
 
     TEST_ASSERT(result == 1);
     TEST_ASSERT(output.count == 1u);
     TEST_ASSERT(LogEntry_GetTimestamp(output.entries[0]) == 600u);
-    TEST_ASSERT(source_timestamp == 600u);
-    TEST_ASSERT(timestamp_valid);
-    TEST_ASSERT(sequence == 1u);
+    TEST_ASSERT(source_state.last_timestamp == 600u);
+    TEST_ASSERT(source_state.last_timestamp_valid);
+    TEST_ASSERT(source_state.sequence == 1u);
 
     _DestroyStoredEntries(&output);
     return 0;
 }
 
 static int _TestLeadingUntimedLineWaitsForFirstTimestamp(void) {
-    TestCollectorOutput_t output;
-    char                  pending[128];
-    size_t                pending_len;
-    uint64_t              source_timestamp;
-    uint64_t              sequence;
-    bool                  timestamp_valid;
-    int                   result;
+    TestCollectorOutput_t      output;
+    LogCollector_SourceState_t source_state;
+    char                       pending[128];
+    int                        result;
 
     _ResetCollectorState();
     memset(&output, 0, sizeof(output));
+    memset(&source_state, 0, sizeof(source_state));
     memset(pending, 0, sizeof(pending));
 
-    pending_len = 0u;
-    source_timestamp = 0u;
-    sequence = 0u;
-    timestamp_valid = false;
+    source_state.source = LOG_SOURCE_RTOS;
+    source_state.pending_untimed = pending;
+    source_state.pending_untimed_size = sizeof(pending);
 
-    _Collector_RecordObservedTimestamp(500u);
+    LogCollectorState_RecordObservedTimestamp(500u);
 
     result = _ProcessTestLine("leading banner",
-                              LOG_SOURCE_RTOS,
-                              &source_timestamp,
-                              &timestamp_valid,
-                              pending,
-                              sizeof(pending),
-                              &pending_len,
-                              &sequence,
+                              &source_state,
                               &output);
 
     TEST_ASSERT(result == 0);
     TEST_ASSERT(output.count == 0u);
-    TEST_ASSERT(pending_len > 0u);
-    TEST_ASSERT(source_timestamp == 0u);
-    TEST_ASSERT(!timestamp_valid);
-    TEST_ASSERT(sequence == 0u);
+    TEST_ASSERT(source_state.pending_untimed_len > 0u);
+    TEST_ASSERT(source_state.last_timestamp == 0u);
+    TEST_ASSERT(!source_state.last_timestamp_valid);
+    TEST_ASSERT(source_state.sequence == 0u);
 
     result = _ProcessTestLine("[100] first timestamped line",
-                              LOG_SOURCE_RTOS,
-                              &source_timestamp,
-                              &timestamp_valid,
-                              pending,
-                              sizeof(pending),
-                              &pending_len,
-                              &sequence,
+                              &source_state,
                               &output);
 
     TEST_ASSERT(result == 2);
@@ -547,66 +504,52 @@ static int _TestLeadingUntimedLineWaitsForFirstTimestamp(void) {
     TEST_ASSERT(LogEntry_GetTimestamp(output.entries[1]) == 100u);
     TEST_ASSERT(strcmp(LogEntry_GetContent(output.entries[0]), "leading banner") == 0);
     TEST_ASSERT(strcmp(LogEntry_GetContent(output.entries[1]), "first timestamped line") == 0);
-    TEST_ASSERT(pending_len == 0u);
-    TEST_ASSERT(source_timestamp == 100u);
-    TEST_ASSERT(timestamp_valid);
-    TEST_ASSERT(sequence == 2u);
+    TEST_ASSERT(source_state.pending_untimed_len == 0u);
+    TEST_ASSERT(source_state.last_timestamp == 100u);
+    TEST_ASSERT(source_state.last_timestamp_valid);
+    TEST_ASSERT(source_state.sequence == 2u);
 
     _DestroyStoredEntries(&output);
     return 0;
 }
 
 static int _TestLeadingUntimedLineUsesFallbackOnFlush(void) {
-    TestCollectorOutput_t output;
-    char                  pending[128];
-    size_t                pending_len;
-    uint64_t              source_timestamp;
-    uint64_t              sequence;
-    bool                  timestamp_valid;
-    int                   result;
+    TestCollectorOutput_t      output;
+    LogCollector_SourceState_t source_state;
+    char                       pending[128];
+    int                        result;
 
     _ResetCollectorState();
     memset(&output, 0, sizeof(output));
+    memset(&source_state, 0, sizeof(source_state));
     memset(pending, 0, sizeof(pending));
 
-    pending_len = 0u;
-    source_timestamp = 0u;
-    sequence = 0u;
-    timestamp_valid = false;
+    source_state.source = LOG_SOURCE_RTOS;
+    source_state.pending_untimed = pending;
+    source_state.pending_untimed_size = sizeof(pending);
 
-    _Collector_RecordObservedTimestamp(500u);
+    LogCollectorState_RecordObservedTimestamp(500u);
 
     result = _ProcessTestLine("leading banner",
-                              LOG_SOURCE_RTOS,
-                              &source_timestamp,
-                              &timestamp_valid,
-                              pending,
-                              sizeof(pending),
-                              &pending_len,
-                              &sequence,
+                              &source_state,
                               &output);
 
     TEST_ASSERT(result == 0);
     TEST_ASSERT(output.count == 0u);
-    TEST_ASSERT(pending_len > 0u);
+    TEST_ASSERT(source_state.pending_untimed_len > 0u);
 
-    result = _FlushPendingUntimedFallback(LOG_SOURCE_RTOS,
-                                          pending,
-                                          &pending_len,
-                                          &source_timestamp,
-                                          &timestamp_valid,
-                                          &sequence,
-                                          _StoreEntry,
-                                          &output);
+    result = LogCollectorSource_FlushPendingUntimedFallback(&source_state,
+                                                           _StoreEntry,
+                                                           &output);
 
     TEST_ASSERT(result == 1);
     TEST_ASSERT(output.count == 1u);
     TEST_ASSERT(LogEntry_GetTimestamp(output.entries[0]) == 501u);
     TEST_ASSERT(strcmp(LogEntry_GetContent(output.entries[0]), "leading banner") == 0);
-    TEST_ASSERT(pending_len == 0u);
-    TEST_ASSERT(source_timestamp == 501u);
-    TEST_ASSERT(timestamp_valid);
-    TEST_ASSERT(sequence == 1u);
+    TEST_ASSERT(source_state.pending_untimed_len == 0u);
+    TEST_ASSERT(source_state.last_timestamp == 501u);
+    TEST_ASSERT(source_state.last_timestamp_valid);
+    TEST_ASSERT(source_state.sequence == 1u);
 
     _DestroyStoredEntries(&output);
     return 0;

@@ -210,8 +210,12 @@ set(RTT_MEMORY_COMMON_DEFINITIONS
 # ==============================================================================
 
 set(SOURCES
-    ${TRACEHUB_APP_DIR}/main.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/main.c
     ${TRACEHUB_APP_DIR}/CLI.c
+    ${TRACEHUB_APP_DIR}/Options.c
+    ${TRACEHUB_APP_DIR}/ServicePlan.c
+    ${TRACEHUB_APP_DIR}/TraceHubSignal.c
+    ${TRACEHUB_APP_DIR}/RunLoop.c
     ${TRACEHUB_NETWORK_DIR}/Socket.c
     ${TRACEHUB_RTT_DIR}/RTTMemory.c
     ${RTT_MEMORY_BACKEND_SOURCE}
@@ -227,7 +231,9 @@ set(SOURCES
     ${TRACEHUB_SERVICES_DIR}/SystemView.c
     ${TRACEHUB_LOG_DIR}/LogEntry.c
     ${TRACEHUB_LOG_DIR}/LogLineParser.c
-    ${TRACEHUB_LOG_DIR}/LogCollector.c
+    ${TRACEHUB_LOG_DIR}/LogCollectorState.c
+    ${TRACEHUB_LOG_DIR}/LogCollectorSource.c
+    ${TRACEHUB_LOG_DIR}/LogCollectorRuntime.c
     ${TRACEHUB_LOG_DIR}/LogMerger.c
     ${TRACEHUB_LOG_DIR}/SwimLaneRenderer.c
 )

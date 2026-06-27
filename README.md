@@ -286,7 +286,7 @@ LOG_LINE_TIMESTAMP_PARSE_EMPTY_CONTENT - 识别到 timestamp 但内容为空
 
 ### LogCollector - 日志采集模块
 
-**文件**: `Log/LogCollector.h` / `Log/LogCollector.c`
+**文件**: `Log/LogCollector.h` / `Log/LogCollector_internal.h` / `Log/LogCollectorState.c` / `Log/LogCollectorSource.c` / `Log/LogCollectorRuntime.c`
 
 **职责**: 泳道显示管道中的数据采集层。持续轮询 Linux 与 RTOS 两个文本 RTT 通道，解析可选 timestamp prefix，并为下游处理创建 LogEntry 对象。
 

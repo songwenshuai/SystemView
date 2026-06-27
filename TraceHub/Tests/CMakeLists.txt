@@ -158,6 +158,9 @@ if(BUILD_UNIT_TESTS)
 
     add_executable(test_logcollector
         Unit/LogCollectorTest.c
+        ${TRACEHUB_LOG_DIR}/LogCollectorState.c
+        ${TRACEHUB_LOG_DIR}/LogCollectorSource.c
+        ${TRACEHUB_LOG_DIR}/LogCollectorRuntime.c
         ${TRACEHUB_LOG_DIR}/LogLineParser.c
         ${TRACEHUB_LOG_DIR}/LogEntry.c
     )

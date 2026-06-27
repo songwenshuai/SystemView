@@ -126,14 +126,14 @@ static int       _is_creator     = 0;      /* 1 if we created the shm object */
 */
 
 static int _memshm_normalize_name(const char *path, char *name, size_t name_size) {
-    size_t src;
-    size_t dst;
-
     if (path == NULL || path[0] == '\0' || name == NULL || name_size == 0u) {
         return -1;
     }
 
 #if defined(_WIN32)
+    size_t src;
+    size_t dst;
+
     if (strncmp(path, "Global\\", 7u) == 0 || strncmp(path, "Local\\", 6u) == 0) {
         if (snprintf(name, name_size, "%s", path) >= (int)name_size) {
             return -1;
