@@ -1,0 +1,347 @@
+/*********************************************************************
+*                                                                    *
+*                Copyright (C) 2023 xrTest Inc.                      *
+*                      All rights reserved                           *
+*                                                                    *
+**********************************************************************
+----------------------------------------------------------------------
+File    : SYS.c
+Purpose : System abstraction layer for thread and timing functions
+Author  : songwenshuai <songwenshuai@gmail.com>
+---------------------------END-OF-HEADER------------------------------
+*/
+
+/*********************************************************************
+*
+*       #include Section
+*
+**********************************************************************
+*/
+
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdarg.h>
+#include <limits.h>
+#include <string.h>
+#include <stdbool.h>
+#include <inttypes.h>
+#include <time.h>
+
+#include <getopt.h>
+#include <pthread.h>
+#include <arpa/inet.h>
+#include <netinet/in.h>
+#include <netinet/tcp.h>
+#include <sys/time.h>
+#include <sys/ioctl.h>
+#include <sys/socket.h>
+#include <unistd.h>
+#include <poll.h>
+
+#include "SYS.h"
+
+/*********************************************************************
+*
+*       Types
+*
+**********************************************************************
+*/
+
+typedef struct {
+  void (*threadEntry)(void *);
+  void  *context;
+} SYS_ThreadStartContext_t;
+
+/*********************************************************************
+*
+*       Static functions
+*
+**********************************************************************
+*/
+
+static void *_SYS_ThreadTrampoline(void *arg) {
+  SYS_ThreadStartContext_t *thread_context;
+  void (*threadEntry)(void *);
+  void *context;
+
+  thread_context = (SYS_ThreadStartContext_t *)arg;
+  threadEntry = thread_context->threadEntry;
+  context = thread_context->context;
+  free(thread_context);
+
+  threadEntry(context);
+  return NULL;
+}
+
+/*********************************************************************
+*
+*       Public functions
+*
+**********************************************************************
+*/
+
+/*********************************************************************
+*
+*       SYS_createThread()
+*
+*  Function description
+*    Create a new system thread with the specified entry function.
+*
+*  Parameters
+*    threadEntry  Pointer to thread entry function.
+*    context      Context parameter passed to thread entry function.
+*    pRetTid      Pointer to receive thread handle.
+*
+*  Return value
+*     1  Success
+*    -1  Failed to create thread
+*/
+int SYS_createThread(void (*threadEntry)(void*), void* context, SYS_Thread *pRetTid) {
+  SYS_ThreadStartContext_t *thread_context;
+  pthread_t                 tid;
+  int                       ret;
+
+  if ((threadEntry == NULL) || (pRetTid == NULL)) {
+      return -1;
+  }
+
+  thread_context = (SYS_ThreadStartContext_t *)malloc(sizeof(SYS_ThreadStartContext_t));
+  if (thread_context == NULL) {
+      return -1;
+  }
+  thread_context->threadEntry = threadEntry;
+  thread_context->context = context;
+
+  ret = pthread_create(&tid, NULL, _SYS_ThreadTrampoline, thread_context);
+  if (ret != 0) {
+      free(thread_context);
+      printf("SYS_createThread: pthread_create error: %s\n", strerror(ret));
+      return -1;
+  }
+
+  *pRetTid = tid;
+
+  return 1;
+}
+
+/*********************************************************************
+*
+*       SYS_destroyThread()
+*
+*  Function description
+*    Detach a thread, allowing system resources to be reclaimed
+*    automatically when the thread terminates.
+*
+*  Parameters
+*    handle  Thread handle to detach.
+*
+*  Return value
+*    None
+*/
+void SYS_destroyThread(SYS_Thread handle) {
+    pthread_detach(handle);
+}
+
+/*********************************************************************
+*
+*       SYS_ExitThread()
+*
+*  Function description
+*    Terminate the calling thread and return a status value.
+*
+*  Parameters
+*    status  Exit status value returned to joining thread.
+*
+*  Return value
+*    None (function does not return)
+*/
+void SYS_ExitThread(void *status) {
+    pthread_exit(status);
+}
+
+/*********************************************************************
+*
+*       SYS_WaitThreadTerm()
+*
+*  Function description
+*    Wait for the specified thread to terminate.
+*    Blocks until the thread exits.
+*
+*  Parameters
+*    pRetTid  Thread handle to wait for.
+*
+*  Return value
+*    None
+*/
+void SYS_WaitThreadTerm(SYS_Thread pRetTid) {
+  pthread_join(pRetTid, NULL);
+}
+
+/*********************************************************************
+*
+*       SYS_GetTickCount()
+*
+*  Function description
+*    Get system tick count in milliseconds since system boot.
+*    Uses monotonic clock for consistent timing.
+*
+*  Return value
+*    Tick count in milliseconds
+*/
+unsigned SYS_GetTickCount(void) {
+  struct timespec Time;
+
+  clock_gettime(CLOCK_MONOTONIC, &Time);
+  return ((unsigned)Time.tv_sec * 1000) + ((unsigned)Time.tv_nsec / 1000000);
+}
+
+/*********************************************************************
+*
+*       SYS_GetMonotonicTimeUs()
+*
+*  Function description
+*    Get monotonic elapsed time in microseconds.
+*
+*  Return value
+*    Monotonic elapsed time in microseconds
+*/
+uint64_t SYS_GetMonotonicTimeUs(void) {
+  struct timespec Time;
+
+  clock_gettime(CLOCK_MONOTONIC, &Time);
+  return ((uint64_t)Time.tv_sec * 1000000u) + ((uint64_t)Time.tv_nsec / 1000u);
+}
+
+/*********************************************************************
+*
+*       SYS_Sleep()
+*
+*  Function description
+*    Suspends the execution of the program for the specified number of
+*    milliseconds. It uses the `poll` function to introduce a delay.
+*
+*  Parameters
+*    ms - The number of milliseconds to sleep.
+*
+*  Return value
+*    None.
+*/
+void SYS_Sleep(unsigned ms) {
+  // Use the `poll` function to introduce a delay
+  poll(NULL, 0, ms);
+}
+
+/*********************************************************************
+*
+*       SYS_MutexInit()
+*
+*  Function description
+*    Initialize a mutex.
+*
+*  Parameters
+*    mutex  Pointer to mutex to initialize.
+*
+*  Return value
+*    0   Success
+*   -1   Failed to initialize mutex
+*/
+int SYS_MutexInit(SYS_Mutex *mutex) {
+    if (mutex == NULL) {
+        return -1;
+    }
+    return pthread_mutex_init(mutex, NULL);
+}
+
+/*********************************************************************
+*
+*       SYS_MutexLock()
+*
+*  Function description
+*    Lock a mutex.
+*
+*  Parameters
+*    mutex  Pointer to mutex to lock.
+*
+*  Return value
+*    0   Success
+*   -1   Failed to lock mutex
+*/
+int SYS_MutexLock(SYS_Mutex *mutex) {
+    if (mutex == NULL) {
+        return -1;
+    }
+    return pthread_mutex_lock(mutex);
+}
+
+/*********************************************************************
+*
+*       SYS_MutexUnlock()
+*
+*  Function description
+*    Unlock a mutex.
+*
+*  Parameters
+*    mutex  Pointer to mutex to unlock.
+*
+*  Return value
+*    0   Success
+*   -1   Failed to unlock mutex
+*/
+int SYS_MutexUnlock(SYS_Mutex *mutex) {
+    if (mutex == NULL) {
+        return -1;
+    }
+    return pthread_mutex_unlock(mutex);
+}
+
+/*********************************************************************
+*
+*       SYS_MutexDestroy()
+*
+*  Function description
+*    Destroy a mutex.
+*
+*  Parameters
+*    mutex  Pointer to mutex to destroy.
+*
+*  Return value
+*    0   Success
+*   -1   Failed to destroy mutex
+*/
+int SYS_MutexDestroy(SYS_Mutex *mutex) {
+    if (mutex == NULL) {
+        return -1;
+    }
+    return pthread_mutex_destroy(mutex);
+}
+
+/*********************************************************************
+*
+*       SYS_GetTimestampStr()
+*
+*  Function description
+*    Get current time as formatted timestamp string.
+*    Format: "HH:MM:SS.mmm" (hours:minutes:seconds.milliseconds)
+*
+*  Parameters
+*    buf   Buffer to receive timestamp string
+*    size  Size of buffer in bytes
+*/
+void SYS_GetTimestampStr(char *buf, size_t size) {
+    struct timespec ts;
+    struct tm       tm_info;
+
+    if (buf == NULL || size == 0) {
+        return;
+    }
+
+    clock_gettime(CLOCK_REALTIME, &ts);
+    localtime_r(&ts.tv_sec, &tm_info);
+
+    snprintf(buf, size, "%02d:%02d:%02d.%03ld",
+             tm_info.tm_hour, tm_info.tm_min, tm_info.tm_sec,
+             ts.tv_nsec / 1000000);
+}
+
+/*************************** End of file ****************************/

@@ -22,14 +22,14 @@ volatile int _Cnt;
 volatile int _Delay;
 volatile int _Marker;
 
-static unsigned char _aRTTMemory[SEGGER_RTT__REQUIRED_MEM_SIZE + 4u];
+static unsigned char _aRTTMemory[SEGGER_RTT__REQUIRED_MEM_SIZE + SEGGER_RTT__CB_ALIGNMENT];
 
 /*********************************************************************
 *
 *       _GetRTTAddress
 */
 static uintptr_t _GetRTTAddress(void) {
-  return ((uintptr_t)_aRTTMemory + 3u) & ~(uintptr_t)3u;
+  return ((uintptr_t)_aRTTMemory + SEGGER_RTT__CB_ALIGNMENT_MASK) & ~(uintptr_t)SEGGER_RTT__CB_ALIGNMENT_MASK;
 }
 
 /*********************************************************************

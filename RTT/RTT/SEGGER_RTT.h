@@ -296,13 +296,16 @@ Purpose : Implementation of SEGGER real-time transfer which allows
 #endif
 #define SEGGER_RTT__AC_ID_SIZE                           (16u)
 #define SEGGER_RTT__CB_FIELD_SIZE                        (4u)
-#define SEGGER_RTT__BUFFER_SIZE                          (24u)
+#define SEGGER_RTT__OFFSET_FIELD_SIZE                    (8u)
+#define SEGGER_RTT__CB_ALIGNMENT                         (8u)
+#define SEGGER_RTT__CB_ALIGNMENT_MASK                    (SEGGER_RTT__CB_ALIGNMENT - 1u)
 #define SEGGER_RTT__BUFFER_OFF_NAME                      (0u)
-#define SEGGER_RTT__BUFFER_OFF_P_BUFFER                  (4u)
-#define SEGGER_RTT__BUFFER_OFF_SIZE_OF_BUFFER            (8u)
-#define SEGGER_RTT__BUFFER_OFF_WR_OFF                    (12u)
-#define SEGGER_RTT__BUFFER_OFF_RD_OFF                    (16u)
-#define SEGGER_RTT__BUFFER_OFF_FLAGS                     (20u)
+#define SEGGER_RTT__BUFFER_OFF_P_BUFFER                  (SEGGER_RTT__BUFFER_OFF_NAME + SEGGER_RTT__OFFSET_FIELD_SIZE)
+#define SEGGER_RTT__BUFFER_OFF_SIZE_OF_BUFFER            (SEGGER_RTT__BUFFER_OFF_P_BUFFER + SEGGER_RTT__OFFSET_FIELD_SIZE)
+#define SEGGER_RTT__BUFFER_OFF_WR_OFF                    (SEGGER_RTT__BUFFER_OFF_SIZE_OF_BUFFER + SEGGER_RTT__CB_FIELD_SIZE)
+#define SEGGER_RTT__BUFFER_OFF_RD_OFF                    (SEGGER_RTT__BUFFER_OFF_WR_OFF + SEGGER_RTT__CB_FIELD_SIZE)
+#define SEGGER_RTT__BUFFER_OFF_FLAGS                     (SEGGER_RTT__BUFFER_OFF_RD_OFF + SEGGER_RTT__CB_FIELD_SIZE)
+#define SEGGER_RTT__BUFFER_SIZE                          (SEGGER_RTT__BUFFER_OFF_FLAGS + SEGGER_RTT__CB_FIELD_SIZE)
 #define SEGGER_RTT__CB_OFF_AC_ID                         (0u)
 #define SEGGER_RTT__CB_OFF_MAX_NUM_UP_BUFFERS            (SEGGER_RTT__CB_OFF_AC_ID + SEGGER_RTT__AC_ID_SIZE)
 #define SEGGER_RTT__CB_OFF_MAX_NUM_DOWN_BUFFERS          (SEGGER_RTT__CB_OFF_MAX_NUM_UP_BUFFERS + SEGGER_RTT__CB_FIELD_SIZE)
@@ -322,10 +325,19 @@ Purpose : Implementation of SEGGER real-time transfer which allows
 #define SEGGER_RTT__DOWN_BUFFER_OFF                      (SEGGER_RTT__DOWN_NAME_OFF + SEGGER_RTT__TERMINAL_NAME_SIZE_ALIGNED)
 #define SEGGER_RTT__ACTIVE_TERMINAL_OFF                  (SEGGER_RTT__DOWN_BUFFER_OFF + BUFFER_SIZE_DOWN)
 #define SEGGER_RTT__REQUIRED_MEM_SIZE                    (SEGGER_RTT__ROUND_UP_4(SEGGER_RTT__ACTIVE_TERMINAL_OFF + 1u))
+#define SEGGER_RTT__EXTRA_BUFFER_PAIR_SIZE               (SEGGER_RTT__TERMINAL_NAME_SIZE_ALIGNED + BUFFER_SIZE_UP + BUFFER_SIZE_DOWN)
+#define SEGGER_RTT_REQUIRED_MEM_SIZE_FOR_BUFFER_PAIRS(NumBuffers) \
+        (((NumBuffers) == 0u) ? ((size_t)0u) : \
+         (SEGGER_RTT__REQUIRED_MEM_SIZE + (((size_t)((NumBuffers) - 1u)) * SEGGER_RTT__EXTRA_BUFFER_PAIR_SIZE)))
+#define SEGGER_RTT_SPINLOCK_SW_WORD_SIZE                 (4u)
+#define SEGGER_RTT_SPINLOCK_SW_HEADER_SIZE               (8u)
+#define SEGGER_RTT_SPINLOCK_SW_SIZE                      (SEGGER_RTT_SPINLOCK_SW_HEADER_SIZE + (SEGGER_RTT_SPINLOCK_MAX_CORES * SEGGER_RTT_SPINLOCK_SW_WORD_SIZE * 2u))
 #define SEGGER_RTT__RD8(Address)                         (*(volatile unsigned char*)(uintptr_t)(Address))
 #define SEGGER_RTT__WR8(Address, Data)                   (*(volatile unsigned char*)(uintptr_t)(Address) = (unsigned char)(Data))
 #define SEGGER_RTT__RD32(Address)                        (*(volatile uint32_t*)(uintptr_t)(Address))
 #define SEGGER_RTT__WR32(Address, Data)                  (*(volatile uint32_t*)(uintptr_t)(Address) = (uint32_t)(Data))
+#define SEGGER_RTT__RD64(Address)                        (*(volatile uint64_t*)(uintptr_t)(Address))
+#define SEGGER_RTT__WR64(Address, Data)                  (*(volatile uint64_t*)(uintptr_t)(Address) = (uint64_t)(Data))
 #define SEGGER_RTT__ADDR(Address, Off)                   ((uintptr_t)(Address) + (uintptr_t)(Off))
 #define SEGGER_RTT__FIELD(pRing, Off)                    ((uintptr_t)(pRing) + (uintptr_t)(Off))
 #define SEGGER_RTT__STATIC_ASSERT(Name, Condition)       typedef char SEGGER_RTT__static_assert_##Name[(Condition) ? 1 : -1]
@@ -342,8 +354,8 @@ Purpose : Implementation of SEGGER real-time transfer which allows
 // which is used as up-buffer (T->H)
 //
 typedef struct {
-            uint32_t sName;         // 32-bit offset of optional name from RTT control block base. Standard names so far are: "Terminal", "SysView", "J-Scope_t4i4"
-            uint32_t pBuffer;       // 32-bit offset of buffer from RTT control block base
+            uint64_t sName;         // 64-bit offset of optional name from RTT control block base. Standard names so far are: "Terminal", "SysView", "J-Scope_t4i4"
+            uint64_t pBuffer;       // 64-bit offset of buffer from RTT control block base
             uint32_t SizeOfBuffer;  // Buffer size in bytes. Note that one byte is lost, as this implementation does not fill up the buffer in order to avoid the problem of being unable to distinguish between full and empty.
             uint32_t WrOff;         // Position of next item to be written by either target.
   volatile  uint32_t RdOff;         // Position of next item to be read by host. Must be volatile since it may be modified by host.
@@ -355,8 +367,8 @@ typedef struct {
 // which is used as down-buffer (H->T)
 //
 typedef struct {
-            uint32_t sName;         // 32-bit offset of optional name from RTT control block base. Standard names so far are: "Terminal", "SysView", "J-Scope_t4i4"
-            uint32_t pBuffer;       // 32-bit offset of buffer from RTT control block base
+            uint64_t sName;         // 64-bit offset of optional name from RTT control block base. Standard names so far are: "Terminal", "SysView", "J-Scope_t4i4"
+            uint64_t pBuffer;       // 64-bit offset of buffer from RTT control block base
             uint32_t SizeOfBuffer;  // Buffer size in bytes. Note that one byte is lost, as this implementation does not fill up the buffer in order to avoid the problem of being unable to distinguish between full and empty.
   volatile  uint32_t WrOff;         // Position of next item to be written by host. Must be volatile since it may be modified by host.
             uint32_t RdOff;         // Position of next item to be read by target (down-buffer).
@@ -398,6 +410,7 @@ SEGGER_RTT__STATIC_ASSERT(cb_max_up_off,           offsetof(SEGGER_RTT_CB, MaxNu
 SEGGER_RTT__STATIC_ASSERT(cb_max_down_off,         offsetof(SEGGER_RTT_CB, MaxNumDownBuffers) == SEGGER_RTT__CB_OFF_MAX_NUM_DOWN_BUFFERS);
 SEGGER_RTT__STATIC_ASSERT(cb_a_up_off,             offsetof(SEGGER_RTT_CB, aUp) == SEGGER_RTT__CB_OFF_A_UP);
 SEGGER_RTT__STATIC_ASSERT(cb_a_down_off,           offsetof(SEGGER_RTT_CB, aDown) == SEGGER_RTT__CB_OFF_A_DOWN);
+SEGGER_RTT__STATIC_ASSERT(spinlock_max_cores,      SEGGER_RTT_SPINLOCK_MAX_CORES > 0u);
 
 /*********************************************************************
 *
@@ -416,6 +429,11 @@ SEGGER_RTT__STATIC_ASSERT(cb_a_down_off,           offsetof(SEGGER_RTT_CB, aDown
 *
 **********************************************************************
 */
+//
+// Address parameters are local mapped addresses that are directly
+// accessible by the current process or core. Shared RTT descriptors store
+// fixed-width 64-bit offsets from this address, not backend or physical addresses.
+//
 #ifdef __cplusplus
   extern "C" {
 #endif
@@ -423,15 +441,20 @@ int          SEGGER_RTT_AllocDownBuffer         (uintptr_t Address, const char* 
 int          SEGGER_RTT_AllocUpBuffer           (uintptr_t Address, const char* sName, void* pBuffer, unsigned BufferSize, unsigned Flags);
 int          SEGGER_RTT_CheckInit               (uintptr_t Address);
 int          SEGGER_RTT_CheckRegion             (uintptr_t Address, size_t Size);
+int          SEGGER_RTT_CheckUpBuffer           (uintptr_t Address, size_t Size, unsigned BufferIndex);
+int          SEGGER_RTT_CheckDownBuffer         (uintptr_t Address, size_t Size, unsigned BufferIndex);
 int          SEGGER_RTT_FindControlBlock        (uintptr_t* pAddress, size_t Size);
+int          SEGGER_RTT_FindValidControlBlock   (uintptr_t* pAddress, size_t Size, size_t* pRegionSize);
 int          SEGGER_RTT_ConfigUpBuffer          (uintptr_t Address, unsigned BufferIndex, const char* sName, void* pBuffer, unsigned BufferSize, unsigned Flags);
 int          SEGGER_RTT_ConfigDownBuffer        (uintptr_t Address, unsigned BufferIndex, const char* sName, void* pBuffer, unsigned BufferSize, unsigned Flags);
+size_t       SEGGER_RTT_GetRequiredMemSize      (unsigned NumBuffers);
 int          SEGGER_RTT_GetKey                  (uintptr_t Address);
 unsigned     SEGGER_RTT_HasData                 (uintptr_t Address, unsigned BufferIndex);
 int          SEGGER_RTT_HasKey                  (uintptr_t Address);
 unsigned     SEGGER_RTT_HasDataUp               (uintptr_t Address, unsigned BufferIndex);
 void         SEGGER_RTT_Init                    (uintptr_t Address);
 int          SEGGER_RTT_InitEx                  (uintptr_t Address, size_t Size);
+int          SEGGER_RTT_EnsureInitEx            (uintptr_t Address, size_t Size, unsigned NumBuffers);
 unsigned     SEGGER_RTT_Read                    (uintptr_t Address, unsigned BufferIndex,       void* pBuffer, unsigned BufferSize);
 unsigned     SEGGER_RTT_ReadNoLock              (uintptr_t Address, unsigned BufferIndex,       void* pData,   unsigned BufferSize);
 int          SEGGER_RTT_SetNameDownBuffer       (uintptr_t Address, unsigned BufferIndex, const char* sName);
@@ -450,6 +473,11 @@ unsigned     SEGGER_RTT_PutCharSkipNoLock       (uintptr_t Address, unsigned Buf
 unsigned     SEGGER_RTT_GetAvailWriteSpace      (uintptr_t Address, unsigned BufferIndex);
 unsigned     SEGGER_RTT_GetBytesInBuffer        (uintptr_t Address, unsigned BufferIndex);
 unsigned     SEGGER_RTT_GetBytesDownInBuffer    (uintptr_t Address, unsigned BufferIndex);
+int          SEGGER_RTT_SPINLOCK_SW_Create      (uintptr_t Address, size_t Size);
+int          SEGGER_RTT_SPINLOCK_SW_Check       (uintptr_t Address, size_t Size);
+int          SEGGER_RTT_SPINLOCK_SW_Lock        (uintptr_t Address, unsigned Id);
+int          SEGGER_RTT_SPINLOCK_SW_LockWithLimit(uintptr_t Address, unsigned Id, uint32_t MaxWaitSpins);
+int          SEGGER_RTT_SPINLOCK_SW_Unlock      (uintptr_t Address, unsigned Id);
 //
 // Function macro for performance optimization
 //

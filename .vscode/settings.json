@@ -1,0 +1,18 @@
+{
+    "C_Cpp.intelliSenseEngine": "disabled",
+    "C_Cpp.autocomplete": "disabled",
+    "C_Cpp.errorSquiggles": "disabled",
+    "C_Cpp.hover": "disabled",
+    "C_Cpp.formatting": "disabled",
+    "C_Cpp.codeAnalysis.runAutomatically": false,
+    "C_Cpp.codeAnalysis.clangTidy.enabled": false,
+    "clangd.fallbackFlags": [
+        "-std=c11",
+        "-IRTT/RTT",
+        "-ISystemView/SEGGER",
+        "-ISystemView/Config",
+        "-ISystemView/SYSVIEW",
+        "-ISystemView/Tests/Config",
+        "-Itelnetrtt"
+    ]
+}

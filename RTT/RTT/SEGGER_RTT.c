@@ -130,6 +130,13 @@ static const char _aTerminalStr[] = "Terminal";  // Default terminal name copied
 #define SEGGER_RTT__CB_OFF_A_DOWN_RUNTIME(MaxNumUpBuffers)             (SEGGER_RTT__CB_OFF_A_UP + ((uintptr_t)(MaxNumUpBuffers) * SEGGER_RTT__BUFFER_SIZE))
 #define SEGGER_RTT__CB_OFF_A_DOWN_RUNTIME_INDEX(MaxNumUpBuffers, BufferIndex) \
                                                                       (SEGGER_RTT__CB_OFF_A_DOWN_RUNTIME(MaxNumUpBuffers) + ((uintptr_t)(BufferIndex) * SEGGER_RTT__BUFFER_SIZE))
+#define SEGGER_RTT_SPINLOCK_SW_MAGIC                                  (0x5254534Cu)
+#define SEGGER_RTT_SPINLOCK_SW_OFF_MAGIC                              (0u)
+#define SEGGER_RTT_SPINLOCK_SW_OFF_MAX_CORES                          (4u)
+#define SEGGER_RTT_SPINLOCK_SW_OFF_ENTERING                           (SEGGER_RTT_SPINLOCK_SW_HEADER_SIZE)
+#define SEGGER_RTT_SPINLOCK_SW_OFF_NUMBER                             (SEGGER_RTT_SPINLOCK_SW_OFF_ENTERING + (SEGGER_RTT_SPINLOCK_MAX_CORES * SEGGER_RTT_SPINLOCK_SW_WORD_SIZE))
+#define SEGGER_RTT_SPINLOCK_SW_ENTERING_ADDR(Address, Id)             (SEGGER_RTT__ADDR((Address), SEGGER_RTT_SPINLOCK_SW_OFF_ENTERING + ((uintptr_t)(Id) * SEGGER_RTT_SPINLOCK_SW_WORD_SIZE)))
+#define SEGGER_RTT_SPINLOCK_SW_NUMBER_ADDR(Address, Id)               (SEGGER_RTT__ADDR((Address), SEGGER_RTT_SPINLOCK_SW_OFF_NUMBER + ((uintptr_t)(Id) * SEGGER_RTT_SPINLOCK_SW_WORD_SIZE)))
 
 /*********************************************************************
 *
@@ -159,6 +166,154 @@ static int _IsValidFlags(unsigned Flags) {
 
 /*********************************************************************
 *
+*       _GetRequiredMemSize()
+*
+*  Function description
+*    Returns the shared-memory size required for the RTT control block,
+*    the default channel, and the requested number of extra buffer pairs.
+*
+*  Parameters
+*    NumBuffers  Number of up/down buffer pairs to support.
+*
+*  Return value
+*    > 0  Required shared-memory size.
+*    == 0 Invalid buffer count or size overflow.
+*/
+static size_t _GetRequiredMemSize(unsigned NumBuffers) {
+  size_t NumExtraBuffers;
+
+  if ((NumBuffers == 0u) ||
+      (NumBuffers > SEGGER_RTT_MAX_NUM_UP_BUFFERS) ||
+      (NumBuffers > SEGGER_RTT_MAX_NUM_DOWN_BUFFERS)) {
+    return 0u;
+  }
+  NumExtraBuffers = (size_t)(NumBuffers - 1u);
+  if (NumExtraBuffers > ((SIZE_MAX - SEGGER_RTT__REQUIRED_MEM_SIZE) / SEGGER_RTT__EXTRA_BUFFER_PAIR_SIZE)) {
+    return 0u;
+  }
+  return SEGGER_RTT_REQUIRED_MEM_SIZE_FOR_BUFFER_PAIRS(NumBuffers);
+}
+
+/*********************************************************************
+*
+*       _CheckSpinLockRange()
+*
+*  Function description
+*    Checks whether a software spinlock object fits into a directly
+*    accessible memory range.
+*/
+static int _CheckSpinLockRange(uintptr_t Address, size_t Size) {
+  if ((Address == 0u) || ((Address & (uintptr_t)(SEGGER_RTT_SPINLOCK_SW_WORD_SIZE - 1u)) != 0u)) {
+    return -1;
+  }
+  if (Size < SEGGER_RTT_SPINLOCK_SW_SIZE) {
+    return -1;
+  }
+  if (Size > (size_t)(UINTPTR_MAX - Address)) {
+    return -1;
+  }
+  return 0;
+}
+
+/*********************************************************************
+*
+*       _SpinLockWaitStep()
+*
+*  Function description
+*    Consume one software spinlock wait iteration.
+*/
+static int _SpinLockWaitStep(uint32_t* pRemainingSpins) {
+  if (pRemainingSpins != NULL) {
+    if (*pRemainingSpins == 0u) {
+      return -1;
+    }
+    (*pRemainingSpins)--;
+  }
+  RTT__DMB();
+  return 0;
+}
+
+/*********************************************************************
+*
+*       _SpinLockCancel()
+*
+*  Function description
+*    Withdraw the current core from the software spinlock algorithm.
+*/
+static void _SpinLockCancel(uintptr_t Address, unsigned Id) {
+  SEGGER_RTT__WR32(SEGGER_RTT_SPINLOCK_SW_ENTERING_ADDR(Address, Id), 0u);
+  SEGGER_RTT__WR32(SEGGER_RTT_SPINLOCK_SW_NUMBER_ADDR(  Address, Id), 0u);
+  RTT__DMB();
+}
+
+/*********************************************************************
+*
+*       _SpinLockAcquire()
+*
+*  Function description
+*    Acquires a software spinlock with optional bounded waiting.
+*/
+static int _SpinLockAcquire(uintptr_t Address, unsigned Id, uint32_t* pRemainingSpins) {
+  uint32_t max;
+  uint32_t current;
+  uint32_t j;
+  uint32_t n;
+  uint32_t own_number;
+
+  if ((Address == 0u) || (Id >= SEGGER_RTT_SPINLOCK_MAX_CORES)) {
+    return -1;
+  }
+  if (SEGGER_RTT__RD32(SEGGER_RTT__ADDR(Address, SEGGER_RTT_SPINLOCK_SW_OFF_MAGIC)) != SEGGER_RTT_SPINLOCK_SW_MAGIC) {
+    return -1;
+  }
+  if (SEGGER_RTT__RD32(SEGGER_RTT__ADDR(Address, SEGGER_RTT_SPINLOCK_SW_OFF_MAX_CORES)) != SEGGER_RTT_SPINLOCK_MAX_CORES) {
+    return -1;
+  }
+
+  max = 0u;
+  SEGGER_RTT__WR32(SEGGER_RTT_SPINLOCK_SW_ENTERING_ADDR(Address, Id), 1u);
+  RTT__DMB();
+  for (n = 0u; n < SEGGER_RTT_SPINLOCK_MAX_CORES; n++) {
+    current = SEGGER_RTT__RD32(SEGGER_RTT_SPINLOCK_SW_NUMBER_ADDR(Address, n));
+    if (current > max) {
+      max = current;
+    }
+  }
+  if (max == UINT32_MAX) {
+    _SpinLockCancel(Address, Id);
+    return -1;
+  }
+  SEGGER_RTT__WR32(SEGGER_RTT_SPINLOCK_SW_NUMBER_ADDR(Address, Id), max + 1u);
+  RTT__DMB();
+  SEGGER_RTT__WR32(SEGGER_RTT_SPINLOCK_SW_ENTERING_ADDR(Address, Id), 0u);
+  RTT__DMB();
+  for (j = 0u; j < SEGGER_RTT_SPINLOCK_MAX_CORES; j++) {
+    while (SEGGER_RTT__RD32(SEGGER_RTT_SPINLOCK_SW_ENTERING_ADDR(Address, j)) != 0u) {
+      if (_SpinLockWaitStep(pRemainingSpins) != 0) {
+        _SpinLockCancel(Address, Id);
+        return -1;
+      }
+    }
+    for (;;) {
+      current = SEGGER_RTT__RD32(SEGGER_RTT_SPINLOCK_SW_NUMBER_ADDR(Address, j));
+      own_number = SEGGER_RTT__RD32(SEGGER_RTT_SPINLOCK_SW_NUMBER_ADDR(Address, Id));
+      if ((current == 0u) ||
+          (current > own_number) ||
+          ((current == own_number) && (j >= Id))) {
+        break;
+      }
+      if (_SpinLockWaitStep(pRemainingSpins) != 0) {
+        _SpinLockCancel(Address, Id);
+        return -1;
+      }
+    }
+  }
+  RTT__DMB();
+  return 0;
+}
+
+/*********************************************************************
+*
 *       _IsRTTId()
 *
 *  Function description
@@ -175,7 +330,7 @@ static int _IsValidFlags(unsigned Flags) {
 static int _IsRTTId(uintptr_t Address) {
   unsigned i;
 
-  if ((Address == 0u) || ((Address & 3u) != 0u)) {
+  if ((Address == 0u) || ((Address & SEGGER_RTT__CB_ALIGNMENT_MASK) != 0u)) {
     return 0;
   }
   for (i = 0u; i < sizeof(_aRTTId); i++) {
@@ -193,7 +348,7 @@ static int _IsRTTId(uintptr_t Address) {
 *
 *  Function description
 *    Checks whether an optional shared-memory string pointer can be
-*    represented as a 32-bit offset from the control block base.
+*    represented as a 64-bit offset from the control block base.
 *
 *  Parameters
 *    Address  Base address of the RTT control block.
@@ -210,9 +365,14 @@ static int _IsValidSharedName(uintptr_t Address, const void* Ptr) {
   if (Addr == 0u) {
     return 1;
   }
-  if ((Addr <= Address) || ((Addr - Address) > (uintptr_t)UINT32_MAX)) {
+  if (Addr <= Address) {
     return 0;
   }
+#if UINTPTR_MAX > UINT64_MAX
+  if ((Addr - Address) > (uintptr_t)UINT64_MAX) {
+    return 0;
+  }
+#endif
   return 1;
 }
 
@@ -222,7 +382,7 @@ static int _IsValidSharedName(uintptr_t Address, const void* Ptr) {
 *
 *  Function description
 *    Checks whether a shared-memory payload buffer can be represented as
-*    a 32-bit offset and has enough bytes to operate as a ring buffer.
+*    a 64-bit offset and has enough bytes to operate as a ring buffer.
 *
 *  Parameters
 *    Address     Base address of the RTT control block.
@@ -235,14 +395,26 @@ static int _IsValidSharedName(uintptr_t Address, const void* Ptr) {
 */
 static int _IsValidSharedBuffer(uintptr_t Address, const void* pBuffer, unsigned BufferSize) {
   uintptr_t Addr;
+#if UINTPTR_MAX > UINT64_MAX
+  uintptr_t Off;
+#endif
 
   Addr = (uintptr_t)pBuffer;
-  if ((BufferSize < 2u) || (Addr <= Address) || ((Addr - Address) > (uintptr_t)UINT32_MAX)) {
+  if ((BufferSize < 2u) || (Addr <= Address)) {
     return 0;
   }
-  if ((uintptr_t)BufferSize > ((uintptr_t)UINT32_MAX - (Addr - Address))) {
+  if ((uintptr_t)BufferSize > (UINTPTR_MAX - Addr)) {
     return 0;
   }
+#if UINTPTR_MAX > UINT64_MAX
+  Off = Addr - Address;
+  if (Off > (uintptr_t)UINT64_MAX) {
+    return 0;
+  }
+  if ((uintptr_t)BufferSize > ((uintptr_t)UINT64_MAX - Off)) {
+    return 0;
+  }
+#endif
   return 1;
 }
 
@@ -263,9 +435,12 @@ static int _IsValidSharedBuffer(uintptr_t Address, const void* pBuffer, unsigned
 *    != 0  Range is inside the region.
 *    == 0  Range is outside the region.
 */
-static int _IsOffsetRangeInRegion(uint32_t Off, uint32_t NumBytes, size_t Size) {
+static int _IsOffsetRangeInRegion(uint64_t Off, uint32_t NumBytes, size_t Size) {
   size_t Offset;
 
+  if (Off > SIZE_MAX) {
+    return 0;
+  }
   Offset = (size_t)Off;
   if (Offset >= Size) {
     return 0;
@@ -292,15 +467,15 @@ static int _IsOffsetRangeInRegion(uint32_t Off, uint32_t NumBytes, size_t Size) 
 *     < 0  Descriptor is invalid.
 */
 static int _CheckRingInRegion(uintptr_t pRing, size_t Size) {
-  uint32_t NameOff;
-  uint32_t BufferOff;
+  uint64_t NameOff;
+  uint64_t BufferOff;
   uint32_t SizeOfBuffer;
   uint32_t RdOff;
   uint32_t WrOff;
   uint32_t Flags;
 
-  NameOff      = SEGGER_RTT__RD32(SEGGER_RTT__FIELD(pRing, SEGGER_RTT__BUFFER_OFF_NAME));
-  BufferOff    = SEGGER_RTT__RD32(SEGGER_RTT__FIELD(pRing, SEGGER_RTT__BUFFER_OFF_P_BUFFER));
+  NameOff      = SEGGER_RTT__RD64(SEGGER_RTT__FIELD(pRing, SEGGER_RTT__BUFFER_OFF_NAME));
+  BufferOff    = SEGGER_RTT__RD64(SEGGER_RTT__FIELD(pRing, SEGGER_RTT__BUFFER_OFF_P_BUFFER));
   SizeOfBuffer = SEGGER_RTT__RD32(SEGGER_RTT__FIELD(pRing, SEGGER_RTT__BUFFER_OFF_SIZE_OF_BUFFER));
   RdOff        = SEGGER_RTT__RD32(SEGGER_RTT__FIELD(pRing, SEGGER_RTT__BUFFER_OFF_RD_OFF));
   WrOff        = SEGGER_RTT__RD32(SEGGER_RTT__FIELD(pRing, SEGGER_RTT__BUFFER_OFF_WR_OFF));
@@ -325,6 +500,171 @@ static int _CheckRingInRegion(uintptr_t pRing, size_t Size) {
     return -1;
   }
   return 0;
+}
+
+/*********************************************************************
+*
+*       _CheckRingConfigured()
+*
+*  Function description
+*    Checks whether one ring descriptor is configured.
+*
+*  Parameters
+*    pRing  Address of the descriptor to check.
+*
+*  Return value
+*    >= 0  Descriptor is configured.
+*     < 0  Descriptor is empty or invalid.
+*/
+static int _CheckRingConfigured(uintptr_t pRing) {
+  uint64_t BufferOff;
+  uint32_t SizeOfBuffer;
+
+  BufferOff    = SEGGER_RTT__RD64(SEGGER_RTT__FIELD(pRing, SEGGER_RTT__BUFFER_OFF_P_BUFFER));
+  SizeOfBuffer = SEGGER_RTT__RD32(SEGGER_RTT__FIELD(pRing, SEGGER_RTT__BUFFER_OFF_SIZE_OF_BUFFER));
+  RTT__DMB();                         // Force descriptor reads before checking configured state
+  if ((BufferOff == 0u) || (SizeOfBuffer < 2u)) {
+    return -1;
+  }
+  return 0;
+}
+
+/*********************************************************************
+*
+*       _IsExtraBufferPairConfigured()
+*
+*  Function description
+*    Checks whether an extra up/down buffer pair is configured.
+*
+*  Parameters
+*    Address      Base address of the RTT control block.
+*    BufferIndex  Index of the buffer pair to check.
+*
+*  Return value
+*     1  Buffer pair is configured.
+*     0  Buffer pair is empty.
+*    <0  Buffer pair is invalid.
+*/
+static int _IsExtraBufferPairConfigured(uintptr_t Address, unsigned BufferIndex) {
+  unsigned  MaxNumUpBuffers;
+  unsigned  MaxNumDownBuffers;
+  uint64_t  UpBufferOff;
+  uint64_t  DownBufferOff;
+  uintptr_t pUp;
+  uintptr_t pDown;
+
+  MaxNumUpBuffers   = SEGGER_RTT__RD32(SEGGER_RTT__ADDR(Address, SEGGER_RTT__CB_OFF_MAX_NUM_UP_BUFFERS));
+  MaxNumDownBuffers = SEGGER_RTT__RD32(SEGGER_RTT__ADDR(Address, SEGGER_RTT__CB_OFF_MAX_NUM_DOWN_BUFFERS));
+  RTT__DMB();                         // Force buffer count reads before calculating descriptor addresses
+  if ((BufferIndex >= MaxNumUpBuffers) || (BufferIndex >= MaxNumDownBuffers)) {
+    return -1;
+  }
+  pUp   = SEGGER_RTT__ADDR(Address, SEGGER_RTT__CB_OFF_A_UP_INDEX(BufferIndex));
+  pDown = SEGGER_RTT__ADDR(Address, SEGGER_RTT__CB_OFF_A_DOWN_RUNTIME_INDEX(MaxNumUpBuffers, BufferIndex));
+  UpBufferOff   = SEGGER_RTT__RD64(SEGGER_RTT__FIELD(pUp,   SEGGER_RTT__BUFFER_OFF_P_BUFFER));
+  DownBufferOff = SEGGER_RTT__RD64(SEGGER_RTT__FIELD(pDown, SEGGER_RTT__BUFFER_OFF_P_BUFFER));
+  RTT__DMB();                         // Force descriptor reads before checking pair state
+  if ((UpBufferOff == 0u) && (DownBufferOff == 0u)) {
+    return 0;
+  }
+  if ((UpBufferOff == 0u) || (DownBufferOff == 0u)) {
+    return -1;
+  }
+  return 1;
+}
+
+/*********************************************************************
+*
+*       _ConfigureExtraBufferPair()
+*
+*  Function description
+*    Configures one extra up/down buffer pair in the mapped RTT region.
+*
+*  Parameters
+*    Address      Base address of the RTT control block.
+*    Size         Size of the mapped shared-memory region.
+*    BufferIndex  Index of the buffer pair to configure.
+*
+*  Return value
+*      0  O.K.
+*    < 0  Error.
+*/
+static int _ConfigureExtraBufferPair(uintptr_t Address, size_t Size, unsigned BufferIndex) {
+  size_t    BufferOff;
+  size_t    RequiredSize;
+  size_t    i;
+  uintptr_t BufferBase;
+  char*     sName;
+  void*     pUpBuffer;
+  void*     pDownBuffer;
+
+  if (BufferIndex == 0u) {
+    return 0;
+  }
+  RequiredSize = _GetRequiredMemSize(BufferIndex + 1u);
+  if (RequiredSize == 0u) {
+    return -1;
+  }
+  BufferOff = RequiredSize - SEGGER_RTT__EXTRA_BUFFER_PAIR_SIZE;
+  if ((BufferOff > Size) || (SEGGER_RTT__EXTRA_BUFFER_PAIR_SIZE > (Size - BufferOff))) {
+    return -1;
+  }
+  BufferBase  = SEGGER_RTT__ADDR(Address, BufferOff);
+  sName       = (char*)BufferBase;
+  pUpBuffer   = (void*)SEGGER_RTT__ADDR(BufferBase, SEGGER_RTT__TERMINAL_NAME_SIZE_ALIGNED);
+  pDownBuffer = (void*)SEGGER_RTT__ADDR(BufferBase, SEGGER_RTT__TERMINAL_NAME_SIZE_ALIGNED + BUFFER_SIZE_UP);
+  for (i = 0u; i < SEGGER_RTT__EXTRA_BUFFER_PAIR_SIZE; i++) {
+    SEGGER_RTT__WR8(SEGGER_RTT__ADDR(BufferBase, i), 0u);
+  }
+  for (i = 0u; i < sizeof(_aTerminalStr); i++) {
+    SEGGER_RTT__WR8(SEGGER_RTT__ADDR((uintptr_t)sName, i), (unsigned char)_aTerminalStr[i]);
+  }
+  if (SEGGER_RTT_ConfigUpBuffer(Address, BufferIndex, sName, pUpBuffer, BUFFER_SIZE_UP, SEGGER_RTT_MODE_DEFAULT) < 0) {
+    return -1;
+  }
+  if (SEGGER_RTT_ConfigDownBuffer(Address, BufferIndex, sName, pDownBuffer, BUFFER_SIZE_DOWN, SEGGER_RTT_MODE_DEFAULT) < 0) {
+    return -1;
+  }
+  return 0;
+}
+
+/*********************************************************************
+*
+*       _EnsureExtraBufferPairs()
+*
+*  Function description
+*    Ensures all requested extra up/down buffer pairs are configured.
+*
+*  Parameters
+*    Address     Base address of the RTT control block.
+*    Size        Size of the mapped shared-memory region.
+*    NumBuffers  Number of buffer pairs to configure.
+*
+*  Return value
+*      0  O.K.
+*    < 0  Error.
+*/
+static int _EnsureExtraBufferPairs(uintptr_t Address, size_t Size, unsigned NumBuffers) {
+  unsigned BufferIndex;
+  int      Configured;
+
+  if ((NumBuffers == 0u) ||
+      (NumBuffers > SEGGER_RTT_MAX_NUM_UP_BUFFERS) ||
+      (NumBuffers > SEGGER_RTT_MAX_NUM_DOWN_BUFFERS)) {
+    return -1;
+  }
+  for (BufferIndex = 1u; BufferIndex < NumBuffers; BufferIndex++) {
+    Configured = _IsExtraBufferPairConfigured(Address, BufferIndex);
+    if (Configured < 0) {
+      return -1;
+    }
+    if (Configured == 0) {
+      if (_ConfigureExtraBufferPair(Address, Size, BufferIndex) != 0) {
+        return -1;
+      }
+    }
+  }
+  return SEGGER_RTT_CheckRegion(Address, Size);
 }
 
 /*********************************************************************
@@ -361,7 +701,7 @@ static void _DoInit(uintptr_t Address) {
   const char*    pSrc;
 #endif
 
-  if ((Address == 0u) || ((Address & 3u) != 0u)) {
+  if ((Address == 0u) || ((Address & SEGGER_RTT__CB_ALIGNMENT_MASK) != 0u)) {
     return;
   }
   //
@@ -385,8 +725,8 @@ static void _DoInit(uintptr_t Address) {
 #else
   SEGGER_RTT_MEMCPY((void*)SEGGER_RTT__ADDR(Address, SEGGER_RTT__UP_NAME_OFF), _aTerminalStr, sizeof(_aTerminalStr));
 #endif
-  SEGGER_RTT__WR32(SEGGER_RTT__ADDR(Address, SEGGER_RTT__CB_OFF_A_UP_INDEX(0u) + SEGGER_RTT__BUFFER_OFF_NAME),           SEGGER_RTT__UP_NAME_OFF);
-  SEGGER_RTT__WR32(SEGGER_RTT__ADDR(Address, SEGGER_RTT__CB_OFF_A_UP_INDEX(0u) + SEGGER_RTT__BUFFER_OFF_P_BUFFER),       SEGGER_RTT__UP_BUFFER_OFF);
+  SEGGER_RTT__WR64(SEGGER_RTT__ADDR(Address, SEGGER_RTT__CB_OFF_A_UP_INDEX(0u) + SEGGER_RTT__BUFFER_OFF_NAME),           SEGGER_RTT__UP_NAME_OFF);
+  SEGGER_RTT__WR64(SEGGER_RTT__ADDR(Address, SEGGER_RTT__CB_OFF_A_UP_INDEX(0u) + SEGGER_RTT__BUFFER_OFF_P_BUFFER),       SEGGER_RTT__UP_BUFFER_OFF);
   SEGGER_RTT__WR32(SEGGER_RTT__ADDR(Address, SEGGER_RTT__CB_OFF_A_UP_INDEX(0u) + SEGGER_RTT__BUFFER_OFF_SIZE_OF_BUFFER), BUFFER_SIZE_UP);
   SEGGER_RTT__WR32(SEGGER_RTT__ADDR(Address, SEGGER_RTT__CB_OFF_A_UP_INDEX(0u) + SEGGER_RTT__BUFFER_OFF_RD_OFF),         0u);
   SEGGER_RTT__WR32(SEGGER_RTT__ADDR(Address, SEGGER_RTT__CB_OFF_A_UP_INDEX(0u) + SEGGER_RTT__BUFFER_OFF_WR_OFF),         0u);
@@ -404,8 +744,8 @@ static void _DoInit(uintptr_t Address) {
 #else
   SEGGER_RTT_MEMCPY((void*)SEGGER_RTT__ADDR(Address, SEGGER_RTT__DOWN_NAME_OFF), _aTerminalStr, sizeof(_aTerminalStr));
 #endif
-  SEGGER_RTT__WR32(SEGGER_RTT__ADDR(Address, SEGGER_RTT__CB_OFF_A_DOWN_INDEX(0u) + SEGGER_RTT__BUFFER_OFF_NAME),           SEGGER_RTT__DOWN_NAME_OFF);
-  SEGGER_RTT__WR32(SEGGER_RTT__ADDR(Address, SEGGER_RTT__CB_OFF_A_DOWN_INDEX(0u) + SEGGER_RTT__BUFFER_OFF_P_BUFFER),       SEGGER_RTT__DOWN_BUFFER_OFF);
+  SEGGER_RTT__WR64(SEGGER_RTT__ADDR(Address, SEGGER_RTT__CB_OFF_A_DOWN_INDEX(0u) + SEGGER_RTT__BUFFER_OFF_NAME),           SEGGER_RTT__DOWN_NAME_OFF);
+  SEGGER_RTT__WR64(SEGGER_RTT__ADDR(Address, SEGGER_RTT__CB_OFF_A_DOWN_INDEX(0u) + SEGGER_RTT__BUFFER_OFF_P_BUFFER),       SEGGER_RTT__DOWN_BUFFER_OFF);
   SEGGER_RTT__WR32(SEGGER_RTT__ADDR(Address, SEGGER_RTT__CB_OFF_A_DOWN_INDEX(0u) + SEGGER_RTT__BUFFER_OFF_SIZE_OF_BUFFER), BUFFER_SIZE_DOWN);
   SEGGER_RTT__WR32(SEGGER_RTT__ADDR(Address, SEGGER_RTT__CB_OFF_A_DOWN_INDEX(0u) + SEGGER_RTT__BUFFER_OFF_RD_OFF),         0u);
   SEGGER_RTT__WR32(SEGGER_RTT__ADDR(Address, SEGGER_RTT__CB_OFF_A_DOWN_INDEX(0u) + SEGGER_RTT__BUFFER_OFF_WR_OFF),         0u);
@@ -462,7 +802,7 @@ static unsigned _WriteBlocking(uintptr_t Address, uintptr_t pRing, const char* p
     }
     NumBytesToWrite = MIN(NumBytesToWrite, (SEGGER_RTT__RD32(SEGGER_RTT__FIELD(pRing, SEGGER_RTT__BUFFER_OFF_SIZE_OF_BUFFER)) - WrOff));      // Number of bytes that can be written until buffer wrap-around
     NumBytesToWrite = MIN(NumBytesToWrite, NumBytes);
-    pDst = (volatile char*)SEGGER_RTT__ADDR(Address, SEGGER_RTT__RD32(SEGGER_RTT__FIELD(pRing, SEGGER_RTT__BUFFER_OFF_P_BUFFER)) + WrOff);
+    pDst = (volatile char*)SEGGER_RTT__ADDR(Address, SEGGER_RTT__RD64(SEGGER_RTT__FIELD(pRing, SEGGER_RTT__BUFFER_OFF_P_BUFFER)) + WrOff);
 #if SEGGER_RTT_MEMCPY_USE_BYTELOOP
     NumBytesWritten += NumBytesToWrite;
     NumBytes        -= NumBytesToWrite;
@@ -517,7 +857,7 @@ static void _WriteNoCheck(uintptr_t Address, uintptr_t pRing, const char* pData,
     //
     // All data fits before wrap around
     //
-    pDst = (volatile char*)SEGGER_RTT__ADDR(Address, SEGGER_RTT__RD32(SEGGER_RTT__FIELD(pRing, SEGGER_RTT__BUFFER_OFF_P_BUFFER)) + WrOff);
+    pDst = (volatile char*)SEGGER_RTT__ADDR(Address, SEGGER_RTT__RD64(SEGGER_RTT__FIELD(pRing, SEGGER_RTT__BUFFER_OFF_P_BUFFER)) + WrOff);
 #if SEGGER_RTT_MEMCPY_USE_BYTELOOP
     WrOff += NumBytes;
     while (NumBytes--) {
@@ -535,12 +875,12 @@ static void _WriteNoCheck(uintptr_t Address, uintptr_t pRing, const char* pData,
     // We reach the end of the buffer, so need to wrap around
     //
 #if SEGGER_RTT_MEMCPY_USE_BYTELOOP
-    pDst = (volatile char*)SEGGER_RTT__ADDR(Address, SEGGER_RTT__RD32(SEGGER_RTT__FIELD(pRing, SEGGER_RTT__BUFFER_OFF_P_BUFFER)) + WrOff);
+    pDst = (volatile char*)SEGGER_RTT__ADDR(Address, SEGGER_RTT__RD64(SEGGER_RTT__FIELD(pRing, SEGGER_RTT__BUFFER_OFF_P_BUFFER)) + WrOff);
     NumBytesAtOnce = Rem;
     while (NumBytesAtOnce--) {
       *pDst++ = *pData++;
     };
-    pDst = (volatile char*)SEGGER_RTT__ADDR(Address, SEGGER_RTT__RD32(SEGGER_RTT__FIELD(pRing, SEGGER_RTT__BUFFER_OFF_P_BUFFER)));
+    pDst = (volatile char*)SEGGER_RTT__ADDR(Address, SEGGER_RTT__RD64(SEGGER_RTT__FIELD(pRing, SEGGER_RTT__BUFFER_OFF_P_BUFFER)));
     NumBytesAtOnce = NumBytes - Rem;
     while (NumBytesAtOnce--) {
       *pDst++ = *pData++;
@@ -549,10 +889,10 @@ static void _WriteNoCheck(uintptr_t Address, uintptr_t pRing, const char* pData,
     SEGGER_RTT__WR32(SEGGER_RTT__FIELD(pRing, SEGGER_RTT__BUFFER_OFF_WR_OFF), NumBytes - Rem);
 #else
     NumBytesAtOnce = Rem;
-    pDst = (volatile char*)SEGGER_RTT__ADDR(Address, SEGGER_RTT__RD32(SEGGER_RTT__FIELD(pRing, SEGGER_RTT__BUFFER_OFF_P_BUFFER)) + WrOff);
+    pDst = (volatile char*)SEGGER_RTT__ADDR(Address, SEGGER_RTT__RD64(SEGGER_RTT__FIELD(pRing, SEGGER_RTT__BUFFER_OFF_P_BUFFER)) + WrOff);
     SEGGER_RTT_MEMCPY((void*)pDst, pData, NumBytesAtOnce);
     NumBytesAtOnce = NumBytes - Rem;
-    pDst = (volatile char*)SEGGER_RTT__ADDR(Address, SEGGER_RTT__RD32(SEGGER_RTT__FIELD(pRing, SEGGER_RTT__BUFFER_OFF_P_BUFFER)));
+    pDst = (volatile char*)SEGGER_RTT__ADDR(Address, SEGGER_RTT__RD64(SEGGER_RTT__FIELD(pRing, SEGGER_RTT__BUFFER_OFF_P_BUFFER)));
     SEGGER_RTT_MEMCPY((void*)pDst, pData + Rem, NumBytesAtOnce);
     RTT__DMB();                     // Force data write to be complete before writing the <WrOff>, in case CPU is allowed to change the order of memory accesses
     SEGGER_RTT__WR32(SEGGER_RTT__FIELD(pRing, SEGGER_RTT__BUFFER_OFF_WR_OFF), NumBytesAtOnce);
@@ -671,7 +1011,7 @@ int SEGGER_RTT_CheckRegion(uintptr_t Address, size_t Size) {
   uintptr_t DownOff;
   uintptr_t pRing;
 
-  if ((Address == 0u) || ((Address & 3u) != 0u) || (Size < SEGGER_RTT__REQUIRED_MEM_SIZE)) {
+  if ((Address == 0u) || ((Address & SEGGER_RTT__CB_ALIGNMENT_MASK) != 0u) || (Size < SEGGER_RTT__CB_OFF_A_UP)) {
     return -1;
   }
   if (Size > (size_t)(UINTPTR_MAX - Address)) {
@@ -713,6 +1053,245 @@ int SEGGER_RTT_CheckRegion(uintptr_t Address, size_t Size) {
 
 /*********************************************************************
 *
+*       SEGGER_RTT_CheckUpBuffer()
+*
+*  Function description
+*    Checks whether an initialized RTT control block contains a valid
+*    and configured up-buffer descriptor in a mapped shared-memory
+*    region. This function never initializes or modifies the control
+*    block.
+*
+*  Parameters
+*    Address      Base address of the RTT control block.
+*    Size         Size of the mapped shared-memory region.
+*    BufferIndex  Index of Up-buffer to check.
+*
+*  Return value
+*      0 - Up-buffer descriptor is valid and configured.
+*    < 0 - RTT control block or up-buffer descriptor is invalid.
+*/
+int SEGGER_RTT_CheckUpBuffer(uintptr_t Address, size_t Size, unsigned BufferIndex) {
+  unsigned  MaxNumUpBuffers;
+  uintptr_t pRing;
+
+  if (SEGGER_RTT_CheckRegion(Address, Size) != 0) {
+    return -1;
+  }
+  MaxNumUpBuffers = SEGGER_RTT__RD32(SEGGER_RTT__ADDR(Address, SEGGER_RTT__CB_OFF_MAX_NUM_UP_BUFFERS));
+  RTT__DMB();                       // Force buffer count read before calculating the ring address
+  if ((MaxNumUpBuffers == 0u) || (BufferIndex >= MaxNumUpBuffers)) {
+    return -1;
+  }
+  pRing = SEGGER_RTT__ADDR(Address, SEGGER_RTT__CB_OFF_A_UP_INDEX(BufferIndex));
+  return _CheckRingConfigured(pRing);
+}
+
+/*********************************************************************
+*
+*       SEGGER_RTT_CheckDownBuffer()
+*
+*  Function description
+*    Checks whether an initialized RTT control block contains a valid
+*    and configured down-buffer descriptor in a mapped shared-memory
+*    region. This function never initializes or modifies the control
+*    block.
+*
+*  Parameters
+*    Address      Base address of the RTT control block.
+*    Size         Size of the mapped shared-memory region.
+*    BufferIndex  Index of Down-buffer to check.
+*
+*  Return value
+*      0 - Down-buffer descriptor is valid and configured.
+*    < 0 - RTT control block or down-buffer descriptor is invalid.
+*/
+int SEGGER_RTT_CheckDownBuffer(uintptr_t Address, size_t Size, unsigned BufferIndex) {
+  unsigned  MaxNumUpBuffers;
+  unsigned  MaxNumDownBuffers;
+  uintptr_t pRing;
+
+  if (SEGGER_RTT_CheckRegion(Address, Size) != 0) {
+    return -1;
+  }
+  MaxNumUpBuffers   = SEGGER_RTT__RD32(SEGGER_RTT__ADDR(Address, SEGGER_RTT__CB_OFF_MAX_NUM_UP_BUFFERS));
+  MaxNumDownBuffers = SEGGER_RTT__RD32(SEGGER_RTT__ADDR(Address, SEGGER_RTT__CB_OFF_MAX_NUM_DOWN_BUFFERS));
+  RTT__DMB();                       // Force buffer count reads before calculating the ring address
+  if ((MaxNumUpBuffers == 0u) || (MaxNumDownBuffers == 0u) || (BufferIndex >= MaxNumDownBuffers)) {
+    return -1;
+  }
+  pRing = SEGGER_RTT__ADDR(Address, SEGGER_RTT__CB_OFF_A_DOWN_RUNTIME_INDEX(MaxNumUpBuffers, BufferIndex));
+  return _CheckRingConfigured(pRing);
+}
+
+/*********************************************************************
+*
+*       SEGGER_RTT_GetRequiredMemSize()
+*
+*  Function description
+*    Returns the shared-memory size required by SEGGER RTT for the
+*    requested number of up/down buffer pairs. The returned size does not
+*    include application-defined memory placed after the RTT buffers.
+*
+*  Parameters
+*    NumBuffers  Number of up/down buffer pairs to support.
+*
+*  Return value
+*    > 0  Required shared-memory size.
+*    == 0 Invalid buffer count or size overflow.
+*/
+size_t SEGGER_RTT_GetRequiredMemSize(unsigned NumBuffers) {
+  return _GetRequiredMemSize(NumBuffers);
+}
+
+/*********************************************************************
+*
+*       SEGGER_RTT_SPINLOCK_SW_Create()
+*
+*  Function description
+*    Creates a software-implementation spinlock in shared memory.
+*
+*  Parameters
+*    Address  Base address of the spinlock object.
+*    Size     Size of the accessible spinlock memory range.
+*
+*  Return value
+*      0  O.K.
+*    < 0  Error.
+*
+*  Additional information
+*    After creation, the spinlock is not locked.
+*/
+int SEGGER_RTT_SPINLOCK_SW_Create(uintptr_t Address, size_t Size) {
+  unsigned i;
+
+  if (_CheckSpinLockRange(Address, Size) != 0) {
+    return -1;
+  }
+
+  SEGGER_RTT__WR32(SEGGER_RTT__ADDR(Address, SEGGER_RTT_SPINLOCK_SW_OFF_MAGIC), 0u);
+  RTT__DMB();
+  for (i = 0u; i < SEGGER_RTT_SPINLOCK_MAX_CORES; i++) {
+    SEGGER_RTT__WR32(SEGGER_RTT_SPINLOCK_SW_ENTERING_ADDR(Address, i), 0u);
+    SEGGER_RTT__WR32(SEGGER_RTT_SPINLOCK_SW_NUMBER_ADDR(  Address, i), 0u);
+  }
+  SEGGER_RTT__WR32(SEGGER_RTT__ADDR(Address, SEGGER_RTT_SPINLOCK_SW_OFF_MAX_CORES), SEGGER_RTT_SPINLOCK_MAX_CORES);
+  RTT__DMB();
+  SEGGER_RTT__WR32(SEGGER_RTT__ADDR(Address, SEGGER_RTT_SPINLOCK_SW_OFF_MAGIC), SEGGER_RTT_SPINLOCK_SW_MAGIC);
+  RTT__DMB();
+  return 0;
+}
+
+/*********************************************************************
+*
+*       SEGGER_RTT_SPINLOCK_SW_Check()
+*
+*  Function description
+*    Checks whether a software-implementation spinlock exists in the
+*    supplied shared-memory range.
+*
+*  Parameters
+*    Address  Base address of the spinlock object.
+*    Size     Size of the accessible spinlock memory range.
+*
+*  Return value
+*      0  O.K.
+*    < 0  Error.
+*/
+int SEGGER_RTT_SPINLOCK_SW_Check(uintptr_t Address, size_t Size) {
+  if (_CheckSpinLockRange(Address, Size) != 0) {
+    return -1;
+  }
+  if (SEGGER_RTT__RD32(SEGGER_RTT__ADDR(Address, SEGGER_RTT_SPINLOCK_SW_OFF_MAGIC)) != SEGGER_RTT_SPINLOCK_SW_MAGIC) {
+    return -1;
+  }
+  RTT__DMB();
+  if (SEGGER_RTT__RD32(SEGGER_RTT__ADDR(Address, SEGGER_RTT_SPINLOCK_SW_OFF_MAX_CORES)) != SEGGER_RTT_SPINLOCK_MAX_CORES) {
+    return -1;
+  }
+  return 0;
+}
+
+/*********************************************************************
+*
+*       SEGGER_RTT_SPINLOCK_SW_Lock()
+*
+*  Function description
+*    Acquires a software-implementation spinlock.
+*
+*  Parameters
+*    Address  Base address of the spinlock object.
+*    Id       Unique core identifier, 0 <= Id < SEGGER_RTT_SPINLOCK_MAX_CORES.
+*
+*  Return value
+*      0  O.K.
+*    < 0  Error.
+*
+*  Additional information
+*    A core that has acquired a spinlock must not call this function for
+*    the same spinlock again. The spinlock must first be released by
+*    SEGGER_RTT_SPINLOCK_SW_Unlock().
+*/
+int SEGGER_RTT_SPINLOCK_SW_Lock(uintptr_t Address, unsigned Id) {
+  return _SpinLockAcquire(Address, Id, NULL);
+}
+
+/*********************************************************************
+*
+*       SEGGER_RTT_SPINLOCK_SW_LockWithLimit()
+*
+*  Function description
+*    Acquires a software-implementation spinlock with bounded waiting.
+*
+*  Parameters
+*    Address       Base address of the spinlock object.
+*    Id            Unique core identifier, 0 <= Id < SEGGER_RTT_SPINLOCK_MAX_CORES.
+*    MaxWaitSpins  Maximum wait-loop iterations before returning an error.
+*
+*  Return value
+*      0  O.K.
+*    < 0  Error.
+*
+*  Additional information
+*    MaxWaitSpins limits only waits for other participants. If no wait is
+*    needed, the lock can be acquired even when MaxWaitSpins is 0.
+*/
+int SEGGER_RTT_SPINLOCK_SW_LockWithLimit(uintptr_t Address, unsigned Id, uint32_t MaxWaitSpins) {
+  return _SpinLockAcquire(Address, Id, &MaxWaitSpins);
+}
+
+/*********************************************************************
+*
+*       SEGGER_RTT_SPINLOCK_SW_Unlock()
+*
+*  Function description
+*    Releases a software-implementation spinlock.
+*
+*  Parameters
+*    Address  Base address of the spinlock object.
+*    Id       Unique core identifier, 0 <= Id < SEGGER_RTT_SPINLOCK_MAX_CORES.
+*
+*  Return value
+*      0  O.K.
+*    < 0  Error.
+*/
+int SEGGER_RTT_SPINLOCK_SW_Unlock(uintptr_t Address, unsigned Id) {
+  if ((Address == 0u) || (Id >= SEGGER_RTT_SPINLOCK_MAX_CORES)) {
+    return -1;
+  }
+  if (SEGGER_RTT__RD32(SEGGER_RTT__ADDR(Address, SEGGER_RTT_SPINLOCK_SW_OFF_MAGIC)) != SEGGER_RTT_SPINLOCK_SW_MAGIC) {
+    return -1;
+  }
+  if (SEGGER_RTT__RD32(SEGGER_RTT__ADDR(Address, SEGGER_RTT_SPINLOCK_SW_OFF_MAX_CORES)) != SEGGER_RTT_SPINLOCK_MAX_CORES) {
+    return -1;
+  }
+  RTT__DMB();
+  SEGGER_RTT__WR32(SEGGER_RTT_SPINLOCK_SW_NUMBER_ADDR(Address, Id), 0u);
+  RTT__DMB();
+  return 0;
+}
+
+/*********************************************************************
+*
 *       SEGGER_RTT_FindControlBlock()
 *
 *  Function description
@@ -739,9 +1318,12 @@ int SEGGER_RTT_FindControlBlock(uintptr_t* pAddress, size_t Size) {
     return -1;
   }
   Address = *pAddress;
+  if (Size > (size_t)(UINTPTR_MAX - Address)) {
+    return -1;
+  }
   for (Off = 0u; Off <= (Size - sizeof(_aRTTId)); Off++) {
     Candidate = SEGGER_RTT__ADDR(Address, Off);
-    if (((Candidate & 3u) != 0u) || (Off > (Size - SEGGER_RTT__CB_OFF_A_UP))) {
+    if (((Candidate & SEGGER_RTT__CB_ALIGNMENT_MASK) != 0u) || (Off > (Size - SEGGER_RTT__CB_OFF_A_UP))) {
       continue;
     }
     if (SEGGER_RTT__RD8(Candidate) != (unsigned char)_aRTTId[0]) {
@@ -757,6 +1339,75 @@ int SEGGER_RTT_FindControlBlock(uintptr_t* pAddress, size_t Size) {
       *pAddress = Candidate;
       return 0;
     }
+  }
+  return -1;
+}
+
+/*********************************************************************
+*
+*       SEGGER_RTT_FindValidControlBlock()
+*
+*  Function description
+*    Searches for the first initialized RTT control block whose
+*    descriptor table and configured payload buffers are valid for the
+*    remaining mapped shared-memory region. This function never
+*    initializes or modifies the control block.
+*
+*  Parameters
+*    pAddress     Pointer to the mapped memory base address.
+*                 Updated to the RTT control block address on success.
+*    Size         Size of the mapped memory region to search.
+*    pRegionSize  Optional pointer updated to the remaining mapped
+*                 region size from the returned control block address.
+*
+*  Return value
+*      0 - Valid RTT control block found, pAddress updated.
+*    < 0 - Valid RTT control block not found.
+*/
+int SEGGER_RTT_FindValidControlBlock(uintptr_t* pAddress, size_t Size, size_t* pRegionSize) {
+  uintptr_t SearchBase;
+  uintptr_t SearchEnd;
+  uintptr_t RemainingBase;
+  uintptr_t Candidate;
+  uintptr_t NextBase;
+  size_t    RemainingSize;
+  size_t    CandidateRegionSize;
+
+  if ((pAddress == NULL) || (*pAddress == 0u) || (Size == 0u)) {
+    return -1;
+  }
+  SearchBase = *pAddress;
+  if (Size > (size_t)(UINTPTR_MAX - SearchBase)) {
+    return -1;
+  }
+  SearchEnd     = SearchBase + Size;
+  RemainingBase = SearchBase;
+  RemainingSize = Size;
+  while (RemainingSize >= SEGGER_RTT__CB_OFF_A_UP) {
+    Candidate = RemainingBase;
+    if (SEGGER_RTT_FindControlBlock(&Candidate, RemainingSize) != 0) {
+      return -1;
+    }
+    if ((Candidate < RemainingBase) || (Candidate >= SearchEnd)) {
+      return -1;
+    }
+    CandidateRegionSize = (size_t)(SearchEnd - Candidate);
+    if (SEGGER_RTT_CheckRegion(Candidate, CandidateRegionSize) == 0) {
+      *pAddress = Candidate;
+      if (pRegionSize != NULL) {
+        *pRegionSize = CandidateRegionSize;
+      }
+      return 0;
+    }
+    if (Candidate > (UINTPTR_MAX - SEGGER_RTT__CB_ALIGNMENT)) {
+      return -1;
+    }
+    NextBase = Candidate + SEGGER_RTT__CB_ALIGNMENT;
+    if (NextBase >= SearchEnd) {
+      return -1;
+    }
+    RemainingBase = NextBase;
+    RemainingSize = (size_t)(SearchEnd - RemainingBase);
   }
   return -1;
 }
@@ -791,7 +1442,7 @@ unsigned SEGGER_RTT_ReadUpBufferNoLock(uintptr_t Address, unsigned BufferIndex, 
   unsigned                WrOff;
   unsigned                i;
   unsigned                MaxNumUpBuffers;
-  unsigned                BufferOff;
+  uint64_t                BufferOff;
   unsigned                SizeOfBuffer;
   unsigned char*          pBuffer;
   uintptr_t               pRing;
@@ -813,7 +1464,7 @@ unsigned SEGGER_RTT_ReadUpBufferNoLock(uintptr_t Address, unsigned BufferIndex, 
   }
   pRing = SEGGER_RTT__ADDR(Address, SEGGER_RTT__CB_OFF_A_UP_INDEX(BufferIndex));
   pBuffer = (unsigned char*)pData;
-  BufferOff    = SEGGER_RTT__RD32(SEGGER_RTT__FIELD(pRing, SEGGER_RTT__BUFFER_OFF_P_BUFFER));
+  BufferOff    = SEGGER_RTT__RD64(SEGGER_RTT__FIELD(pRing, SEGGER_RTT__BUFFER_OFF_P_BUFFER));
   SizeOfBuffer = SEGGER_RTT__RD32(SEGGER_RTT__FIELD(pRing, SEGGER_RTT__BUFFER_OFF_SIZE_OF_BUFFER));
   RdOff = SEGGER_RTT__RD32(SEGGER_RTT__FIELD(pRing, SEGGER_RTT__BUFFER_OFF_RD_OFF));
   WrOff = SEGGER_RTT__RD32(SEGGER_RTT__FIELD(pRing, SEGGER_RTT__BUFFER_OFF_WR_OFF));
@@ -909,7 +1560,7 @@ unsigned SEGGER_RTT_ReadNoLock(uintptr_t Address, unsigned BufferIndex, void* pD
   unsigned                i;
   unsigned                MaxNumUpBuffers;
   unsigned                MaxNumDownBuffers;
-  unsigned                BufferOff;
+  uint64_t                BufferOff;
   unsigned                SizeOfBuffer;
   unsigned char*          pBuffer;
   uintptr_t               pRing;
@@ -932,7 +1583,7 @@ unsigned SEGGER_RTT_ReadNoLock(uintptr_t Address, unsigned BufferIndex, void* pD
   }
   pRing = SEGGER_RTT__ADDR(Address, SEGGER_RTT__CB_OFF_A_DOWN_RUNTIME_INDEX(MaxNumUpBuffers, BufferIndex));
   pBuffer = (unsigned char*)pData;
-  BufferOff    = SEGGER_RTT__RD32(SEGGER_RTT__FIELD(pRing, SEGGER_RTT__BUFFER_OFF_P_BUFFER));
+  BufferOff    = SEGGER_RTT__RD64(SEGGER_RTT__FIELD(pRing, SEGGER_RTT__BUFFER_OFF_P_BUFFER));
   SizeOfBuffer = SEGGER_RTT__RD32(SEGGER_RTT__FIELD(pRing, SEGGER_RTT__BUFFER_OFF_SIZE_OF_BUFFER));
   RdOff = SEGGER_RTT__RD32(SEGGER_RTT__FIELD(pRing, SEGGER_RTT__BUFFER_OFF_RD_OFF));
   WrOff = SEGGER_RTT__RD32(SEGGER_RTT__FIELD(pRing, SEGGER_RTT__BUFFER_OFF_WR_OFF));
@@ -1111,7 +1762,7 @@ void SEGGER_RTT_WriteWithOverwriteNoLock(uintptr_t Address, unsigned BufferIndex
   unsigned       i;
   unsigned       MaxNumUpBuffers;
   unsigned       SizeOfBuffer;
-  unsigned       BufferOff;
+  uint64_t       BufferOff;
   volatile char* pDst;
 
   if ((Address == 0u) || (pBuffer == NULL) || (NumBytes == 0u)) {
@@ -1133,7 +1784,7 @@ void SEGGER_RTT_WriteWithOverwriteNoLock(uintptr_t Address, unsigned BufferIndex
     return;
   }
   pRing = SEGGER_RTT__ADDR(Address, SEGGER_RTT__CB_OFF_A_UP_INDEX(BufferIndex));
-  BufferOff    = SEGGER_RTT__RD32(SEGGER_RTT__FIELD(pRing, SEGGER_RTT__BUFFER_OFF_P_BUFFER));
+  BufferOff    = SEGGER_RTT__RD64(SEGGER_RTT__FIELD(pRing, SEGGER_RTT__BUFFER_OFF_P_BUFFER));
   SizeOfBuffer = SEGGER_RTT__RD32(SEGGER_RTT__FIELD(pRing, SEGGER_RTT__BUFFER_OFF_SIZE_OF_BUFFER));
   RdOff        = SEGGER_RTT__RD32(SEGGER_RTT__FIELD(pRing, SEGGER_RTT__BUFFER_OFF_RD_OFF));
   WrOff        = SEGGER_RTT__RD32(SEGGER_RTT__FIELD(pRing, SEGGER_RTT__BUFFER_OFF_WR_OFF));
@@ -1245,7 +1896,7 @@ unsigned SEGGER_RTT_WriteSkipNoLock(uintptr_t Address, unsigned BufferIndex, con
   unsigned       Rem;
   unsigned       i;
   unsigned       MaxNumUpBuffers;
-  unsigned       BufferOff;
+  uint64_t       BufferOff;
   unsigned       SizeOfBuffer;
   volatile char* pDst;
 
@@ -1277,7 +1928,7 @@ unsigned SEGGER_RTT_WriteSkipNoLock(uintptr_t Address, unsigned BufferIndex, con
   pRing = SEGGER_RTT__ADDR(Address, SEGGER_RTT__CB_OFF_A_UP_INDEX(BufferIndex));
   RdOff = SEGGER_RTT__RD32(SEGGER_RTT__FIELD(pRing, SEGGER_RTT__BUFFER_OFF_RD_OFF));
   WrOff = SEGGER_RTT__RD32(SEGGER_RTT__FIELD(pRing, SEGGER_RTT__BUFFER_OFF_WR_OFF));
-  BufferOff    = SEGGER_RTT__RD32(SEGGER_RTT__FIELD(pRing, SEGGER_RTT__BUFFER_OFF_P_BUFFER));
+  BufferOff    = SEGGER_RTT__RD64(SEGGER_RTT__FIELD(pRing, SEGGER_RTT__BUFFER_OFF_P_BUFFER));
   SizeOfBuffer = SEGGER_RTT__RD32(SEGGER_RTT__FIELD(pRing, SEGGER_RTT__BUFFER_OFF_SIZE_OF_BUFFER));
   RTT__DMB();                       // Force descriptor reads before using offsets or buffer memory
   if ((BufferOff == 0u) || (SizeOfBuffer < 2u) || (RdOff >= SizeOfBuffer) || (WrOff >= SizeOfBuffer)) {
@@ -1389,7 +2040,7 @@ unsigned SEGGER_RTT_WriteDownBufferNoLock(uintptr_t Address, unsigned BufferInde
   unsigned                i;
   unsigned                MaxNumUpBuffers;
   unsigned                MaxNumDownBuffers;
-  unsigned                BufferOff;
+  uint64_t                BufferOff;
   unsigned                SizeOfBuffer;
   unsigned                RdOff;
   unsigned                WrOff;
@@ -1416,7 +2067,7 @@ unsigned SEGGER_RTT_WriteDownBufferNoLock(uintptr_t Address, unsigned BufferInde
     return 0u;
   }
   pRing = SEGGER_RTT__ADDR(Address, SEGGER_RTT__CB_OFF_A_DOWN_RUNTIME_INDEX(MaxNumUpBuffers, BufferIndex));
-  BufferOff    = SEGGER_RTT__RD32(SEGGER_RTT__FIELD(pRing, SEGGER_RTT__BUFFER_OFF_P_BUFFER));
+  BufferOff    = SEGGER_RTT__RD64(SEGGER_RTT__FIELD(pRing, SEGGER_RTT__BUFFER_OFF_P_BUFFER));
   SizeOfBuffer = SEGGER_RTT__RD32(SEGGER_RTT__FIELD(pRing, SEGGER_RTT__BUFFER_OFF_SIZE_OF_BUFFER));
   RdOff        = SEGGER_RTT__RD32(SEGGER_RTT__FIELD(pRing, SEGGER_RTT__BUFFER_OFF_RD_OFF));
   WrOff        = SEGGER_RTT__RD32(SEGGER_RTT__FIELD(pRing, SEGGER_RTT__BUFFER_OFF_WR_OFF));
@@ -1496,7 +2147,7 @@ unsigned SEGGER_RTT_WriteNoLock(uintptr_t Address, unsigned BufferIndex, const v
   unsigned              Avail;
   unsigned              i;
   unsigned              MaxNumUpBuffers;
-  unsigned              BufferOff;
+  uint64_t              BufferOff;
   unsigned              SizeOfBuffer;
   unsigned              RdOff;
   unsigned              WrOff;
@@ -1521,7 +2172,7 @@ unsigned SEGGER_RTT_WriteNoLock(uintptr_t Address, unsigned BufferIndex, const v
     return 0u;
   }
   pRing = SEGGER_RTT__ADDR(Address, SEGGER_RTT__CB_OFF_A_UP_INDEX(BufferIndex));
-  BufferOff    = SEGGER_RTT__RD32(SEGGER_RTT__FIELD(pRing, SEGGER_RTT__BUFFER_OFF_P_BUFFER));
+  BufferOff    = SEGGER_RTT__RD64(SEGGER_RTT__FIELD(pRing, SEGGER_RTT__BUFFER_OFF_P_BUFFER));
   SizeOfBuffer = SEGGER_RTT__RD32(SEGGER_RTT__FIELD(pRing, SEGGER_RTT__BUFFER_OFF_SIZE_OF_BUFFER));
   RdOff        = SEGGER_RTT__RD32(SEGGER_RTT__FIELD(pRing, SEGGER_RTT__BUFFER_OFF_RD_OFF));
   WrOff        = SEGGER_RTT__RD32(SEGGER_RTT__FIELD(pRing, SEGGER_RTT__BUFFER_OFF_WR_OFF));
@@ -1700,7 +2351,7 @@ unsigned SEGGER_RTT_PutCharSkipNoLock(uintptr_t Address, unsigned BufferIndex, c
   unsigned       RdOff;
   unsigned       i;
   unsigned       MaxNumUpBuffers;
-  unsigned       BufferOff;
+  uint64_t       BufferOff;
   unsigned       SizeOfBuffer;
   unsigned       Status;
   volatile char* pDst;
@@ -1723,7 +2374,7 @@ unsigned SEGGER_RTT_PutCharSkipNoLock(uintptr_t Address, unsigned BufferIndex, c
     return 0u;
   }
   pRing = SEGGER_RTT__ADDR(Address, SEGGER_RTT__CB_OFF_A_UP_INDEX(BufferIndex));
-  BufferOff    = SEGGER_RTT__RD32(SEGGER_RTT__FIELD(pRing, SEGGER_RTT__BUFFER_OFF_P_BUFFER));
+  BufferOff    = SEGGER_RTT__RD64(SEGGER_RTT__FIELD(pRing, SEGGER_RTT__BUFFER_OFF_P_BUFFER));
   SizeOfBuffer = SEGGER_RTT__RD32(SEGGER_RTT__FIELD(pRing, SEGGER_RTT__BUFFER_OFF_SIZE_OF_BUFFER));
   RdOff        = SEGGER_RTT__RD32(SEGGER_RTT__FIELD(pRing, SEGGER_RTT__BUFFER_OFF_RD_OFF));
   WrOff        = SEGGER_RTT__RD32(SEGGER_RTT__FIELD(pRing, SEGGER_RTT__BUFFER_OFF_WR_OFF));
@@ -1779,7 +2430,7 @@ unsigned SEGGER_RTT_PutCharSkip(uintptr_t Address, unsigned BufferIndex, char c)
   unsigned       WrOffNext;
   unsigned       RdOff;
   unsigned       MaxNumUpBuffers;
-  unsigned       BufferOff;
+  uint64_t       BufferOff;
   unsigned       SizeOfBuffer;
   unsigned       Status;
   volatile char* pDst;
@@ -1798,7 +2449,7 @@ unsigned SEGGER_RTT_PutCharSkip(uintptr_t Address, unsigned BufferIndex, char c)
     Status = 0u;
   } else {
     pRing = SEGGER_RTT__ADDR(Address, SEGGER_RTT__CB_OFF_A_UP_INDEX(BufferIndex));
-    BufferOff    = SEGGER_RTT__RD32(SEGGER_RTT__FIELD(pRing, SEGGER_RTT__BUFFER_OFF_P_BUFFER));
+    BufferOff    = SEGGER_RTT__RD64(SEGGER_RTT__FIELD(pRing, SEGGER_RTT__BUFFER_OFF_P_BUFFER));
     SizeOfBuffer = SEGGER_RTT__RD32(SEGGER_RTT__FIELD(pRing, SEGGER_RTT__BUFFER_OFF_SIZE_OF_BUFFER));
     RdOff        = SEGGER_RTT__RD32(SEGGER_RTT__FIELD(pRing, SEGGER_RTT__BUFFER_OFF_RD_OFF));
     WrOff        = SEGGER_RTT__RD32(SEGGER_RTT__FIELD(pRing, SEGGER_RTT__BUFFER_OFF_WR_OFF));
@@ -1856,7 +2507,7 @@ unsigned SEGGER_RTT_PutChar(uintptr_t Address, unsigned BufferIndex, char c) {
   unsigned       WrOffNext;
   unsigned       RdOff;
   unsigned       MaxNumUpBuffers;
-  unsigned       BufferOff;
+  uint64_t       BufferOff;
   unsigned       SizeOfBuffer;
   unsigned       Flags;
   unsigned       Status;
@@ -1876,7 +2527,7 @@ unsigned SEGGER_RTT_PutChar(uintptr_t Address, unsigned BufferIndex, char c) {
     Status = 0u;
   } else {
     pRing = SEGGER_RTT__ADDR(Address, SEGGER_RTT__CB_OFF_A_UP_INDEX(BufferIndex));
-    BufferOff    = SEGGER_RTT__RD32(SEGGER_RTT__FIELD(pRing, SEGGER_RTT__BUFFER_OFF_P_BUFFER));
+    BufferOff    = SEGGER_RTT__RD64(SEGGER_RTT__FIELD(pRing, SEGGER_RTT__BUFFER_OFF_P_BUFFER));
     SizeOfBuffer = SEGGER_RTT__RD32(SEGGER_RTT__FIELD(pRing, SEGGER_RTT__BUFFER_OFF_SIZE_OF_BUFFER));
     RdOff        = SEGGER_RTT__RD32(SEGGER_RTT__FIELD(pRing, SEGGER_RTT__BUFFER_OFF_RD_OFF));
     WrOff        = SEGGER_RTT__RD32(SEGGER_RTT__FIELD(pRing, SEGGER_RTT__BUFFER_OFF_WR_OFF));
@@ -1999,7 +2650,7 @@ int SEGGER_RTT_HasKey(uintptr_t Address) {
   unsigned i;
   unsigned MaxNumUpBuffers;
   unsigned MaxNumDownBuffers;
-  unsigned BufferOff;
+  uint64_t BufferOff;
   unsigned SizeOfBuffer;
   uintptr_t pRing;
 
@@ -2019,7 +2670,7 @@ int SEGGER_RTT_HasKey(uintptr_t Address) {
     return 0;
   }
   pRing = SEGGER_RTT__ADDR(Address, SEGGER_RTT__CB_OFF_A_DOWN_RUNTIME_INDEX(MaxNumUpBuffers, 0u));
-  BufferOff    = SEGGER_RTT__RD32(SEGGER_RTT__FIELD(pRing, SEGGER_RTT__BUFFER_OFF_P_BUFFER));
+  BufferOff    = SEGGER_RTT__RD64(SEGGER_RTT__FIELD(pRing, SEGGER_RTT__BUFFER_OFF_P_BUFFER));
   SizeOfBuffer = SEGGER_RTT__RD32(SEGGER_RTT__FIELD(pRing, SEGGER_RTT__BUFFER_OFF_SIZE_OF_BUFFER));
   RdOff        = SEGGER_RTT__RD32(SEGGER_RTT__FIELD(pRing, SEGGER_RTT__BUFFER_OFF_RD_OFF));
   WrOff        = SEGGER_RTT__RD32(SEGGER_RTT__FIELD(pRing, SEGGER_RTT__BUFFER_OFF_WR_OFF));
@@ -2052,7 +2703,7 @@ unsigned SEGGER_RTT_HasData(uintptr_t Address, unsigned BufferIndex) {
   unsigned i;
   unsigned MaxNumUpBuffers;
   unsigned MaxNumDownBuffers;
-  unsigned BufferOff;
+  uint64_t BufferOff;
   unsigned SizeOfBuffer;
   uintptr_t pRing;
 
@@ -2072,7 +2723,7 @@ unsigned SEGGER_RTT_HasData(uintptr_t Address, unsigned BufferIndex) {
     return 0u;
   }
   pRing = SEGGER_RTT__ADDR(Address, SEGGER_RTT__CB_OFF_A_DOWN_RUNTIME_INDEX(MaxNumUpBuffers, BufferIndex));
-  BufferOff    = SEGGER_RTT__RD32(SEGGER_RTT__FIELD(pRing, SEGGER_RTT__BUFFER_OFF_P_BUFFER));
+  BufferOff    = SEGGER_RTT__RD64(SEGGER_RTT__FIELD(pRing, SEGGER_RTT__BUFFER_OFF_P_BUFFER));
   SizeOfBuffer = SEGGER_RTT__RD32(SEGGER_RTT__FIELD(pRing, SEGGER_RTT__BUFFER_OFF_SIZE_OF_BUFFER));
   RdOff        = SEGGER_RTT__RD32(SEGGER_RTT__FIELD(pRing, SEGGER_RTT__BUFFER_OFF_RD_OFF));
   WrOff        = SEGGER_RTT__RD32(SEGGER_RTT__FIELD(pRing, SEGGER_RTT__BUFFER_OFF_WR_OFF));
@@ -2107,7 +2758,7 @@ unsigned SEGGER_RTT_HasDataUp(uintptr_t Address, unsigned BufferIndex) {
   unsigned WrOff;
   unsigned i;
   unsigned MaxNumUpBuffers;
-  unsigned BufferOff;
+  uint64_t BufferOff;
   unsigned SizeOfBuffer;
   uintptr_t pRing;
 
@@ -2126,7 +2777,7 @@ unsigned SEGGER_RTT_HasDataUp(uintptr_t Address, unsigned BufferIndex) {
     return 0u;
   }
   pRing = SEGGER_RTT__ADDR(Address, SEGGER_RTT__CB_OFF_A_UP_INDEX(BufferIndex));
-  BufferOff    = SEGGER_RTT__RD32(SEGGER_RTT__FIELD(pRing, SEGGER_RTT__BUFFER_OFF_P_BUFFER));
+  BufferOff    = SEGGER_RTT__RD64(SEGGER_RTT__FIELD(pRing, SEGGER_RTT__BUFFER_OFF_P_BUFFER));
   SizeOfBuffer = SEGGER_RTT__RD32(SEGGER_RTT__FIELD(pRing, SEGGER_RTT__BUFFER_OFF_SIZE_OF_BUFFER));
   RdOff        = SEGGER_RTT__RD32(SEGGER_RTT__FIELD(pRing, SEGGER_RTT__BUFFER_OFF_RD_OFF));
   WrOff        = SEGGER_RTT__RD32(SEGGER_RTT__FIELD(pRing, SEGGER_RTT__BUFFER_OFF_WR_OFF));
@@ -2182,16 +2833,16 @@ int SEGGER_RTT_AllocDownBuffer(uintptr_t Address, const char* sName, void* pBuff
     BufferIndex = 0;
     do {
       pRing = SEGGER_RTT__ADDR(Address, SEGGER_RTT__CB_OFF_A_DOWN_RUNTIME_INDEX(MaxNumUpBuffers, (unsigned)BufferIndex));
-      if (SEGGER_RTT__RD32(SEGGER_RTT__FIELD(pRing, SEGGER_RTT__BUFFER_OFF_P_BUFFER)) == 0u) {
+      if (SEGGER_RTT__RD64(SEGGER_RTT__FIELD(pRing, SEGGER_RTT__BUFFER_OFF_P_BUFFER)) == 0u) {
         break;
       }
       BufferIndex++;
     } while ((unsigned)BufferIndex < MaxNumDownBuffers);
     if ((unsigned)BufferIndex < MaxNumDownBuffers) {
       Addr = (uintptr_t)sName;
-      SEGGER_RTT__WR32(SEGGER_RTT__FIELD(pRing, SEGGER_RTT__BUFFER_OFF_NAME),           Addr ? (uint32_t)(Addr - Address) : 0u);
+      SEGGER_RTT__WR64(SEGGER_RTT__FIELD(pRing, SEGGER_RTT__BUFFER_OFF_NAME),           Addr ? (uint64_t)(Addr - Address) : 0u);
       Addr = (uintptr_t)pBuffer;
-      SEGGER_RTT__WR32(SEGGER_RTT__FIELD(pRing, SEGGER_RTT__BUFFER_OFF_P_BUFFER),       Addr ? (uint32_t)(Addr - Address) : 0u);
+      SEGGER_RTT__WR64(SEGGER_RTT__FIELD(pRing, SEGGER_RTT__BUFFER_OFF_P_BUFFER),       Addr ? (uint64_t)(Addr - Address) : 0u);
       SEGGER_RTT__WR32(SEGGER_RTT__FIELD(pRing, SEGGER_RTT__BUFFER_OFF_SIZE_OF_BUFFER), BufferSize);
       SEGGER_RTT__WR32(SEGGER_RTT__FIELD(pRing, SEGGER_RTT__BUFFER_OFF_RD_OFF),         0u);
       SEGGER_RTT__WR32(SEGGER_RTT__FIELD(pRing, SEGGER_RTT__BUFFER_OFF_WR_OFF),         0u);
@@ -2245,16 +2896,16 @@ int SEGGER_RTT_AllocUpBuffer(uintptr_t Address, const char* sName, void* pBuffer
     BufferIndex = 0;
     do {
       pRing = SEGGER_RTT__ADDR(Address, SEGGER_RTT__CB_OFF_A_UP_INDEX((unsigned)BufferIndex));
-      if (SEGGER_RTT__RD32(SEGGER_RTT__FIELD(pRing, SEGGER_RTT__BUFFER_OFF_P_BUFFER)) == 0u) {
+      if (SEGGER_RTT__RD64(SEGGER_RTT__FIELD(pRing, SEGGER_RTT__BUFFER_OFF_P_BUFFER)) == 0u) {
         break;
       }
       BufferIndex++;
     } while ((unsigned)BufferIndex < MaxNumUpBuffers);
     if ((unsigned)BufferIndex < MaxNumUpBuffers) {
       Addr = (uintptr_t)sName;
-      SEGGER_RTT__WR32(SEGGER_RTT__FIELD(pRing, SEGGER_RTT__BUFFER_OFF_NAME),           Addr ? (uint32_t)(Addr - Address) : 0u);
+      SEGGER_RTT__WR64(SEGGER_RTT__FIELD(pRing, SEGGER_RTT__BUFFER_OFF_NAME),           Addr ? (uint64_t)(Addr - Address) : 0u);
       Addr = (uintptr_t)pBuffer;
-      SEGGER_RTT__WR32(SEGGER_RTT__FIELD(pRing, SEGGER_RTT__BUFFER_OFF_P_BUFFER),       Addr ? (uint32_t)(Addr - Address) : 0u);
+      SEGGER_RTT__WR64(SEGGER_RTT__FIELD(pRing, SEGGER_RTT__BUFFER_OFF_P_BUFFER),       Addr ? (uint64_t)(Addr - Address) : 0u);
       SEGGER_RTT__WR32(SEGGER_RTT__FIELD(pRing, SEGGER_RTT__BUFFER_OFF_SIZE_OF_BUFFER), BufferSize);
       SEGGER_RTT__WR32(SEGGER_RTT__FIELD(pRing, SEGGER_RTT__BUFFER_OFF_RD_OFF),         0u);
       SEGGER_RTT__WR32(SEGGER_RTT__FIELD(pRing, SEGGER_RTT__BUFFER_OFF_WR_OFF),         0u);
@@ -2322,9 +2973,9 @@ int SEGGER_RTT_ConfigUpBuffer(uintptr_t Address, unsigned BufferIndex, const cha
         pUp = SEGGER_RTT__ADDR(Address, SEGGER_RTT__CB_OFF_A_UP_INDEX(BufferIndex));
         if (BufferIndex) {
           Addr = (uintptr_t)sName;
-          SEGGER_RTT__WR32(SEGGER_RTT__FIELD(pUp, SEGGER_RTT__BUFFER_OFF_NAME),           Addr ? (uint32_t)(Addr - Address) : 0u);
+          SEGGER_RTT__WR64(SEGGER_RTT__FIELD(pUp, SEGGER_RTT__BUFFER_OFF_NAME),           Addr ? (uint64_t)(Addr - Address) : 0u);
           Addr = (uintptr_t)pBuffer;
-          SEGGER_RTT__WR32(SEGGER_RTT__FIELD(pUp, SEGGER_RTT__BUFFER_OFF_P_BUFFER),       Addr ? (uint32_t)(Addr - Address) : 0u);
+          SEGGER_RTT__WR64(SEGGER_RTT__FIELD(pUp, SEGGER_RTT__BUFFER_OFF_P_BUFFER),       Addr ? (uint64_t)(Addr - Address) : 0u);
           SEGGER_RTT__WR32(SEGGER_RTT__FIELD(pUp, SEGGER_RTT__BUFFER_OFF_SIZE_OF_BUFFER), BufferSize);
           SEGGER_RTT__WR32(SEGGER_RTT__FIELD(pUp, SEGGER_RTT__BUFFER_OFF_RD_OFF),         0u);
           SEGGER_RTT__WR32(SEGGER_RTT__FIELD(pUp, SEGGER_RTT__BUFFER_OFF_WR_OFF),         0u);
@@ -2396,9 +3047,9 @@ int SEGGER_RTT_ConfigDownBuffer(uintptr_t Address, unsigned BufferIndex, const c
         pDown = SEGGER_RTT__ADDR(Address, SEGGER_RTT__CB_OFF_A_DOWN_RUNTIME_INDEX(MaxNumUpBuffers, BufferIndex));
         if (BufferIndex) {
           Addr = (uintptr_t)sName;
-          SEGGER_RTT__WR32(SEGGER_RTT__FIELD(pDown, SEGGER_RTT__BUFFER_OFF_NAME),           Addr ? (uint32_t)(Addr - Address) : 0u);
+          SEGGER_RTT__WR64(SEGGER_RTT__FIELD(pDown, SEGGER_RTT__BUFFER_OFF_NAME),           Addr ? (uint64_t)(Addr - Address) : 0u);
           Addr = (uintptr_t)pBuffer;
-          SEGGER_RTT__WR32(SEGGER_RTT__FIELD(pDown, SEGGER_RTT__BUFFER_OFF_P_BUFFER),       Addr ? (uint32_t)(Addr - Address) : 0u);
+          SEGGER_RTT__WR64(SEGGER_RTT__FIELD(pDown, SEGGER_RTT__BUFFER_OFF_P_BUFFER),       Addr ? (uint64_t)(Addr - Address) : 0u);
           SEGGER_RTT__WR32(SEGGER_RTT__FIELD(pDown, SEGGER_RTT__BUFFER_OFF_SIZE_OF_BUFFER), BufferSize);
           SEGGER_RTT__WR32(SEGGER_RTT__FIELD(pDown, SEGGER_RTT__BUFFER_OFF_RD_OFF),         0u);
           SEGGER_RTT__WR32(SEGGER_RTT__FIELD(pDown, SEGGER_RTT__BUFFER_OFF_WR_OFF),         0u);
@@ -2450,7 +3101,7 @@ int SEGGER_RTT_SetNameUpBuffer(uintptr_t Address, unsigned BufferIndex, const ch
         r = -1;
       } else {
         pUp = SEGGER_RTT__ADDR(Address, SEGGER_RTT__CB_OFF_A_UP_INDEX(BufferIndex));
-        SEGGER_RTT__WR32(SEGGER_RTT__FIELD(pUp, SEGGER_RTT__BUFFER_OFF_NAME), Addr ? (uint32_t)(Addr - Address) : 0u);
+        SEGGER_RTT__WR64(SEGGER_RTT__FIELD(pUp, SEGGER_RTT__BUFFER_OFF_NAME), Addr ? (uint64_t)(Addr - Address) : 0u);
         r =  0;
       }
       SEGGER_RTT_UNLOCK();
@@ -2499,7 +3150,7 @@ int SEGGER_RTT_SetNameDownBuffer(uintptr_t Address, unsigned BufferIndex, const 
         r = -1;
       } else {
         pDown = SEGGER_RTT__ADDR(Address, SEGGER_RTT__CB_OFF_A_DOWN_RUNTIME_INDEX(MaxNumUpBuffers, BufferIndex));
-        SEGGER_RTT__WR32(SEGGER_RTT__FIELD(pDown, SEGGER_RTT__BUFFER_OFF_NAME), Addr ? (uint32_t)(Addr - Address) : 0u);
+        SEGGER_RTT__WR64(SEGGER_RTT__FIELD(pDown, SEGGER_RTT__BUFFER_OFF_NAME), Addr ? (uint64_t)(Addr - Address) : 0u);
         r =  0;
       }
       SEGGER_RTT_UNLOCK();
@@ -2637,7 +3288,7 @@ void SEGGER_RTT_Init (uintptr_t Address) {
 *    < 0 - Error
 */
 int SEGGER_RTT_InitEx (uintptr_t Address, size_t Size) {
-  if ((Address == 0u) || ((Address & 3u) != 0u) || (Size < SEGGER_RTT__REQUIRED_MEM_SIZE)) {
+  if ((Address == 0u) || ((Address & SEGGER_RTT__CB_ALIGNMENT_MASK) != 0u) || (Size < SEGGER_RTT__REQUIRED_MEM_SIZE)) {
     return -1;
   }
   if (Size > (size_t)(UINTPTR_MAX - Address)) {
@@ -2645,6 +3296,46 @@ int SEGGER_RTT_InitEx (uintptr_t Address, size_t Size) {
   }
   _DoInit(Address);
   return SEGGER_RTT_CheckRegion(Address, Size);
+}
+
+/*********************************************************************
+*
+*       SEGGER_RTT_EnsureInitEx
+*
+*  Function description
+*    Initializes the RTT Control Block if it is not initialized,
+*    validates it if it already exists, and configures the requested
+*    up/down buffer pairs in the mapped shared-memory region.
+*
+*  Parameters
+*    Address     Base address of the RTT control block.
+*    Size        Size of the mapped shared-memory region.
+*    NumBuffers  Number of up/down buffer pairs to configure.
+*
+*  Return value
+*      0 - O.K.
+*    < 0 - Error
+*/
+int SEGGER_RTT_EnsureInitEx (uintptr_t Address, size_t Size, unsigned NumBuffers) {
+  if ((Address == 0u) || (Size == 0u)) {
+    return -1;
+  }
+  if ((NumBuffers == 0u) ||
+      (NumBuffers > SEGGER_RTT_MAX_NUM_UP_BUFFERS) ||
+      (NumBuffers > SEGGER_RTT_MAX_NUM_DOWN_BUFFERS)) {
+    return -1;
+  }
+  if (Size > (size_t)(UINTPTR_MAX - Address)) {
+    return -1;
+  }
+  if (SEGGER_RTT_CheckInit(Address) != 0) {
+    if (SEGGER_RTT_InitEx(Address, Size) != 0) {
+      return -1;
+    }
+  } else if (SEGGER_RTT_CheckRegion(Address, Size) != 0) {
+    return -1;
+  }
+  return _EnsureExtraBufferPairs(Address, Size, NumBuffers);
 }
 
 /*********************************************************************
@@ -2806,7 +3497,7 @@ unsigned SEGGER_RTT_GetAvailWriteSpace (uintptr_t Address, unsigned BufferIndex)
   unsigned WrOff;
   unsigned i;
   unsigned MaxNumUpBuffers;
-  unsigned BufferOff;
+  uint64_t BufferOff;
   unsigned SizeOfBuffer;
   uintptr_t pRing;
 
@@ -2825,7 +3516,7 @@ unsigned SEGGER_RTT_GetAvailWriteSpace (uintptr_t Address, unsigned BufferIndex)
     return 0u;
   }
   pRing = SEGGER_RTT__ADDR(Address, SEGGER_RTT__CB_OFF_A_UP_INDEX(BufferIndex));
-  BufferOff    = SEGGER_RTT__RD32(SEGGER_RTT__FIELD(pRing, SEGGER_RTT__BUFFER_OFF_P_BUFFER));
+  BufferOff    = SEGGER_RTT__RD64(SEGGER_RTT__FIELD(pRing, SEGGER_RTT__BUFFER_OFF_P_BUFFER));
   SizeOfBuffer = SEGGER_RTT__RD32(SEGGER_RTT__FIELD(pRing, SEGGER_RTT__BUFFER_OFF_SIZE_OF_BUFFER));
   RdOff        = SEGGER_RTT__RD32(SEGGER_RTT__FIELD(pRing, SEGGER_RTT__BUFFER_OFF_RD_OFF));
   WrOff        = SEGGER_RTT__RD32(SEGGER_RTT__FIELD(pRing, SEGGER_RTT__BUFFER_OFF_WR_OFF));
@@ -2859,7 +3550,7 @@ unsigned SEGGER_RTT_GetBytesInBuffer(uintptr_t Address, unsigned BufferIndex) {
   unsigned WrOff;
   unsigned i;
   unsigned MaxNumUpBuffers;
-  unsigned BufferOff;
+  uint64_t BufferOff;
   unsigned SizeOfBuffer;
   uintptr_t pRing;
 
@@ -2878,7 +3569,7 @@ unsigned SEGGER_RTT_GetBytesInBuffer(uintptr_t Address, unsigned BufferIndex) {
     return 0u;
   }
   pRing = SEGGER_RTT__ADDR(Address, SEGGER_RTT__CB_OFF_A_UP_INDEX(BufferIndex));
-  BufferOff    = SEGGER_RTT__RD32(SEGGER_RTT__FIELD(pRing, SEGGER_RTT__BUFFER_OFF_P_BUFFER));
+  BufferOff    = SEGGER_RTT__RD64(SEGGER_RTT__FIELD(pRing, SEGGER_RTT__BUFFER_OFF_P_BUFFER));
   SizeOfBuffer = SEGGER_RTT__RD32(SEGGER_RTT__FIELD(pRing, SEGGER_RTT__BUFFER_OFF_SIZE_OF_BUFFER));
   RdOff        = SEGGER_RTT__RD32(SEGGER_RTT__FIELD(pRing, SEGGER_RTT__BUFFER_OFF_RD_OFF));
   WrOff        = SEGGER_RTT__RD32(SEGGER_RTT__FIELD(pRing, SEGGER_RTT__BUFFER_OFF_WR_OFF));
@@ -2913,7 +3604,7 @@ unsigned SEGGER_RTT_GetBytesDownInBuffer(uintptr_t Address, unsigned BufferIndex
   unsigned i;
   unsigned MaxNumUpBuffers;
   unsigned MaxNumDownBuffers;
-  unsigned BufferOff;
+  uint64_t BufferOff;
   unsigned SizeOfBuffer;
   uintptr_t pRing;
 
@@ -2933,7 +3624,7 @@ unsigned SEGGER_RTT_GetBytesDownInBuffer(uintptr_t Address, unsigned BufferIndex
     return 0u;
   }
   pRing = SEGGER_RTT__ADDR(Address, SEGGER_RTT__CB_OFF_A_DOWN_RUNTIME_INDEX(MaxNumUpBuffers, BufferIndex));
-  BufferOff    = SEGGER_RTT__RD32(SEGGER_RTT__FIELD(pRing, SEGGER_RTT__BUFFER_OFF_P_BUFFER));
+  BufferOff    = SEGGER_RTT__RD64(SEGGER_RTT__FIELD(pRing, SEGGER_RTT__BUFFER_OFF_P_BUFFER));
   SizeOfBuffer = SEGGER_RTT__RD32(SEGGER_RTT__FIELD(pRing, SEGGER_RTT__BUFFER_OFF_SIZE_OF_BUFFER));
   RdOff        = SEGGER_RTT__RD32(SEGGER_RTT__FIELD(pRing, SEGGER_RTT__BUFFER_OFF_RD_OFF));
   WrOff        = SEGGER_RTT__RD32(SEGGER_RTT__FIELD(pRing, SEGGER_RTT__BUFFER_OFF_WR_OFF));

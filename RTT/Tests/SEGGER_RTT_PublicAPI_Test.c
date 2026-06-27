@@ -40,6 +40,7 @@ Purpose : Unit tests for the shared-memory RTT public API.
 #define TEST_EXTRA_DOWN_BUF_OFF               (TEST_EXTRA_OFF + 160u)
 #define TEST_EXTRA_PRINTF_BUF_OFF             (TEST_EXTRA_OFF + 256u)
 #define TEST_EXTRA_PRINTF_BUF_SIZE            (384u)
+#define TEST_ENSURE_EXTRA_PAIR_SIZE           (SEGGER_RTT__TERMINAL_NAME_SIZE_ALIGNED + BUFFER_SIZE_UP + BUFFER_SIZE_DOWN)
 #define TEST_RUNTIME_DOWN_OFF(NumUp)          (SEGGER_RTT__CB_OFF_A_UP + ((uintptr_t)(NumUp) * SEGGER_RTT__BUFFER_SIZE))
 #define TEST_RUNTIME_DOWN_INDEX(NumUp, Index) (TEST_RUNTIME_DOWN_OFF(NumUp) + ((uintptr_t)(Index) * SEGGER_RTT__BUFFER_SIZE))
 
@@ -51,7 +52,7 @@ Purpose : Unit tests for the shared-memory RTT public API.
 */
 
 typedef union {
-  uint32_t Align;
+  uint64_t Align;
   unsigned char ac[TEST_MEM_SIZE];
 } TEST_MEM;
 
@@ -251,7 +252,7 @@ static void _ExpectMem(const void* pData, const char* sExpected, unsigned NumByt
 *    Pointer to the descriptor name string in the simulated mapping.
 */
 static const char* _RingName(uintptr_t Address, uintptr_t pRing) {
-  return (const char*)SEGGER_RTT__ADDR(Address, SEGGER_RTT__RD32(SEGGER_RTT__FIELD(pRing, SEGGER_RTT__BUFFER_OFF_NAME)));
+  return (const char*)SEGGER_RTT__ADDR(Address, SEGGER_RTT__RD64(SEGGER_RTT__FIELD(pRing, SEGGER_RTT__BUFFER_OFF_NAME)));
 }
 
 /*********************************************************************
@@ -270,7 +271,7 @@ static const char* _RingName(uintptr_t Address, uintptr_t pRing) {
 *    Pointer to the descriptor payload buffer in the simulated mapping.
 */
 static char* _RingBuffer(uintptr_t Address, uintptr_t pRing) {
-  return (char*)SEGGER_RTT__ADDR(Address, SEGGER_RTT__RD32(SEGGER_RTT__FIELD(pRing, SEGGER_RTT__BUFFER_OFF_P_BUFFER)));
+  return (char*)SEGGER_RTT__ADDR(Address, SEGGER_RTT__RD64(SEGGER_RTT__FIELD(pRing, SEGGER_RTT__BUFFER_OFF_P_BUFFER)));
 }
 
 /*********************************************************************
@@ -430,6 +431,9 @@ static int _CallVPrintf(uintptr_t Address, const char* sFormat, ...) {
 static void _TestInitAndFind(void) {
   uintptr_t Address;
   uintptr_t Search;
+  size_t DescriptorRegionSize;
+  size_t RegionSize;
+  size_t TruncatedRegionSize;
 
   memset(&_TestMem, 0, sizeof(_TestMem));
   Address = _Base();
@@ -437,32 +441,56 @@ static void _TestInitAndFind(void) {
   TEST_ASSERT_EQ_I(-1, SEGGER_RTT_CheckInit(Address + 1u));
   TEST_ASSERT_EQ_I(-1, SEGGER_RTT_InitEx(0u, TEST_MEM_SIZE));
   TEST_ASSERT_EQ_I(-1, SEGGER_RTT_InitEx(Address + 1u, TEST_MEM_SIZE));
+  TEST_ASSERT_EQ_I(-1, SEGGER_RTT_InitEx(Address + 4u, TEST_MEM_SIZE - 4u));
   TEST_ASSERT_EQ_I(-1, SEGGER_RTT_InitEx(Address, SEGGER_RTT__REQUIRED_MEM_SIZE - 1u));
   TEST_ASSERT_EQ_I(-1, SEGGER_RTT_FindControlBlock(NULL, sizeof(_TestMem.ac)));
 
   TEST_ASSERT_EQ_I(0, SEGGER_RTT_InitEx(Address, TEST_MEM_SIZE));
   TEST_ASSERT_EQ_I(0, SEGGER_RTT_CheckInit(Address));
   TEST_ASSERT_EQ_I(0, SEGGER_RTT_CheckRegion(Address, TEST_MEM_SIZE));
-  TEST_ASSERT_EQ_I(-1, SEGGER_RTT_CheckRegion(Address, SEGGER_RTT__REQUIRED_MEM_SIZE - 1u));
+  TEST_ASSERT_EQ_I(0, SEGGER_RTT_CheckUpBuffer(Address, TEST_MEM_SIZE, 0u));
+  TEST_ASSERT_EQ_I(-1, SEGGER_RTT_CheckUpBuffer(Address, TEST_MEM_SIZE, 1u));
+  TEST_ASSERT_EQ_I(0, SEGGER_RTT_CheckDownBuffer(Address, TEST_MEM_SIZE, 0u));
+  TEST_ASSERT_EQ_I(-1, SEGGER_RTT_CheckDownBuffer(Address, TEST_MEM_SIZE, 1u));
+  DescriptorRegionSize = SEGGER_RTT__DOWN_BUFFER_OFF + BUFFER_SIZE_DOWN;
+  TruncatedRegionSize  = DescriptorRegionSize - 1u;
+  TEST_ASSERT_EQ_I(0, SEGGER_RTT_CheckRegion(Address, DescriptorRegionSize));
+  TEST_ASSERT_EQ_I(0, SEGGER_RTT_CheckUpBuffer(Address, DescriptorRegionSize, 0u));
+  TEST_ASSERT_EQ_I(0, SEGGER_RTT_CheckDownBuffer(Address, DescriptorRegionSize, 0u));
+  TEST_ASSERT_EQ_I(-1, SEGGER_RTT_CheckRegion(Address, TruncatedRegionSize));
+  TEST_ASSERT_EQ_I(-1, SEGGER_RTT_CheckUpBuffer(Address, TruncatedRegionSize, 0u));
+  TEST_ASSERT_EQ_I(-1, SEGGER_RTT_CheckDownBuffer(Address, TruncatedRegionSize, 0u));
   Search = Address;
   TEST_ASSERT_EQ_I(0, SEGGER_RTT_FindControlBlock(&Search, sizeof(_TestMem.ac)));
   TEST_ASSERT(Search == Address);
+  Search = Address;
+  RegionSize = 0u;
+  TEST_ASSERT_EQ_I(0, SEGGER_RTT_FindValidControlBlock(&Search, sizeof(_TestMem.ac), &RegionSize));
+  TEST_ASSERT(Search == Address);
+  TEST_ASSERT_EQ_U(TEST_MEM_SIZE, RegionSize);
 
   memset(&_TestMem, 0, sizeof(_TestMem));
-  Address = _Base() + 4u;
+  Address = _Base() + SEGGER_RTT__CB_ALIGNMENT;
   SEGGER_RTT_Init(Address);
   Search = _Base();
-  TEST_ASSERT_EQ_I(0, SEGGER_RTT_FindControlBlock(&Search, sizeof(_TestMem.ac) - 4u));
+  TEST_ASSERT_EQ_I(0, SEGGER_RTT_FindControlBlock(&Search, sizeof(_TestMem.ac) - SEGGER_RTT__CB_ALIGNMENT));
   TEST_ASSERT(Search == Address);
 
   Search = _Base() + 1u;
   TEST_ASSERT_EQ_I(0, SEGGER_RTT_FindControlBlock(&Search, sizeof(_TestMem.ac) - 1u));
   TEST_ASSERT(Search == Address);
+  Search = _Base();
+  RegionSize = 0u;
+  TEST_ASSERT_EQ_I(0, SEGGER_RTT_FindValidControlBlock(&Search, sizeof(_TestMem.ac), &RegionSize));
+  TEST_ASSERT(Search == Address);
+  TEST_ASSERT_EQ_U(TEST_MEM_SIZE - SEGGER_RTT__CB_ALIGNMENT, RegionSize);
 
   Address = _Reset();
-  SEGGER_RTT__WR32(SEGGER_RTT__FIELD(_UpRing(Address, 0u), SEGGER_RTT__BUFFER_OFF_P_BUFFER), TEST_MEM_SIZE - 4u);
+  SEGGER_RTT__WR64(SEGGER_RTT__FIELD(_UpRing(Address, 0u), SEGGER_RTT__BUFFER_OFF_P_BUFFER), TEST_MEM_SIZE - 4u);
   SEGGER_RTT__WR32(SEGGER_RTT__FIELD(_UpRing(Address, 0u), SEGGER_RTT__BUFFER_OFF_SIZE_OF_BUFFER), 8u);
   TEST_ASSERT_EQ_I(-1, SEGGER_RTT_CheckRegion(Address, TEST_MEM_SIZE));
+  Search = Address;
+  TEST_ASSERT_EQ_I(-1, SEGGER_RTT_FindValidControlBlock(&Search, TEST_MEM_SIZE, NULL));
 
   Address = _Reset();
   SEGGER_RTT__WR32(SEGGER_RTT__FIELD(_UpRing(Address, 0u), SEGGER_RTT__BUFFER_OFF_FLAGS), 3u);
@@ -478,6 +506,88 @@ static void _TestInitAndFind(void) {
   TEST_ASSERT_EQ_I(-1, SEGGER_RTT_CheckInit(Address));
   TEST_ASSERT_EQ_U(1u, SEGGER_RTT_PutChar(Address, 0u, 'Z'));
   TEST_ASSERT_EQ_I(0, SEGGER_RTT_CheckInit(Address));
+}
+
+/*********************************************************************
+*
+*       _TestEnsureInitExAPI()
+*
+*  Function description
+*    Verifies the owner-side initialize-or-reuse API and its configured
+*    extra up/down buffer pairs.
+*
+*  Parameters
+*    None.
+*
+*  Return value
+*    None.
+*/
+static void _TestEnsureInitExAPI(void) {
+  uintptr_t Address;
+  uintptr_t ExpectedPairBase;
+  uintptr_t Search;
+  uintptr_t pRing;
+  size_t RegionSize;
+  size_t FoundRegionSize;
+  char ac[64];
+
+  memset(&_TestMem, 0, sizeof(_TestMem));
+  Address = _Base();
+  TEST_ASSERT_EQ_I(-1, SEGGER_RTT_EnsureInitEx(0u, TEST_MEM_SIZE, 1u));
+  TEST_ASSERT_EQ_I(-1, SEGGER_RTT_EnsureInitEx(Address + 1u, TEST_MEM_SIZE - 1u, 1u));
+  TEST_ASSERT_EQ_I(-1, SEGGER_RTT_EnsureInitEx(Address, 0u, 1u));
+  TEST_ASSERT_EQ_I(-1, SEGGER_RTT_EnsureInitEx(Address, TEST_MEM_SIZE, 0u));
+  TEST_ASSERT_EQ_I(-1, SEGGER_RTT_EnsureInitEx(Address,
+                                               TEST_MEM_SIZE,
+                                               SEGGER_RTT_MAX_NUM_UP_BUFFERS + 1u));
+
+  RegionSize = SEGGER_RTT__REQUIRED_MEM_SIZE + TEST_ENSURE_EXTRA_PAIR_SIZE - 1u;
+  TEST_ASSERT_EQ_I(-1, SEGGER_RTT_EnsureInitEx(Address, RegionSize, 2u));
+
+  memset(&_TestMem, 0, sizeof(_TestMem));
+  Address = _Base();
+  RegionSize = SEGGER_RTT__REQUIRED_MEM_SIZE + (2u * TEST_ENSURE_EXTRA_PAIR_SIZE);
+  TEST_ASSERT_EQ_I(0, SEGGER_RTT_EnsureInitEx(Address, RegionSize, 3u));
+  TEST_ASSERT_EQ_I(0, SEGGER_RTT_CheckRegion(Address, RegionSize));
+  TEST_ASSERT_EQ_I(0, SEGGER_RTT_CheckUpBuffer(Address, RegionSize, 0u));
+  TEST_ASSERT_EQ_I(0, SEGGER_RTT_CheckUpBuffer(Address, RegionSize, 1u));
+  TEST_ASSERT_EQ_I(0, SEGGER_RTT_CheckUpBuffer(Address, RegionSize, 2u));
+  TEST_ASSERT_EQ_I(0, SEGGER_RTT_CheckDownBuffer(Address, RegionSize, 0u));
+  TEST_ASSERT_EQ_I(0, SEGGER_RTT_CheckDownBuffer(Address, RegionSize, 1u));
+  TEST_ASSERT_EQ_I(0, SEGGER_RTT_CheckDownBuffer(Address, RegionSize, 2u));
+
+  Search = Address;
+  FoundRegionSize = 0u;
+  TEST_ASSERT_EQ_I(0, SEGGER_RTT_FindValidControlBlock(&Search, RegionSize, &FoundRegionSize));
+  TEST_ASSERT(Search == Address);
+  TEST_ASSERT_EQ_U(RegionSize, FoundRegionSize);
+
+  ExpectedPairBase = SEGGER_RTT__ADDR(Address, SEGGER_RTT__REQUIRED_MEM_SIZE);
+  pRing = _UpRing(Address, 1u);
+  TEST_ASSERT(strcmp(_RingName(Address, pRing), "Terminal") == 0);
+  TEST_ASSERT(_RingBuffer(Address, pRing) == (char*)SEGGER_RTT__ADDR(ExpectedPairBase, SEGGER_RTT__TERMINAL_NAME_SIZE_ALIGNED));
+  pRing = _DownRing(Address, 1u);
+  TEST_ASSERT(strcmp(_RingName(Address, pRing), "Terminal") == 0);
+  TEST_ASSERT(_RingBuffer(Address, pRing) == (char*)SEGGER_RTT__ADDR(ExpectedPairBase, SEGGER_RTT__TERMINAL_NAME_SIZE_ALIGNED + BUFFER_SIZE_UP));
+
+  ExpectedPairBase = SEGGER_RTT__ADDR(Address, SEGGER_RTT__REQUIRED_MEM_SIZE + TEST_ENSURE_EXTRA_PAIR_SIZE);
+  pRing = _UpRing(Address, 2u);
+  TEST_ASSERT(strcmp(_RingName(Address, pRing), "Terminal") == 0);
+  TEST_ASSERT(_RingBuffer(Address, pRing) == (char*)SEGGER_RTT__ADDR(ExpectedPairBase, SEGGER_RTT__TERMINAL_NAME_SIZE_ALIGNED));
+  pRing = _DownRing(Address, 2u);
+  TEST_ASSERT(strcmp(_RingName(Address, pRing), "Terminal") == 0);
+  TEST_ASSERT(_RingBuffer(Address, pRing) == (char*)SEGGER_RTT__ADDR(ExpectedPairBase, SEGGER_RTT__TERMINAL_NAME_SIZE_ALIGNED + BUFFER_SIZE_UP));
+
+  TEST_ASSERT_EQ_U(2u, SEGGER_RTT_WriteNoLock(Address, 1u, "u1", 2u));
+  TEST_ASSERT_EQ_U(2u, SEGGER_RTT_WriteDownBufferNoLock(Address, 2u, "d2", 2u));
+  TEST_ASSERT_EQ_I(0, SEGGER_RTT_EnsureInitEx(Address, RegionSize, 3u));
+
+  memset(ac, 0, sizeof(ac));
+  TEST_ASSERT_EQ_U(2u, SEGGER_RTT_ReadUpBufferNoLock(Address, 1u, ac, sizeof(ac)));
+  _ExpectMem(ac, "u1", 2u);
+  memset(ac, 0, sizeof(ac));
+  TEST_ASSERT_EQ_U(2u, SEGGER_RTT_ReadNoLock(Address, 2u, ac, sizeof(ac)));
+  _ExpectMem(ac, "d2", 2u);
 }
 
 /*********************************************************************
@@ -632,6 +742,7 @@ static void _TestConfigAndAllocAPI(void) {
   sName   = _SharedString(Address, TEST_EXTRA_STR0_OFF, "Up1");
   pBuffer = _SharedBuffer(Address, TEST_EXTRA_UP_BUF_OFF, 24u);
   TEST_ASSERT_EQ_I(0, SEGGER_RTT_ConfigUpBuffer(Address, 1u, sName, pBuffer, 24u, SEGGER_RTT_MODE_NO_BLOCK_SKIP));
+  TEST_ASSERT_EQ_I(0, SEGGER_RTT_CheckUpBuffer(Address, TEST_MEM_SIZE, 1u));
   TEST_ASSERT_EQ_U(2u, SEGGER_RTT_Write(Address, 1u, "u1", 2u));
   memset(ac, 0, sizeof(ac));
   TEST_ASSERT_EQ_U(2u, SEGGER_RTT_ReadUpBufferNoLock(Address, 1u, ac, sizeof(ac)));
@@ -640,6 +751,7 @@ static void _TestConfigAndAllocAPI(void) {
   sName   = _SharedString(Address, TEST_EXTRA_STR1_OFF, "Down1");
   pBuffer = _SharedBuffer(Address, TEST_EXTRA_DOWN_BUF_OFF, 24u);
   TEST_ASSERT_EQ_I(0, SEGGER_RTT_ConfigDownBuffer(Address, 1u, sName, pBuffer, 24u, SEGGER_RTT_MODE_NO_BLOCK_SKIP));
+  TEST_ASSERT_EQ_I(0, SEGGER_RTT_CheckDownBuffer(Address, TEST_MEM_SIZE, 1u));
   TEST_ASSERT_EQ_U(2u, SEGGER_RTT_WriteDownBuffer(Address, 1u, "d1", 2u));
   memset(ac, 0, sizeof(ac));
   TEST_ASSERT_EQ_U(2u, SEGGER_RTT_ReadNoLock(Address, 1u, ac, sizeof(ac)));
@@ -672,6 +784,7 @@ static void _TestConfigAndAllocAPI(void) {
   pBuffer = _SharedBuffer(Address, TEST_EXTRA_DOWN_BUF_OFF, 20u);
   BufferIndex = SEGGER_RTT_AllocDownBuffer(Address, sName, pBuffer, 20u, SEGGER_RTT_MODE_NO_BLOCK_SKIP);
   TEST_ASSERT_EQ_I(1, BufferIndex);
+  TEST_ASSERT_EQ_I(0, SEGGER_RTT_CheckDownBuffer(Address, TEST_MEM_SIZE, (unsigned)BufferIndex));
   TEST_ASSERT_EQ_U(2u, SEGGER_RTT_WriteDownBufferNoLock(Address, (unsigned)BufferIndex, "AD", 2u));
 }
 
@@ -1171,6 +1284,7 @@ static void _TestTerminalAndPrintfAPI(void) {
 
 int main(void) {
   _TestInitAndFind();
+  _TestEnsureInitExAPI();
   _TestUpBufferAPI();
   _TestDownBufferAPI();
   _TestConfigAndAllocAPI();

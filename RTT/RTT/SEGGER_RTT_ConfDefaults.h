@@ -48,8 +48,9 @@ Purpose : Default configuration for RTT.
 *
 *  Additional information
 *    Common use case:
-*      Up-buffer channel 0: RTT Terminal I/O.
-*      Up-buffer channel 1: SystemView.
+*      Up-buffer channel 0: RTT Terminal I/O or Linux core log.
+*      Up-buffer channel 1: RTOS core log.
+*      Up-buffer channel 2: SystemView.
 */
 #ifndef   SEGGER_RTT_MAX_NUM_UP_BUFFERS
   #define SEGGER_RTT_MAX_NUM_UP_BUFFERS             (3)
@@ -64,7 +65,7 @@ Purpose : Default configuration for RTT.
 *  Additional information
 *    Common use case:
 *      Down-buffer channel 0: RTT Terminal I/O.
-*      Down-buffer channel 1: SystemView.
+*      Down-buffer channel 2: SystemView commands.
 *
 *    The number of up- and down-buffers may differ.
 */
@@ -124,11 +125,27 @@ Purpose : Default configuration for RTT.
 *
 *  Additional information
 *    In shared-memory mode, pointer fields in the RTT control block
-*    contain 32-bit offsets relative to the base address passed to the
+*    contain 64-bit offsets relative to the base address passed to the
 *    RTT API.
 */
 #ifndef   SEGGER_RTT_USE_SHARED_MEMORY
   #define SEGGER_RTT_USE_SHARED_MEMORY               (1)
+#endif
+
+/*********************************************************************
+*
+*     SEGGER_RTT_SPINLOCK_MAX_CORES
+*
+*  Description
+*    Maximum number of cores that can participate in one RTT software
+*    spinlock object.
+*
+*  Additional information
+*    All cores or host processes sharing the same spinlock object must
+*    use the same value.
+*/
+#ifndef   SEGGER_RTT_SPINLOCK_MAX_CORES
+  #define SEGGER_RTT_SPINLOCK_MAX_CORES              (2u)
 #endif
 
 /*********************************************************************
