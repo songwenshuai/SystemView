@@ -1,0 +1,32 @@
+// SPDX-License-Identifier: MIT
+
+// TRICE_INSERT_OFF - Trice parser exclusion marker
+
+//! \file cobsEncode.c
+//! \brief cobs Encode implementation.
+
+
+#include "cobs.h"
+
+// Public API is documented in cobs.h.
+// Implementation adapted from the Wikipedia COBS reference.
+size_t COBSEncode(void* __restrict out, const void* __restrict in, size_t length) {
+	uint8_t* buffer = out;     // (uint8_t*)out;
+	uint8_t* encode = buffer;  // Encoded byte pointer
+	uint8_t* codep = encode++; // Output code pointer
+	uint8_t code = 1;          // Code value
+
+	for (const uint8_t* byte = /*(const uint8_t*)*/ in; length--; ++byte) {
+		if (*byte) { // Byte not zero, write it
+			*encode++ = *byte, ++code;
+		}
+		if (!*byte || code == 0xff) { // Input is zero or block completed, restart
+			*codep = code, code = 1, codep = encode;
+			if (!*byte || length) {
+				++encode;
+			}
+		}
+	}
+	*codep = code; // Write final code value
+	return (size_t)(encode - buffer);
+}
