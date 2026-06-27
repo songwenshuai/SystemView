@@ -5,7 +5,7 @@
 *                                                                    *
 **********************************************************************
 ----------------------------------------------------------------------
-File    : test_logline_parser.c
+File    : LogLineParserTest.c
 Purpose : Unit checks for core log timestamp parsing
 Author  : songwenshuai <songwenshuai@gmail.com>
 ---------------------------END-OF-HEADER------------------------------

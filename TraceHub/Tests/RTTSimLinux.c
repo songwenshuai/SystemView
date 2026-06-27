@@ -5,7 +5,7 @@
 *                                                                    *
 **********************************************************************
 ----------------------------------------------------------------------
-File    : rtt_sim_linux.c
+File    : RTTSimLinux.c
 Purpose : Simulate Linux A53 core writing logs to RTT channel 0
           and SystemView multi-core events to RTT channel 2.
           Linux app is the SOLE INITIALIZER of RTT control block.
@@ -39,8 +39,8 @@ Usage   :
 #include "RTTMemory.h"
 #include "SYS.h"
 #include "SEGGER_RTT.h"
-#include "rtt_sim_common.h"
-#include "rtt_sim_sysview.h"
+#include "RTTSimCommon.h"
+#include "RTTSimSystemView.h"
 
 /*********************************************************************
 *

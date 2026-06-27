@@ -5,7 +5,7 @@
 *                                                                    *
 **********************************************************************
 ----------------------------------------------------------------------
-File    : test_logmerger.c
+File    : LogMergerTest.c
 Purpose : Unit checks for log merger failure and capacity semantics
 Author  : songwenshuai <songwenshuai@gmail.com>
 ---------------------------END-OF-HEADER------------------------------

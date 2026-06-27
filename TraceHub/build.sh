@@ -417,16 +417,16 @@ else
 fi
 
 # Copy test programs if they exist
-if [ -f "$SCRIPT_DIR/$BUILD_DIR/test/rtt_sim_rtos" ]; then
-    cp "$SCRIPT_DIR/$BUILD_DIR/test/rtt_sim_rtos" "$SCRIPT_DIR/"
+if [ -f "$SCRIPT_DIR/$BUILD_DIR/Tests/rtt_sim_rtos" ]; then
+    cp "$SCRIPT_DIR/$BUILD_DIR/Tests/rtt_sim_rtos" "$SCRIPT_DIR/"
     chmod +x "$SCRIPT_DIR/rtt_sim_rtos"
 fi
-if [ -f "$SCRIPT_DIR/$BUILD_DIR/test/rtt_sim_linux" ]; then
-    cp "$SCRIPT_DIR/$BUILD_DIR/test/rtt_sim_linux" "$SCRIPT_DIR/"
+if [ -f "$SCRIPT_DIR/$BUILD_DIR/Tests/rtt_sim_linux" ]; then
+    cp "$SCRIPT_DIR/$BUILD_DIR/Tests/rtt_sim_linux" "$SCRIPT_DIR/"
     chmod +x "$SCRIPT_DIR/rtt_sim_linux"
 fi
-if [ -f "$SCRIPT_DIR/$BUILD_DIR/test/rtt_sim_sysview_tcp_client" ]; then
-    cp "$SCRIPT_DIR/$BUILD_DIR/test/rtt_sim_sysview_tcp_client" "$SCRIPT_DIR/"
+if [ -f "$SCRIPT_DIR/$BUILD_DIR/Tests/rtt_sim_sysview_tcp_client" ]; then
+    cp "$SCRIPT_DIR/$BUILD_DIR/Tests/rtt_sim_sysview_tcp_client" "$SCRIPT_DIR/"
     chmod +x "$SCRIPT_DIR/rtt_sim_sysview_tcp_client"
 fi
 if [ "$BUILD_SIM_TESTS" = "OFF" ]; then

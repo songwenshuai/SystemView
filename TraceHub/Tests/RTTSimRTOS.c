@@ -5,7 +5,7 @@
 *                                                                    *
 **********************************************************************
 ----------------------------------------------------------------------
-File    : rtt_sim_rtos.c
+File    : RTTSimRTOS.c
 Purpose : Simulate RTOS R5 core writing logs to RTT channel 1
           and SystemView multi-core events to RTT channel 2.
           RTOS only VALIDATES RTT CB - never initializes.
@@ -39,8 +39,8 @@ Usage   :
 #include "RTTMemory.h"
 #include "SYS.h"
 #include "SEGGER_RTT.h"
-#include "rtt_sim_common.h"
-#include "rtt_sim_sysview.h"
+#include "RTTSimCommon.h"
+#include "RTTSimSystemView.h"
 
 /*********************************************************************
 *

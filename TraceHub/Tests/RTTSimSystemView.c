@@ -5,7 +5,7 @@
 *                                                                    *
 **********************************************************************
 ----------------------------------------------------------------------
-File    : rtt_sim_sysview.c
+File    : RTTSimSystemView.c
 Purpose : SystemView event generation for RTT simulation programs
 Author  : songwenshuai <songwenshuai@gmail.com>
 ---------------------------END-OF-HEADER------------------------------
@@ -25,7 +25,7 @@ Author  : songwenshuai <songwenshuai@gmail.com>
 #include "SEGGER_RTT.h"
 #include "SEGGER_SYSVIEW.h"
 #include "SYS.h"
-#include "rtt_sim_sysview.h"
+#include "RTTSimSystemView.h"
 
 /*********************************************************************
 *

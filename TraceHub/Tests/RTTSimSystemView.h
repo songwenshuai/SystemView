@@ -5,7 +5,7 @@
 *                                                                    *
 **********************************************************************
 ----------------------------------------------------------------------
-File    : rtt_sim_sysview.h
+File    : RTTSimSystemView.h
 Purpose : SystemView event generation for RTT simulation programs
 Author  : songwenshuai <songwenshuai@gmail.com>
 ---------------------------END-OF-HEADER------------------------------

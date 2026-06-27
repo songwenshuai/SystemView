@@ -5,7 +5,7 @@
 *                                                                    *
 **********************************************************************
 ----------------------------------------------------------------------
-File    : test_logcollector.c
+File    : LogCollectorTest.c
 Purpose : Unit checks for log collector timestamp assignment
 Author  : songwenshuai <songwenshuai@gmail.com>
 ---------------------------END-OF-HEADER------------------------------

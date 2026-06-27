@@ -30,7 +30,7 @@ RUN_MARKER=""
 
 show_usage() {
     cat << EOF
-Usage: bash test/run_smem_preflight.sh [OPTIONS]
+Usage: bash Tests/run-smem-preflight.sh [OPTIONS]
 
 Validate the Linux SMEM hardware path with a real SharedMem device and target
 RTT layout. The script starts tracehub in swimlane + SystemView mode and
@@ -60,10 +60,10 @@ Options:
   -h, --help               Show this help message
 
 Examples:
-  sudo bash test/run_smem_preflight.sh --build-dir build/HOST_Debug -k /path/to/SharedMem.ko
-  sudo bash test/run_smem_preflight.sh --force-reload --rtt-timeout-ms 10000
-  bash test/run_smem_preflight.sh --use-loaded-module --device /dev/shared_mem0
-  bash test/run_smem_preflight.sh --use-loaded-module --startup-only
+  sudo bash Tests/run-smem-preflight.sh --build-dir build/HOST_Debug -k /path/to/SharedMem.ko
+  sudo bash Tests/run-smem-preflight.sh --force-reload --rtt-timeout-ms 10000
+  bash Tests/run-smem-preflight.sh --use-loaded-module --device /dev/shared_mem0
+  bash Tests/run-smem-preflight.sh --use-loaded-module --startup-only
 EOF
 }
 

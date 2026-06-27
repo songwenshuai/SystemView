@@ -262,5 +262,5 @@ message(STATUS "================================================================
 
 if(BUILD_SIM_TESTS)
     message(STATUS "Building RTT simulation test programs")
-    add_subdirectory(test)
+    add_subdirectory(Tests)
 endif()

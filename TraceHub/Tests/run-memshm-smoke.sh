@@ -189,9 +189,9 @@ main() {
     local sysview_tcp_client_bin
 
     tracehub_bin="$(resolve_executable "tracehub" "tracehub")"
-    linux_sim_bin="$(resolve_executable "rtt_sim_linux" "test/rtt_sim_linux")"
-    rtos_sim_bin="$(resolve_executable "rtt_sim_rtos" "test/rtt_sim_rtos")"
-    sysview_tcp_client_bin="$(resolve_executable "rtt_sim_sysview_tcp_client" "test/rtt_sim_sysview_tcp_client")"
+    linux_sim_bin="$(resolve_executable "rtt_sim_linux" "Tests/rtt_sim_linux")"
+    rtos_sim_bin="$(resolve_executable "rtt_sim_rtos" "Tests/rtt_sim_rtos")"
+    sysview_tcp_client_bin="$(resolve_executable "rtt_sim_sysview_tcp_client" "Tests/rtt_sim_sysview_tcp_client")"
 
     WORK_DIR="$(mktemp -d "${TMPDIR:-/tmp}/tracehub-smoke.XXXXXX")"
     trap cleanup EXIT

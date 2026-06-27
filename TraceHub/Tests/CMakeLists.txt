@@ -43,7 +43,7 @@ set(SEGGER_RTT_SOURCE_DIR ${RTT_SOURCE_DIR}/../RTT/RTT)
 set(SEGGER_SYSVIEW_SOURCE_DIR ${RTT_SOURCE_DIR}/../SystemView/SYSVIEW)
 set(SEGGER_SOURCE_DIR ${RTT_SOURCE_DIR}/../SystemView/SEGGER)
 set(SEGGER_CONFIG_DIR ${RTT_SOURCE_DIR}/../SystemView/Config)
-set(SYSVIEW_CONFIG_DIR ${CMAKE_CURRENT_SOURCE_DIR}/sysview_config)
+set(SYSVIEW_CONFIG_DIR ${CMAKE_CURRENT_SOURCE_DIR}/SystemViewConfig)
 
 # Common source files needed by test programs
 set(COMMON_SOURCES
@@ -53,7 +53,7 @@ set(COMMON_SOURCES
     ${RTT_SOURCE_DIR}/Log.c
     ${RTT_SOURCE_DIR}/Utils.c
     ${RTT_SOURCE_DIR}/SYS.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/rtt_sim_sysview.c
+    ${CMAKE_CURRENT_SOURCE_DIR}/RTTSimSystemView.c
     ${SEGGER_RTT_SOURCE_DIR}/SEGGER_RTT.c
     ${SEGGER_SYSVIEW_SOURCE_DIR}/SEGGER_SYSVIEW.c
 )
@@ -90,7 +90,7 @@ set(COMMON_LIBRARIES
 # ==============================================================================
 
 add_executable(rtt_sim_rtos
-    rtt_sim_rtos.c
+    RTTSimRTOS.c
     ${COMMON_SOURCES}
 )
 
@@ -103,7 +103,7 @@ target_link_libraries(rtt_sim_rtos PRIVATE ${COMMON_LIBRARIES})
 # ==============================================================================
 
 add_executable(rtt_sim_linux
-    rtt_sim_linux.c
+    RTTSimLinux.c
     ${COMMON_SOURCES}
 )
 
@@ -116,7 +116,7 @@ target_link_libraries(rtt_sim_linux PRIVATE ${COMMON_LIBRARIES})
 # ==============================================================================
 
 add_executable(rtt_sim_sysview_tcp_client
-    rtt_sim_sysview_tcp_client.c
+    RTTSimSystemViewTCPClient.c
 )
 
 target_include_directories(rtt_sim_sysview_tcp_client PRIVATE ${RTT_SOURCE_DIR})
@@ -127,7 +127,7 @@ target_link_libraries(rtt_sim_sysview_tcp_client PRIVATE ${COMMON_LIBRARIES})
 # ==============================================================================
 
 add_executable(test_logline_parser
-    test_logline_parser.c
+    LogLineParserTest.c
     ${RTT_SOURCE_DIR}/LogLineParser.c
 )
 
@@ -135,7 +135,7 @@ target_include_directories(test_logline_parser PRIVATE ${RTT_SOURCE_DIR})
 add_test(NAME test_logline_parser COMMAND test_logline_parser)
 
 add_executable(test_logcollector
-    test_logcollector.c
+    LogCollectorTest.c
     ${RTT_SOURCE_DIR}/LogLineParser.c
     ${RTT_SOURCE_DIR}/LogEntry.c
 )
@@ -145,7 +145,7 @@ target_link_libraries(test_logcollector PRIVATE ${COMMON_LIBRARIES})
 add_test(NAME test_logcollector COMMAND test_logcollector)
 
 add_executable(test_logmerger
-    test_logmerger.c
+    LogMergerTest.c
     ${RTT_SOURCE_DIR}/LogMerger.c
     ${RTT_SOURCE_DIR}/LogEntry.c
     ${RTT_SOURCE_DIR}/Log.c

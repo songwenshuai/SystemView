@@ -5,7 +5,7 @@
 *                                                                    *
 **********************************************************************
 ----------------------------------------------------------------------
-File    : rtt_sim_common.h
+File    : RTTSimCommon.h
 Purpose : Shared helpers for RTT simulation programs
 Author  : songwenshuai <songwenshuai@gmail.com>
 ---------------------------END-OF-HEADER------------------------------

@@ -5,7 +5,7 @@
 *                                                                    *
 **********************************************************************
 ----------------------------------------------------------------------
-File    : rtt_sim_sysview_tcp_client.c
+File    : RTTSimSystemViewTCPClient.c
 Purpose : TCP client smoke validator for the tracehub SystemView service
 Author  : songwenshuai <songwenshuai@gmail.com>
 ---------------------------END-OF-HEADER------------------------------
