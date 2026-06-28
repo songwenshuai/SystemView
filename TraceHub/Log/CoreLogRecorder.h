@@ -123,7 +123,7 @@ typedef struct {
 *  Description
 *    Per-source recorder statistics.
 *    bytes_recorded counts clean text bytes written to the source log file.
-*    bytes_consumed counts raw bytes read from the RTT up-buffer.
+*    bytes_consumed counts raw bytes delivered to the registered consumer.
 */
 typedef struct {
     unsigned channel;
