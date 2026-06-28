@@ -1,0 +1,14 @@
+ignoreNone:  Ignore 'None' samples of the input signals. 
+* Ignore none samples
+* Ignore samples with missing members 
+
+hideIdentical: Check to hide sequence of identical samples.
+* Only write to output if the value has changed.
+* Only add a struct member if the member value has changed.
+* In case of struct/continuous, add an empty sample if no change.
+
+KeepTags: The output samples shall keep the tag information of each input sample.
+
+keepAttachments: Check to keep labels and relations of each input sample.
+
+keepGroups: Check to keep the group information (e.g. transactions) of each input sample.

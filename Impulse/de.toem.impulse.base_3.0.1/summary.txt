@@ -1,0 +1,120 @@
+Summary for /Users/songwenshuai/workspace/github/SystemView/Impulse/de.toem.impulse.base_3.0.1.jar
+Decompiled with CFR 0.152
+
+
+de.toem.impulse.flux.FluxParser
+----------------------------
+
+parseEntry(de.toem.toolkits.pattern.threading.IProgress de.toem.impulse.serializer.BinaryParseBuffer int )
+  Unable to fully structure code
+
+
+de.toem.impulse.paint.plan.SinglePaintPlanner
+----------------------------
+
+plan(de.toem.toolkits.pattern.threading.IProgress de.toem.impulse.axis.IDomainAxis )
+  Exception : org.benf.cfr.reader.util.ConfusedCFRException: Started 3 blocks at once
+
+
+de.toem.impulse.samples.legend.DefaultSamplesLegend
+----------------------------
+
+write()
+  Unable to fully structure code
+
+
+de.toem.impulse.samples.producer.AbstractSamplesProducer
+----------------------------
+
+init(java.lang.String java.lang.String java.lang.String de.toem.impulse.domain.IDomainBaseProvider )
+  Exception : org.benf.cfr.reader.util.ConfusedCFRException: Tried to end blocks [0[TRYBLOCK]], but top level block is 11[DOLOOP]
+
+
+de.toem.impulse.samples.reader.SamplesReader
+----------------------------
+
+packed2Value(byte[] int int int int )
+  Unable to fully structure code
+  Could not resolve type clashes
+findNext()
+  Unable to fully structure code
+findNextBefore(int )
+  Unable to fully structure code
+ensureSettled(de.toem.toolkits.pattern.threading.IProgress int int long long de.toem.impulse.samples.reader.SamplesReader$GroupIndexBuilder )
+  Unable to fully structure code
+fetchStat(int int de.toem.impulse.samples.base.SamplesStat )
+  Unable to fully structure code
+
+
+de.toem.impulse.samples.writer.EventSamplesWriter
+----------------------------
+
+write(long boolean int )
+  Unable to fully structure code
+write(long boolean int[] )
+  Unable to fully structure code
+
+
+de.toem.impulse.samples.writer.IntegerSamplesWriter
+----------------------------
+
+write(long boolean int )
+  Unable to fully structure code
+write(long boolean long )
+  Unable to fully structure code
+write(long boolean int[] )
+  Unable to fully structure code
+write(long boolean long[] )
+  Unable to fully structure code
+
+
+de.toem.impulse.samples.writer.SamplesWriter
+----------------------------
+
+attachRelation(int int int long int int int )
+  Unable to fully structure code
+
+
+de.toem.impulse.serializer.AbstractParsingRecordReader
+----------------------------
+
+read(de.toem.toolkits.pattern.threading.IProgress java.lang.String de.toem.toolkits.pattern.element.ICell int )
+  Unable to fully structure code
+
+
+de.toem.impulse.serializer.AbstractTabularReader
+----------------------------
+
+parse(de.toem.toolkits.pattern.threading.IProgress java.io.InputStream )
+  Unable to fully structure code
+  Could not resolve type clashes
+
+
+de.toem.impulse.serializer.base.LineReader
+----------------------------
+
+parse(de.toem.toolkits.pattern.threading.IProgress java.io.InputStream )
+  Unable to fully structure code
+
+
+de.toem.impulse.serializer.base.TraceReader
+----------------------------
+
+parse(de.toem.toolkits.pattern.threading.IProgress java.io.InputStream )
+  Unable to fully structure code
+
+
+de.toem.impulse.serializer.vcd.VcdReader
+----------------------------
+
+read(de.toem.toolkits.pattern.threading.IProgress java.lang.String de.toem.toolkits.pattern.element.ICell int )
+  Unable to fully structure code
+parse(byte[] )
+  Unable to fully structure code
+
+
+de.toem.impulse.values.StructMember
+----------------------------
+
+pack()
+  Unable to fully structure code

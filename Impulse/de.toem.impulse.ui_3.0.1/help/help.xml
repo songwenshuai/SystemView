@@ -1,0 +1,341 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<contexts>
+  
+    <!---  Parts -->
+    
+  <context id="record_viewer">
+    <description>impulse is a powerful waveform viewer and analyser tool, helping engineers to comfortably understand and debug complex semiconductor and multi-core software systems. It allows the representation of a wide range of signals, and is not limited to digital and analogue signals only. Beside these two types, impulse offers transaction, event, text, log, structured, binary, image and multi-dimensional signals, supporting impressive visualization options.</description>
+    
+    <topic href="https://www.toem.de/index.php/products/impulse" label="impulse Core" />
+    <topic href="https://www.toem.de/index.php/products/impulse-log-trace" label="impulse LogTrace" />
+    <topic href="https://www.toem.de/index.php/products/impulse-embedded" label="impulse EMBEDDED" />
+    <topic href="https://www.toem.de/index.php/products/impulse-canbus" label="impulse CANbus" />  
+    <topic href="https://www.toem.de/index.php/products/impulse-vp" label="impulse VP" />  
+    <topic href="https://www.toem.de/index.php/products/impulse-hdl" label="impulse HDL" />
+    <topic href="https://www.toem.de/index.php/products/impulse-spice" label="impulse SPICE" />
+    <topic href="https://www.toem.de/index.php/products/impulse-birt" label="impulse BIRT" />
+    <topic href="https://www.toem.de/index.php/products/impulse-nebula" label="impulse NEBULA" />
+    <topic href="https://www.toem.de/index.php/products/impulse-opc-ua" label="impulse OPC/UA" />
+    <topic href="https://www.toem.de/index.php/products/impulse-scope" label="impulse SCOPE" />
+    <topic href="https://www.toem.de/index.php/products/impulse-yakindu" label="impulse YAKINDU" />  
+
+    <topic href="https://www.toem.de/index.php/resources/installation" label="RESOURCES" />  
+    <topic href="https://www.toem.de/index.php/pricing/pricing-options" label="PRICING" />  
+      
+         
+    <topic href="https://www.toem.de/index.php/resources/documentation#impulseManual" label="MANUAL" />  
+    <topic href="https://www.toem.de/index.php/resources/all-documents/234-01-the-impulse-viewer-at-a-glance" label="01 At a glance" />
+    <topic href="https://www.toem.de/index.php/resources/all-documents/260-02-reading-records" label="02 Reading Records " />
+    <topic href="https://www.toem.de/index.php/resources/all-documents/126-03-views-and-plots" label="03 Views and Plots" />
+    <topic href="https://www.toem.de/index.php/resources/all-documents/67-04-plots-and-cursors" label="04 Plots and Cursors" />
+    <topic href="https://www.toem.de/index.php/resources/all-documents/125-05-domains-and-axes" label="05 Domains and Axes" />
+    <topic href="https://www.toem.de/index.php/resources/all-documents/43-06-ports" label="06 Ports" />
+    <topic href="https://www.toem.de/index.php/resources/all-documents/2-07-complementary-views" label="07 Complementary Views" />  
+    <topic href="https://www.toem.de/index.php/resources/all-documents/32-08-marker" label="08 Markers" />
+    <topic href="https://www.toem.de/index.php/resources/all-documents/88-9-preferences" label="09 Preferences" />
+    <topic href="https://www.toem.de/index.php/resources/all-documents/7-10-signal-scripts" label="10 Signal Script" />
+    <topic href="https://www.toem.de/index.php/resources/all-documents/50-11-synchronisation" label="11 Synchronisation" />
+    <topic href="https://www.toem.de/index.php/resources/all-documents/24-12-searching" label="12 Searching" />
+    <topic href="https://www.toem.de/index.php/resources/all-documents/84-13-working-with-charts" label="13 Working with Charts" />
+    <topic href="https://www.toem.de/index.php/resources/all-documents/80-14-templates" label="14 Templates" />
+    <topic href="https://www.toem.de/index.php/resources/all-documents/36-15-comparing-signals-and-records" label="15 Comparing signals and records " />
+    <topic href="https://www.toem.de/index.php/resources/all-documents/93-16-launcher-integration" label="16 Launcher Integration" />
+    <topic href="https://www.toem.de/index.php/resources/all-documents/90-native-extensions" label="17 Native Extensions " />           
+    <topic href="https://www.toem.de/index.php/resources/all-documents/20-keyboard-shortcuts" label="18 Keyboard Shortcuts" />
+    <topic href="https://www.toem.de/index.php/resources/all-documents/87-19-signal-content" label="19 Signal Content" />
+  </context>
+    
+  <context id="wallet_editor">
+    <description>If you want to deploy or re-use already existing configurations for impulse you need to export or import them into the program. To achieve this you have to create an Impulse wallet. You can do so if you open the preferences editor and chose Create a new wallet. You now have to chose the name and place where it should be opened and then you get the wallet editor. </description>
+    <topic href="https://www.toem.de/index.php/resources/documentation#impulseManual" label="MANUAL" /> 
+    <topic href="https://www.toem.de/index.php/resources/all-documents/88-9-preferences" label="Manual 09 Preferences" />
+  </context>
+  
+  <context id="signal_table">
+    <description>When you open the Signal Table, you only see the names of the signals you chose. The Signal Table is used to show an overview of the statistical data of your signals; for example, the number of events or when the first event appears.  </description>
+    <topic href="https://www.toem.de/index.php/resources/documentation#impulseManual" label="MANUAL" /> 
+    <topic href="https://www.toem.de/index.php/resources/all-documents/2-07-complementary-views" label="Manual 07 Complementary Views" />  
+  </context>
+  
+  <context id="samples_view">
+    <description>The Sample Table shows the different events within your signals as a table. This table displays the index and domain position (e.g., time) on the left-hand side and the value (plus optional value specific columns) of it on the right-hand side. When you choose multiple signals, the table additionally shows their names.  </description>
+    <topic href="https://www.toem.de/index.php/resources/documentation#impulseManual" label="MANUAL" /> 
+    <topic href="https://www.toem.de/index.php/resources/all-documents/2-07-complementary-views" label="Manual 07 Complementary Views" />  
+  </context>
+  <context id="ports_view">
+    <description> As soon as your signals are not bound to a file, but stream-in from different sources like processes, sockets, pipe and drivers, ports are the means in impulse to handle those signals.  </description>
+    <topic href="https://www.toem.de/index.php/resources/documentation#impulseManual" label="MANUAL" /> 
+    <topic href="https://www.toem.de/index.php/resources/all-documents/43-06-ports" label="Manual 06 Ports" />
+    <topic href="https://www.toem.de/index.php/resources/all-documents/88-9-preferences" label="Manual 09 Preferences" />
+  </context> 
+   
+  <context id="sample_view">
+    <topic href="https://www.toem.de/index.php/resources/documentation#impulseManual" label="MANUAL" /> 
+    <description>The Sample Inspection window lets you inspect the details of a sample. If you've opened the editor, the window has additional controls that let's you edit the actual samples.  </description>
+    <topic href="https://www.toem.de/index.php/resources/all-documents/2-07-complementary-views" label="Manual 07 Complementary Views" />  
+  </context>
+      
+  <!--- view dialogs  -->
+        
+  <context id="plot_dialog">
+    <description>You can edit an existing plot by opening the edit dialogue with the context menu or by double-clicking the element whose configuration you want to change.
+In the window you can find the name, the description, the production and the primary signal in the upper-left corner.
+Below, you find optional settings depending on the selected production.
+Underneath appear different kinds of interpretation settings depending on which kind of signal the configuration is intended.  </description>
+    <topic href="https://www.toem.de/index.php/resources/documentation#impulseManual" label="MANUAL" /> 
+    <topic href="https://www.toem.de/index.php/resources/all-documents/126-03-views-and-plots" label="Manual 03 Views and Plots " />
+    <topic href="https://www.toem.de/index.php/resources/all-documents/7-10-signal-scripts" label="Manual 10 Signal Script" />
+ 
+  </context>
+  <context id="folder_dialog">
+    <description>Folders help you to organize your plots into a tree structure. </description>
+    <topic href="https://www.toem.de/index.php/resources/documentation#impulseManual" label="MANUAL" /> 
+    <topic href="https://www.toem.de/index.php/resources/all-documents/125-05-domains-and-axes" label="Manual 05 Domains and Axes" />    
+    <topic href="https://www.toem.de/index.php/resources/all-documents/126-03-views-and-plots" label="Manual 03 Views and Plots" />
+  </context>
+  <context id="find_dialog">
+    <description>The Find dialog helps to find signal patterns. Its behaving like the standard find dialog of the text editors. You type in a find expression, select if you want to search forward or reverse, with or without wrapping, and press find. The active cursor will be placed at the found position. </description>
+    <topic href="https://www.toem.de/index.php/resources/documentation#impulseManual" label="MANUAL" /> 
+    <topic href="https://www.toem.de/index.php/resources/all-documents/24-12-searching" label="Manual 12 Searching" />
+    <topic href="https://www.toem.de/index.php/resources/all-documents/7-10-signal-scripts" label="Manual 10 Signal Scripts" />
+
+  </context>
+  <context id="view_dialog">
+    <description>A view provides a presentation for a set of signals. You can switch between these presentations, or re-use views for other signal sets. Views are not bound to a certain file or input.
+Inside of a view you find Plots to display the signal data and Folders to organize the presentation in a hierarchical structure. This enables the user to hide/show parts of the presentation. </description>
+    <topic href="https://www.toem.de/index.php/resources/documentation#impulseManual" label="MANUAL" /> 
+    <topic href="https://www.toem.de/index.php/resources/all-documents/125-05-domains-and-axes" label="Manual 05 Domains and Axes" />
+    <topic href="https://www.toem.de/index.php/resources/all-documents/126-03-views-and-plots" label="Manual 03 Views and Plots" />
+    <topic href="https://www.toem.de/index.php/resources/all-documents/87-02-signal-basics" label="Manual 02 Signal Basics" />
+    <topic href="https://www.toem.de/index.php/resources/all-documents/67-04-plots-and-cursors" label="Manual 04 Plots and Cursors" />    
+  </context>
+  <context id="reference_dialog">
+    <description> The reference dialog allows to select references to plots from the current view or signals from the current record.</description>
+    <topic href="https://www.toem.de/index.php/resources/documentation#impulseManual" label="MANUAL" /> 
+    <topic href="https://www.toem.de/index.php/resources/all-documents/126-03-views-and-plots" label="Manual 03 Views and Plots" />  
+    <topic href="https://www.toem.de/index.php/resources/all-documents/87-02-signal-basics" label="Manual 02 Signal Basics" />
+  </context>  
+  <context id="multi_reference_dialog">
+    <description> The reference dialog allows to select multiple references to plots from the current view or signals from the current record.</description>
+    <topic href="https://www.toem.de/index.php/resources/documentation#impulseManual" label="MANUAL" /> 
+    <topic href="https://www.toem.de/index.php/resources/all-documents/126-03-views-and-plots" label="Manual 03 Views and Plots" />  
+    <topic href="https://www.toem.de/index.php/resources/all-documents/87-02-signal-basics" label="Manual 02 Signal Basics" />
+  </context>    
+  <context id="cursor_dialog">
+    <description>Cursors are part of a view like plots and folders - but they are not visible in the view hierarchy . So if you change a view, you also change to different cursors.  </description>
+    <topic href="https://www.toem.de/index.php/resources/documentation#impulseManual" label="MANUAL" /> 
+    <topic href="https://www.toem.de/index.php/resources/all-documents/67-04-plots-and-cursors" label="Manual 04 Plots and Cursors" />
+    <topic href="https://www.toem.de/index.php/resources/all-documents/126-03-views-and-plots" label="Manual 03 Views and Plots" />
+  </context>
+  
+    <!--- serializer dialogs  -->
+    
+  <context id="serializer_dialog">
+    <description>A serializer is a software component to read or write signal data from or into a file. Users can extend impulse with additional serializers (e.g to read a custom format). Many serializer allow the definition of serializer configurations. Such a configuration describes how a serializer shall process the input/output of a given file (e.g. sets the no. of columns in CSV format). 
+ You may modify the standard parameters or add and modify configurations (availability depending on the serializer). </description>
+    <topic href="https://www.toem.de/index.php/resources/documentation#impulseManual" label="MANUAL" /> 
+        <topic href="https://www.toem.de/index.php/resources/all-documents/87-02-signal-basics" label="Manual 02 Signal Basics" />
+    <topic href="https://www.toem.de/index.php/resources/all-documents/88-9-preferences" label="Manual 09 Preferences" />
+  </context>  
+  <context id="serializer_configuration dialog">
+    <description>The serializer configuration dialog allows to modify reader/writer specific parameters. </description>
+    <topic href="https://www.toem.de/index.php/resources/documentation#impulseManual" label="MANUAL" /> 
+    <topic href="https://www.toem.de/index.php/resources/all-documents/87-02-signal-basics" label="Manual 02 Signal Basics" />
+    <topic href="https://www.toem.de/index.php/resources/all-documents/88-9-preferences" label="Manual 09 Preferences" />
+  </context>  
+  <context id="serializer_select_dialog">
+    <description>A serializer is a software component to read or write signal data from or into a file. Users can extend impulse with additional serializers (e.g to read a custom format). Many serializer allow the definition of serializer configurations. Such a configuration describes how a serializer shall process the input/output of a given file (e.g. sets the no. of columns in CSV format). 
+This dialog enables a user to select between multiple existing serializer configurations or open the serializer preferences to add a new one. </description>
+    <topic href="https://www.toem.de/index.php/resources/documentation#impulseManual" label="MANUAL" /> 
+    <topic href="https://www.toem.de/index.php/resources/all-documents/87-02-signal-basics" label="Manual 02 Signal Basics" />
+    <topic href="https://www.toem.de/index.php/resources/all-documents/88-9-preferences" label="Manual 09 Preferences" />
+  </context>         
+  
+  <context id="flux_reader_dialog">
+    <description>This serializer configuration dialog allows to configure the flux reader. </description>
+    <topic href="https://toem.de/index.php/resources/all-documents/209-flux-rectr-reader" label="R004 flux (RecTr) Reader " />
+    <topic href="https://www.toem.de/index.php/resources/documentation#impulseManual" label="MANUAL" /> 
+    <topic href="https://www.toem.de/index.php/resources/all-documents/87-02-signal-basics" label="Manual 02 Signal Basics" />
+    <topic href="https://www.toem.de/index.php/resources/all-documents/88-9-preferences" label="Manual 09 Preferences" />
+  </context> 
+  <context id="scripted_reader_dialog">
+    <description>This serializer configuration dialog allows to configure the scripted reader. </description>
+    <topic href="https://toem.de/index.php/resources/all-documents/210-r005-scripted-reader" label="R005 Scripted Reader  " />
+    <topic href="https://www.toem.de/index.php/resources/documentation#impulseManual" label="MANUAL" /> 
+    <topic href="https://www.toem.de/index.php/resources/all-documents/87-02-signal-basics" label="Manual 02 Signal Basics" />
+    <topic href="https://www.toem.de/index.php/resources/all-documents/88-9-preferences" label="Manual 09 Preferences" />
+  </context>  
+  
+      <!--- port dialogs  -->
+               
+  <context id="pipe_port_dialog">
+    <description>A pipe adapter reads its data from a a pipe and parses that data data with a given serializer. Typical use case: Write the system-C output into a pipe and connect your port to that pipe. Pipe adapters can be used as ports and within multi adapter ports. </description>
+    <topic href="https://toem.de/index.php/resources/all-documents/64-pipe-adapter" label="R020 File/Pipe Adapter" />  
+    <topic href="https://www.toem.de/index.php/resources/documentation#impulseManual" label="MANUAL" /> 
+    <topic href="https://www.toem.de/index.php/resources/all-documents/43-06-ports" label="Manual 06 Ports" />
+  </context>
+  <context id="process_port_dialog">
+    <description>A process adapter starts a process (command line arguments), reads its data from a stdout and parses that data data with a given serializer. Typical use case: Start a simulator or converter and read its output. Process adapters can be used as ports and within multi adapter ports. </description>
+    <topic href="https://toem.de/index.php/resources/all-documents/204-process-adapter" label="R021 Process Adapter" />  
+    <topic href="https://www.toem.de/index.php/resources/documentation#impulseManual" label="MANUAL" /> 
+    <topic href="https://www.toem.de/index.php/resources/all-documents/43-06-ports" label="Manual 06 Ports" />
+  </context>
+  <context id="tcp_port_dialog">
+    <description>The TCP adapter (Transmission Control Protocol) acts as a TCP client or server. The received data is forwarded to a configurable reader. Scripts are used to send data to the TCP server/client and activate the streaming environment (stimulation). The adapter can be combined with other adapters using a multi-adapter port.</description>
+    <topic href="https://toem.de/index.php/resources/all-documents/37-tcp-adapter" label="R022 TCP (Socket) Adapter" />  
+    <topic href="https://www.toem.de/index.php/resources/documentation#impulseManual" label="MANUAL" /> 
+    <topic href="https://www.toem.de/index.php/resources/all-documents/43-06-ports" label="Manual 06 Ports" />
+  </context>
+  <context id="udp_port_dialog">
+    <description>The UDP adapter (User Datagram Protocol) acts as a UDP client. The received data is forwarded to a configurable reader. Scripts are used to send datagrams and activate the streaming environment (stimulation). The adapter can be combined with other adapters using a multi-adapter port.</description>
+    <topic href="https://toem.de/index.php/resources/all-documents/212-udp-adapter" label="R024 UDP Adapter " />  
+    <topic href="https://www.toem.de/index.php/resources/documentation#impulseManual" label="MANUAL" /> 
+    <topic href="https://www.toem.de/index.php/resources/all-documents/43-06-ports" label="Manual 06 Ports" />
+  </context>  
+  
+        <!--- preference dialogs  -->
+        
+  <context id="impulse_preferences">
+    <description>impulse’s preferences are stored within the eclipse preference store. If you open the preferences dialogue, you can manage all the relevant settings. There are preferences pages for views, serializers, ports, templates, .... Settings can be easily imported or exported using the Wallet Editor.  </description>
+    <topic href="https://www.toem.de/index.php/resources/documentation#impulseManual" label="MANUAL" /> 
+    <topic href="https://www.toem.de/index.php/resources/all-documents/88-9-preferences" label="Manual 09 Preferences" />
+  </context>    
+  <context id="license_preferences">
+    <description>The license preference page allows you to manage your license keys. If you've received a license key, you can enter this key in the field user key. After you entered the key, it will be shown in the list below.The list in the middle of the page shows all available keys, sorted by priority. This list contains the user key, but also system and integrator keys. 
+    			If you select a key, its contents are shown in the fields below. The key with highest priority is the active key. The active key is the key that controls all impulse features. The properties field contains all enabled features, the usage field informs you if about possible usage restrictions. Below you find the licensee information. The field valid until contains the information until when the selected license is valid. </description>
+    <topic href="https://www.toem.de/index.php/resources/documentation#impulseManual" label="MANUAL" /> 
+  </context>   
+  <context id="samples_preferences">
+    <description>Manages all the view configurations. You can see all available views on the left side of this preferences editor. Furthermore, you can delete, copy, edit, change their place within the list to find them more easily and you can enable and disable views. If you disable a view, it will not be used any longer but will still be available in the system. </description>
+    <topic href="https://www.toem.de/index.php/resources/documentation#impulseManual" label="MANUAL" /> 
+    <topic href="https://www.toem.de/index.php/resources/all-documents/126-03-views-and-plots" label="Manual 03 Views and Plots" />
+    <topic href="https://www.toem.de/index.php/resources/all-documents/88-9-preferences" label="Manual 09 Preferences" />
+  </context>   
+  <context id="ports_preferences">
+    <description>Ports are means to read signal data from external devices and interfaces. Similar to charts, you can configure multiple ports of a given set of providers (e.g. add two tcp ports, one for port 4000, the other for port 4101).
+This preference page contains a list of all configured ports. On the right side you find buttons to add new ports, clone existing ones or configure the selected ports. The initial preference set does not contain any ports.  </description>
+    <topic href="https://www.toem.de/index.php/resources/documentation#impulseManual" label="MANUAL" /> 
+    <topic href="https://www.toem.de/index.php/resources/all-documents/43-06-ports" label="Manual 05 Ports" />
+    <topic href="https://www.toem.de/index.php/resources/all-documents/88-9-preferences" label="Manual 09 Preferences" />
+  </context>   
+  <context id="serializer_preferences">
+    <description>A serializer is a software extension to read or write signal data from or into a file. Users can extend impulse with additional serializers (e.g to read a custom format). Many serializer allow the definition of serializer configurations. Such a configuration describes how a serializer shall process the input/output of a given file (e.g. sets the no. of columns in CSV format). 
+The serializer preference page contains a list of all registered serializer. If you press View/Edit (or double click on a serializer), the configuration dialogue opens and lets you extend and define configurations. </description>
+    <topic href="https://www.toem.de/index.php/resources/documentation#impulseManual" label="MANUAL" /> 
+    <topic href="https://www.toem.de/index.php/resources/all-documents/88-9-preferences" label="Manual 09 Preferences" />
+  </context>  
+  <context id="charts_preferences">
+    <description>Charts are highly configurable. The basis for each chart is a so called chart provider. impulse contains providers for Birt charts, Nebula charts and script charts. Users may extend impulse with additional chart providers.
+				To add a new chart, click the Add button and select the chart provider. A dialogue will open to configure the new chart instance. To use and show the newly created chart, you need to select it in the plot dialogue.
+				This preference page contains a list of all configured charts. On the right side of the page you find buttons to add new charts, clone existing ones or configure the selected chart. The initial preference set contains a list off default charts. </description>
+    <topic href="https://www.toem.de/index.php/resources/documentation#impulseManual" label="MANUAL" /> 
+    <topic href="https://www.toem.de/index.php/resources/all-documents/84-13-working-with-charts" label="Manual 13 Working with Charts" />
+    <topic href="https://www.toem.de/index.php/resources/all-documents/88-9-preferences" label="Manual 09 Preferences" />
+  </context>  
+  <context id="formats_preferences">
+    <description>This page let's you enter custom decimal formats as well as preferred domain units. You can define up to eight different decimal formats. To define a custom decimal format, type in the name of the format into the left field, and the format definition into the second field. To use a given custom format, open the plot dialog and select the format in the diagram style field. 
+The field preferred domain units let's you enter domain units like ms or us. impulse will use these domain units in the value table, the inspection view and other UI components. You may enter multiple domain units separated by comma. Impulse will select the best fit. </description>
+    <topic href="https://www.toem.de/index.php/resources/documentation#impulseManual" label="MANUAL" /> 
+    <topic href="https://www.toem.de/index.php/resources/all-documents/88-9-preferences" label="Manual 09 Preferences" />
+    <topic href="https://docs.oracle.com/javase/7/docs/api/java/text/DecimalFormat.html" label="Decimal Format" />
+  </context>  
+  <context id="search_preferences">
+    <description>If you press Ctrl-F in the impulse viewer, the Find dialogue opens (like in any other text editor). With this dialogue you can search for signal patterns. 
+This preference page allows you to manage search expressions. All configured search expressions are shown in the list on the left side. On the right side you find buttons to add, clone and configure those expressions.  </description>
+    <topic href="https://www.toem.de/index.php/resources/documentation#impulseManual" label="MANUAL" /> 
+    <topic href="https://www.toem.de/index.php/resources/all-documents/24-12-searching" label="Manual 12 Searching" />
+    <topic href="https://www.toem.de/index.php/resources/all-documents/88-9-preferences" label="Manual 09 Preferences" />
+  </context>  
+  <context id="template_preferences">
+    <description>Templates simplify the re-use of configuration elements. A template may contain simple defaults, such that all float signals shall be painted red, but they can also contain a rich set of elements containing multiple scripts and folders.
+This page shows all configured templates. Use the buttons on the right side to add, clone or configure your templates. The checkbox on the left side enables or disables the template.</description>
+    <topic href="https://www.toem.de/index.php/resources/documentation#impulseManual" label="MANUAL" /> 
+    <topic href="https://www.toem.de/index.php/resources/all-documents/80-14-templates" label="Manual 14 Templates" />
+    <topic href="https://www.toem.de/index.php/resources/all-documents/88-9-preferences" label="Manual 09 Preferences" />
+  </context>  
+  <context id="theme_preferences">
+    <description>This page shows all available themes. To select a theme, click the button to the right of each image. If you want to change individual colors, use the Appearance page (General->Appearance).</description>
+    <topic href="https://www.toem.de/index.php/resources/documentation#impulseManual" label="MANUAL" /> 
+    <topic href="https://www.toem.de/index.php/resources/all-documents/88-9-preferences" label="Manual 09 Preferences" />
+  </context>  
+  <context id="parts_preferences">
+    <description>In addition to the Viewer, impulse also uses other parts to display signal-related information, such as the Sample Table or the Sample Inspector. Most of these parts can be configured and have the possibility to choose between different configurations. All these configurations can be managed on this settings page.  </description>
+    <topic href="https://www.toem.de/index.php/resources/documentation#impulseManual" label="MANUAL" />
+    <topic href="https://toem.de/index.php/resources/all-documents/2-07-complementary-views" label="07 Complementary Views " />    
+    <topic href="https://www.toem.de/index.php/resources/all-documents/88-9-preferences" label="Manual 09 Preferences" />
+  </context>   
+  <context id="samplesview_member_dialog">
+    <description>This dialog allows the configuration of Sample Table member columns. You may enable the columns, set the format and the alignment.  </description>
+    <topic href="https://www.toem.de/index.php/resources/documentation#impulseManual" label="MANUAL" /> 
+    <topic href="https://toem.de/index.php/resources/all-documents/2-07-complementary-views" label="07 Complementary Views " /> 
+    <topic href="https://www.toem.de/index.php/resources/all-documents/88-9-preferences" label="Manual 09 Preferences" />
+  </context> 
+  <context id="samplesview_dialog">
+    <description>This dialog allows the configuration of Sample Table standard and member columns. You may enable the columns, set the format and the alignment. </description>
+    <topic href="https://www.toem.de/index.php/resources/documentation#impulseManual" label="MANUAL" />
+    <topic href="https://toem.de/index.php/resources/all-documents/2-07-complementary-views" label="07 Complementary Views " />  
+    <topic href="https://www.toem.de/index.php/resources/all-documents/88-9-preferences" label="Manual 09 Preferences" />
+  </context>   
+  <context id="sampleview_member_dialog">
+    <description>This dialog allows the configuration of Sample Inspector member settings. You may choose between different presentation options for the members.  </description>
+    <topic href="https://www.toem.de/index.php/resources/documentation#impulseManual" label="MANUAL" />
+    <topic href="https://toem.de/index.php/resources/all-documents/2-07-complementary-views" label="07 Complementary Views " />  
+    <topic href="https://www.toem.de/index.php/resources/all-documents/88-9-preferences" label="Manual 09 Preferences" />
+  </context> 
+  <context id="sampleview_type_dialog">
+    <description>This dialog allows the configuration of Sample Inspector type settings. You may choose between different presentation options for the signal types.  </description>
+    <topic href="https://www.toem.de/index.php/resources/documentation#impulseManual" label="MANUAL" />
+    <topic href="https://toem.de/index.php/resources/all-documents/2-07-complementary-views" label="07 Complementary Views " />  
+    <topic href="https://www.toem.de/index.php/resources/all-documents/88-9-preferences" label="Manual 09 Preferences" />
+  </context>       
+  <context id="sampleview_dialog">
+    <description>This dialog allows the configuration of Sample Inspector standard, type and member settings. You may choose between different presentation options for different signal types and members.</description>
+    <topic href="https://www.toem.de/index.php/resources/documentation#impulseManual" label="MANUAL" />
+    <topic href="https://toem.de/index.php/resources/all-documents/2-07-complementary-views" label="07 Complementary Views " />  
+    <topic href="https://www.toem.de/index.php/resources/all-documents/88-9-preferences" label="Manual 09 Preferences" />
+  </context>          
+
+  <!--- record dialogs  -->
+        
+  <context id="record_dialog">
+    <description>Represents a group of signals and scopes as a whole. Stands usually for a wave file (if you make the child elements of a wave file visible in the Project Explorer, you will find all its scopes and signals). </description>
+    <topic href="https://www.toem.de/index.php/resources/documentation#impulseManual" label="MANUAL" /> 
+    <topic href="https://www.toem.de/index.php/resources/all-documents/87-02-signal-basics" label="Manual 02 Signal Basics " />
+  </context>  
+
+  <context id="record_message_dialog">
+    <description>Record messages usually contain error messages from a reader. </description>
+    <topic href="https://www.toem.de/index.php/resources/documentation#impulseManual" label="MANUAL" /> 
+    <topic href="https://www.toem.de/index.php/resources/all-documents/87-02-signal-basics" label="Manual 02 Signal Basics " />
+  </context>  
+  
+  <context id="scope_dialog">
+    <description>A Scope is a generic element used by the reader to organize the elements in a useful way, usually inspired by the wave file (module, subsystem, processes,..). Scopes do not have any other meaning. </description>
+    <topic href="https://www.toem.de/index.php/resources/documentation#impulseManual" label="MANUAL" /> 
+    <topic href="https://www.toem.de/index.php/resources/all-documents/87-02-signal-basics" label="Manual 02 Signal Basics " />
+  </context>  
+
+  <context id="proxy_dialog">
+    <description>Proxies are used to share equal signal data between different logical or physical signals. They are links that give an existing signal a new name or an existence somewhere else within the record hierarchy. </description>
+    <topic href="https://www.toem.de/index.php/resources/documentation#impulseManual" label="MANUAL" /> 
+    <topic href="https://www.toem.de/index.php/resources/all-documents/87-02-signal-basics" label="Manual 02 Signal Basics " />
+  </context> 
+  
+  <context id="marker_dialog">
+    <description>The eclipse platform supports different markers like book-marks, tasks, problems and errors. Based on this mechanisms, impulse allows the user to add annotations, book-marks and task to any signal at a given position.  </description>
+    <topic href="https://www.toem.de/index.php/resources/documentation#impulseManual" label="MANUAL" /> 
+    <topic href="https://www.toem.de/index.php/resources/all-documents/32-08-marker" label="Manual 08 Markers" />
+    <topic href="https://www.toem.de/index.php/resources/all-documents/87-02-signal-basics" label="Manual 02 Signal Basics" />
+  </context>
+  
+  <context id="signal_dialog">
+    <description>A signal can contain up to 2^31 samples. Each sample can be of null value or non-null value of a given signal type. 
+Signals may be discrete or continuous.
+The signal descriptor contains additional information about the signal. 
+The domain of a signal may be Time,Frequency,Index,... . The domain base represents the the minimum distance between two samples (e.g. ns or ps). The domain position is the product of the domain base and a 64 bit signed integer value.
+  			</description>
+    <topic href="https://www.toem.de/index.php/resources/documentation#impulseManual" label="MANUAL" /> 
+    <topic href="https://www.toem.de/index.php/resources/all-documents/87-02-signal-basics" label="Manual 02 Signal Basics " />
+  </context>  
+     
+</contexts> 

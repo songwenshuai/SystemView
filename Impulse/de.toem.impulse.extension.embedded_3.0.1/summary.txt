@@ -1,0 +1,16 @@
+Summary for /Users/songwenshuai/workspace/github/SystemView/Impulse/de.toem.impulse.extension.embedded_3.0.1.jar
+Decompiled with CFR 0.152
+
+
+ch.ukos.impulse.serializer.log.UKosBinaryLogReader
+----------------------------
+
+parse(de.toem.toolkits.pattern.threading.IProgress java.io.InputStream )
+  Unable to fully structure code
+
+
+de.toem.impulse.extension.embedded.swv.SwvReader
+----------------------------
+
+parse(de.toem.toolkits.pattern.threading.IProgress java.io.InputStream )
+  Unable to fully structure code

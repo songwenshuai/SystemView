@@ -1,0 +1,737 @@
+<?xml version="1.0" encoding="ASCII"?>
+<fragment:ModelFragments xmi:version="2.0" xmlns:xmi="http://www.omg.org/XMI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:basic="http://www.eclipse.org/ui/2010/UIModel/application/descriptor/basic" xmlns:commands="http://www.eclipse.org/ui/2010/UIModel/application/commands" xmlns:fragment="http://www.eclipse.org/ui/2010/UIModel/fragment" xmlns:menu="http://www.eclipse.org/ui/2010/UIModel/application/ui/menu" xmlns:ui="http://www.eclipse.org/ui/2010/UIModel/application/ui" xmi:id="_H02i8A2VEei_8OLhX6iI4A">
+  <imports xsi:type="commands:Command" xmi:id="_vF4WsA2zEeiAprUmm3_Rlg" elementId="de.toem.toolkits.commands.controller.edit"/>
+  <imports xsi:type="commands:Command" xmi:id="_vF7aAA2zEeiAprUmm3_Rlg" elementId="de.toem.toolkits.commands.controller.open"/>
+  <imports xsi:type="commands:Command" xmi:id="_vF8BEA2zEeiAprUmm3_Rlg" elementId="de.toem.toolkits.commands.controller.print"/>
+  <imports xsi:type="commands:Command" xmi:id="_vF8oIA2zEeiAprUmm3_Rlg" elementId="de.toem.toolkits.commands.controller.up"/>
+  <imports xsi:type="commands:Command" xmi:id="_vF9PMA2zEeiAprUmm3_Rlg" elementId="de.toem.toolkits.commands.controller.down"/>
+  <imports xsi:type="commands:Command" xmi:id="_vF92QA2zEeiAprUmm3_Rlg" elementId="de.toem.toolkits.commands.controller.add"/>
+  <imports xsi:type="commands:Command" xmi:id="_vF-dUA2zEeiAprUmm3_Rlg" elementId="de.toem.toolkits.commands.controller.insert"/>
+  <imports xsi:type="commands:Command" xmi:id="_vF_EYA2zEeiAprUmm3_Rlg" elementId="de.toem.toolkits.commands.controller.clone"/>
+  <imports xsi:type="commands:Command" xmi:id="_vF_EYQ2zEeiAprUmm3_Rlg" elementId="org.eclipse.ui.edit.copy"/>
+  <imports xsi:type="commands:Command" xmi:id="_vF_rcA2zEeiAprUmm3_Rlg" elementId="org.eclipse.ui.edit.cut"/>
+  <imports xsi:type="commands:Command" xmi:id="_vGASgA2zEeiAprUmm3_Rlg" elementId="org.eclipse.ui.edit.paste"/>
+  <imports xsi:type="commands:Command" xmi:id="_vGA5kA2zEeiAprUmm3_Rlg" elementId="org.eclipse.ui.edit.delete"/>
+  <imports xsi:type="commands:Command" xmi:id="_XxmxQEnzEeiaDvEoSpia5Q" elementId="de.toem.toolkits.commands.views.inputSource"/>
+  <imports xsi:type="commands:Command" xmi:id="_aJ43QEnzEeiaDvEoSpia5Q" elementId="de.toem.toolkits.commands.views.inputMode"/>
+  <imports xsi:type="commands:Command" xmi:id="_bs_owEnzEeiaDvEoSpia5Q" elementId="de.toem.toolkits.commands.views.inputSync"/>
+  <imports xsi:type="commands:Command" xmi:id="_chkgUEnzEeiaDvEoSpia5Q" elementId="de.toem.toolkits.commands.views.selectionSync"/>
+  <imports xsi:type="commands:Command" xmi:id="_dVl-QEnzEeiaDvEoSpia5Q" elementId="de.toem.toolkits.commands.views.config"/>
+  <imports xsi:type="commands:Command" xmi:id="_eIfa0EnzEeiaDvEoSpia5Q" elementId="de.toem.toolkits.commands.views.inputRefresh"/>
+  <imports xsi:type="commands:Command" xmi:id="_e1lKUEnzEeiaDvEoSpia5Q" elementId="de.toem.toolkits.commands.views.defaults"/>
+  <imports xsi:type="commands:Command" xmi:id="_qIFVkFqXEeiShepWThYpOw" elementId="org.eclipse.equinox.p2.ui.sdk.install"/>
+  <imports xsi:type="commands:Command" xmi:id="_xWNJIFqXEeiShepWThYpOw" elementId="org.eclipse.ui.file.print"/>
+  <imports xsi:type="commands:Command" xmi:id="_ax_rcHL4Eeiza8VFP7JOFw" elementId="org.eclipse.ui.edit.selectAll"/>
+  <imports xsi:type="commands:Command" xmi:id="_cS9u8HL4Eeiza8VFP7JOFw" elementId="org.eclipse.ui.edit.rename"/>
+  <imports xsi:type="commands:Command" xmi:id="_c_008HL4Eeiza8VFP7JOFw" elementId="org.eclipse.ui.edit.findReplace"/>
+  <imports xsi:type="commands:Command" xmi:id="_dtcv8HL4Eeiza8VFP7JOFw" elementId="org.eclipse.ui.edit.findNext"/>
+  <imports xsi:type="commands:Command" xmi:id="_eWfs8HL4Eeiza8VFP7JOFw" elementId="org.eclipse.ui.edit.findPrevious"/>
+  <imports xsi:type="commands:Command" xmi:id="_dT92AJb0EeihDovBfyKGZw" elementId="de.toem.toolkits.commands.controller.showIn"/>
+  <imports xsi:type="commands:Command" xmi:id="_2dXLQJcTEeihDovBfyKGZw" elementId="de.toem.toolkits.commands.controller.markerAdd"/>
+  <imports xsi:type="commands:Command" xmi:id="_5O10YJcTEeihDovBfyKGZw" elementId="de.toem.toolkits.commands.controller.markerDeleteAll"/>
+  <imports xsi:type="commands:Command" xmi:id="_8BRvcHrTEempAc-b1AO7xg" elementId="de.toem.toolkits.commands.controller.execute"/>
+  <imports xsi:type="commands:BindingContext" xmi:id="_nPOdoO4UEeu3x_q9hy66rg" elementId="de.toem.toolkits.bindingcontext.default"/>
+  <fragments xsi:type="fragment:StringModelFragment" xmi:id="_OMFx0A2VEei_8OLhX6iI4A" featurename="descriptors" parentElementId="xpath:/">
+    <elements xsi:type="basic:PartDescriptor" xmi:id="_pKeD0A2VEei_8OLhX6iI4A" elementId="de.toem.impulse.parts.ports" label="%part.name.ports" iconURI="platform:/plugin/de.toem.impulse.ui/icons/parts/de.toem.impulse.parts.ports.png" tooltip="%part.tooltip.ports" allowMultiple="true" category="impulse" closeable="true" dirtyable="true" contributionURI="bundleclass://de.toem.impulse.ui/de.toem.impulse.parts.views.PortsView">
+      <tags>View</tags>
+      <menus xmi:id="_Vrg7UA2WEei_8OLhX6iI4A" elementId="de.toem.impulse.menu.ports.main">
+        <tags>ViewMenu</tags>
+      </menus>
+      <toolbar xmi:id="_UqSu4A2WEei_8OLhX6iI4A" elementId="de.toem.impulse.toolbar.ports.main"/>
+      <properties key="partURI" value="bundleclass://de.toem.impulse.ui/de.toem.impulse.parts.views.PortsView"/>
+    </elements>
+    <elements xsi:type="basic:PartDescriptor" xmi:id="_zoanAFG9EeiTCsNo2tNg4Q" elementId="de.toem.impulse.parts.sample" label="%part.name.sample" iconURI="platform:/plugin/de.toem.impulse.ui/icons/parts/de.toem.impulse.parts.sample.png" tooltip="%part.tooltip.sample" bindingContexts="_17_E0P9eEeuTmpkiOgtVww _nPOdoO4UEeu3x_q9hy66rg" category="impulse" closeable="true" dirtyable="true" contributionURI="bundleclass://de.toem.impulse.ui/de.toem.impulse.parts.views.SampleView">
+      <tags>View</tags>
+      <menus xmi:id="_zoanAVG9EeiTCsNo2tNg4Q" elementId="de.toem.impulse.menu.sample.main">
+        <tags>ViewMenu</tags>
+      </menus>
+      <toolbar xmi:id="_zoanBlG9EeiTCsNo2tNg4Q" elementId="de.toem.impulse.toolbar.sample.main"/>
+      <properties key="partURI" value="bundleclass://de.toem.impulse.ui/de.toem.impulse.parts.views.SampleView"/>
+    </elements>
+    <elements xsi:type="basic:PartDescriptor" xmi:id="_2H52wEeBEeimhe5fh_XaNg" elementId="de.toem.impulse.parts.samples" label="%part.name.samples.1" iconURI="platform:/plugin/de.toem.impulse.ui/icons/parts/de.toem.impulse.parts.samples.png" tooltip="%part.tooltip.samples" bindingContexts="_17_E0P9eEeuTmpkiOgtVww _nPOdoO4UEeu3x_q9hy66rg" category="impulse" closeable="true" dirtyable="true" contributionURI="bundleclass://de.toem.impulse.ui/de.toem.impulse.parts.views.SamplesView">
+      <tags>View</tags>
+      <menus xmi:id="_2H52w0eBEeimhe5fh_XaNg" elementId="de.toem.impulse.menu.samples.main">
+        <tags>ViewMenu</tags>
+      </menus>
+      <toolbar xmi:id="_2H52ykeBEeimhe5fh_XaNg" elementId="de.toem.impulse.toolbar.samples.main"/>
+      <properties key="partURI" value="bundleclass://de.toem.impulse.ui/de.toem.impulse.parts.views.SamplesView"/>
+    </elements>
+    <elements xsi:type="basic:PartDescriptor" xmi:id="_4R-tcGQkEeiZUPYsbApwmA" elementId="de.toem.impulse.parts.samples.2" label="%part.name.samples.2" iconURI="platform:/plugin/de.toem.impulse.ui/icons/parts/de.toem.impulse.parts.samples.png" tooltip="%part.tooltip.samples" bindingContexts="_17_E0P9eEeuTmpkiOgtVww _nPOdoO4UEeu3x_q9hy66rg" category="impulse" closeable="true" dirtyable="true" contributionURI="bundleclass://de.toem.impulse.ui/de.toem.impulse.parts.views.SamplesView">
+      <tags>View</tags>
+      <menus xmi:id="_4R-tcWQkEeiZUPYsbApwmA" elementId="de.toem.impulse.menu.samples.main">
+        <tags>ViewMenu</tags>
+      </menus>
+      <toolbar xmi:id="_4R-tcmQkEeiZUPYsbApwmA" elementId="de.toem.impulse.toolbar.samples.main"/>
+      <properties key="partURI" value="bundleclass://de.toem.impulse.ui/de.toem.impulse.parts.views.SamplesView"/>
+    </elements>
+    <elements xsi:type="basic:PartDescriptor" xmi:id="_4bM64GQkEeiZUPYsbApwmA" elementId="de.toem.impulse.parts.samples.3" label="%part.name.samples.3" iconURI="platform:/plugin/de.toem.impulse.ui/icons/parts/de.toem.impulse.parts.samples.png" tooltip="%part.tooltip.samples" bindingContexts="_17_E0P9eEeuTmpkiOgtVww _nPOdoO4UEeu3x_q9hy66rg" category="impulse" closeable="true" dirtyable="true" contributionURI="bundleclass://de.toem.impulse.ui/de.toem.impulse.parts.views.SamplesView">
+      <tags>View</tags>
+      <menus xmi:id="_4bM64WQkEeiZUPYsbApwmA" elementId="de.toem.impulse.menu.samples.main">
+        <tags>ViewMenu</tags>
+      </menus>
+      <toolbar xmi:id="_4bM64mQkEeiZUPYsbApwmA" elementId="de.toem.impulse.toolbar.samples.main"/>
+      <properties key="partURI" value="bundleclass://de.toem.impulse.ui/de.toem.impulse.parts.views.SamplesView"/>
+    </elements>
+    <elements xsi:type="basic:PartDescriptor" xmi:id="_4tWa0GQkEeiZUPYsbApwmA" elementId="de.toem.impulse.parts.samples.4" label="%part.name.samples.4" iconURI="platform:/plugin/de.toem.impulse.ui/icons/parts/de.toem.impulse.parts.samples.png" tooltip="%part.tooltip.samples" bindingContexts="_17_E0P9eEeuTmpkiOgtVww _nPOdoO4UEeu3x_q9hy66rg" category="impulse" closeable="true" dirtyable="true" contributionURI="bundleclass://de.toem.impulse.ui/de.toem.impulse.parts.views.SamplesView">
+      <tags>View</tags>
+      <menus xmi:id="_4tXB4GQkEeiZUPYsbApwmA" elementId="de.toem.impulse.menu.samples.main">
+        <tags>ViewMenu</tags>
+      </menus>
+      <toolbar xmi:id="_4tXB4WQkEeiZUPYsbApwmA" elementId="de.toem.impulse.toolbar.samples.main"/>
+      <properties key="partURI" value="bundleclass://de.toem.impulse.ui/de.toem.impulse.parts.views.SamplesView"/>
+    </elements>
+    <elements xsi:type="basic:PartDescriptor" xmi:id="_LYCYsKKDEeulcbCKFj0V2w" elementId="de.toem.impulse.editor.records" label="%editor.name.viewer" iconURI="platform:/plugin/de.toem.impulse.ui/icons/parts/de.toem.impulse.parts.viewer.png" tooltip="%editor.tooltip.viewer" bindingContexts="_scRdAGQfEeiZUPYsbApwmA _nPOdoO4UEeu3x_q9hy66rg _17_E0P9eEeuTmpkiOgtVww" allowMultiple="true" category="impulse" closeable="true" contributionURI="bundleclass://de.toem.impulse.ui/de.toem.impulse.parts.viewer.RecordViewer">
+      <menus xmi:id="_B0d7QKKEEeulcbCKFj0V2w" elementId="de.toem.impulse.editor.records.menu.main">
+        <tags>ViewMenu</tags>
+      </menus>
+      <toolbar xmi:id="_gZ-hcKKDEeulcbCKFj0V2w" elementId="de.toem.impulse.editor.records.toolbar.main"/>
+      <properties key="partURI" value="bundleclass://de.toem.impulse.ui/de.toem.impulse.parts.viewer.RecordViewer"/>
+    </elements>
+    <elements xsi:type="basic:PartDescriptor" xmi:id="_YqmVwLYdEeu27eiW-HQ9yA" elementId="de.toem.impulse.editor.wallet" label="%editor.name.wallet" iconURI="platform:/plugin/de.toem.impulse.ui/icons/parts/de.toem.impulse.parts.wallet.png" tooltip="%editor.tooltip.wallet" bindingContexts="_nPOdoO4UEeu3x_q9hy66rg" allowMultiple="true" category="impulse" closeable="true" contributionURI="bundleclass://de.toem.impulse.ui/de.toem.impulse.parts.wallet.WalletEditor">
+      <menus xmi:id="_YqmVwbYdEeu27eiW-HQ9yA" elementId="de.toem.impulse.editor.wallet.menu.main">
+        <tags>ViewMenu</tags>
+      </menus>
+      <toolbar xmi:id="_Yqm80LYdEeu27eiW-HQ9yA" elementId="de.toem.impulse.editor.wallet.toolbar.main"/>
+      <properties key="partURI" value="bundleclass://de.toem.impulse.ui/de.toem.impulse.parts.wallet.WalletEditor"/>
+    </elements>
+  </fragments>
+  <fragments xsi:type="fragment:StringModelFragment" xmi:id="_0KL5cBMWEeiWhsbWq8LnkQ" featurename="commands" parentElementId="xpath:/">
+    <elements xsi:type="commands:Command" xmi:id="_nrOWULF9EeuGgfrmOeX3IQ" elementId="de.toem.impulse.commands.views.open" commandName="%command.name.views.open" description="%command.description.views.open"/>
+    <elements xsi:type="commands:Command" xmi:id="_eYQxIFKDEeiJAJSywQWx5A" elementId="de.toem.impulse.commands.view.add" commandName="%command.name.view.add" description="%command.description.view.add"/>
+    <elements xsi:type="commands:Command" xmi:id="_OFIrcFKEEeiJAJSywQWx5A" elementId="de.toem.impulse.commands.view.clone" commandName="%command.name.view.clone" description="%command.description.view.clone"/>
+    <elements xsi:type="commands:Command" xmi:id="_OJF-YFKEEeiJAJSywQWx5A" elementId="de.toem.impulse.commands.view.edit" commandName="%command.name.view.edit" description="%command.description.view.edit"/>
+    <elements xsi:type="commands:Command" xmi:id="_OK2R4FKEEeiJAJSywQWx5A" elementId="de.toem.impulse.commands.view.delete" commandName="%command.name.view.delete" description="%command.description.view.delete"/>
+    <elements xsi:type="commands:Command" xmi:id="_OMmlYFKEEeiJAJSywQWx5A" elementId="de.toem.impulse.commands.view.save" commandName="%command.name.view.save" description="%command.description.view.save"/>
+    <elements xsi:type="commands:Command" xmi:id="_OOW44FKEEeiJAJSywQWx5A" elementId="de.toem.impulse.commands.view.reset" commandName="%command.name.view.reset" description="%command.description.view.reset"/>
+    <elements xsi:type="commands:Command" xmi:id="_ORynYFKEEeiJAJSywQWx5A" elementId="de.toem.impulse.commands.cursor.add" commandName="%command.name.cursor.add" description="%command.description.cursor.add"/>
+    <elements xsi:type="commands:Command" xmi:id="_OTeCYFKEEeiJAJSywQWx5A" elementId="de.toem.impulse.commands.cursor.edit" commandName="%command.name.cursor.edit" description="%command.description.cursor.edit"/>
+    <elements xsi:type="commands:Command" xmi:id="_OVJdYFKEEeiJAJSywQWx5A" elementId="de.toem.impulse.commands.cursor.delete" commandName="%command.name.cursor.delete" description="%command.description.cursor.delete"/>
+    <elements xsi:type="commands:Command" xmi:id="_OWrHYFKEEeiJAJSywQWx5A" elementId="de.toem.impulse.commands.cursor.deleteAll" commandName="%command.name.cursor.deleteAll" description="%command.description.cursor.deleteAll"/>
+    <elements xsi:type="commands:Command" xmi:id="_OYba4FKEEeiJAJSywQWx5A" elementId="de.toem.impulse.commands.cursor.show" commandName="%command.name.cursor.show" description="%command.description.cursor.show">
+      <parameters xmi:id="_EQXRUKbcEeidZ5vxI5QOww" elementId="de.toem.command.parameter.1" name="1"/>
+    </elements>
+    <elements xsi:type="commands:Command" xmi:id="_tQ2gkFKEEeiJAJSywQWx5A" elementId="de.toem.impulse.commands.cursor.activate" commandName="%command.name.cursor.activate" description="%command.description.cursor.activate">
+      <parameters xmi:id="_EbXAYKbcEeidZ5vxI5QOww" elementId="de.toem.command.parameter.1" name="1"/>
+    </elements>
+    <elements xsi:type="commands:Command" xmi:id="_tVqIEFKEEeiJAJSywQWx5A" elementId="de.toem.impulse.commands.goto" commandName="%command.name.cursor.goto" description="%command.description.cursor.goto">
+      <parameters xmi:id="_cQ5SIKbcEeidZ5vxI5QOww" elementId="de.toem.command.parameter.1" name="1"/>
+    </elements>
+    <elements xsi:type="commands:Command" xmi:id="_tg8yEFKEEeiJAJSywQWx5A" elementId="de.toem.impulse.commands.cursor.color" commandName="%command.name.cursor.color" description="%command.description.cursor.color">
+      <parameters xmi:id="_0GDpkG16Eeia2L4Rh1hjfQ" elementId="de.toem.command.parameter.1" name="1"/>
+    </elements>
+    <elements xsi:type="commands:Command" xmi:id="__7ZUIFKEEeiJAJSywQWx5A" elementId="de.toem.impulse.commands.plot.color" commandName="%command.name.plot.color" description="%command.description.plot.color">
+      <parameters xmi:id="_uFkt0G16Eeia2L4Rh1hjfQ" elementId="de.toem.command.parameter.1" name="1"/>
+    </elements>
+    <elements xsi:type="commands:Command" xmi:id="_BwPgcFKGEeiJAJSywQWx5A" elementId="de.toem.impulse.commands.samples.reload" commandName="%command.name.samples.reload" description="%command.description.samples.reload">
+      <parameters xmi:id="_1n7fsH4HEeiVPvZGQZXnkA" elementId="de.toem.command.parameter.1" name="1"/>
+    </elements>
+    <elements xsi:type="commands:Command" xmi:id="_uNfssOn1EeuSz-Ka64_jrA" elementId="de.toem.impulse.commands.samples.reader.edit" commandName="%command.name.samples.reader.edit" description="%command.description.samples.reader.edit"/>
+    <elements xsi:type="commands:Command" xmi:id="_svXh0On1EeuSz-Ka64_jrA" elementId="de.toem.impulse.commands.samples.configuration.edit" commandName="%command.name.samples.configuration.edit" description="%command.description.samples.configuration.edit"/>
+    <elements xsi:type="commands:Command" xmi:id="_AET_kFKFEeiJAJSywQWx5A" elementId="de.toem.impulse.commands.axis.domain.zoom.in" commandName="%command.name.axis.domain.zoom.in" description="%command.description.axis.domain.zoom.in"/>
+    <elements xsi:type="commands:Command" xmi:id="_AG1vIFKFEeiJAJSywQWx5A" elementId="de.toem.impulse.commands.axis.domain.zoom.out" commandName="%command.name.axis.domain.zoom.out" description="%command.description.axis.domain.zoom.out"/>
+    <elements xsi:type="commands:Command" xmi:id="_AJlhIFKFEeiJAJSywQWx5A" elementId="de.toem.impulse.commands.axis.domain.zoom.fit" commandName="%command.name.axis.domain.zoom.fit" description="%command.description.axis.domain.zoom.fit"/>
+    <elements xsi:type="commands:Command" xmi:id="_AMVTIFKFEeiJAJSywQWx5A" elementId="de.toem.impulse.commands.axis.value.range.set" commandName="%command.name.axis.value.range.set" description="%command.description.axis.value.range.set">
+      <parameters xmi:id="_MRtGgG2BEeia2L4Rh1hjfQ" elementId="de.toem.command.parameter.1" name="1"/>
+    </elements>
+    <elements xsi:type="commands:Command" xmi:id="_ABR5sFKFEeiJAJSywQWx5A" elementId="de.toem.impulse.commands.geometry.details" commandName="%command.name.geometry.details" description="%command.description.geometry.details"/>
+    <elements xsi:type="commands:Command" xmi:id="_APFFIFKFEeiJAJSywQWx5A" elementId="de.toem.impulse.commands.geometry.signals" commandName="%command.name.geometry.signals" description="%command.description.geometry.signals"/>
+    <elements xsi:type="commands:Command" xmi:id="_aTlI0FKFEeiJAJSywQWx5A" elementId="de.toem.impulse.commands.geometry.namesRightAligned" commandName="%command.name.geometry.namesRightAligned" description="%command.description.geometry.namesRightAligned"/>
+    <elements xsi:type="commands:Command" xmi:id="_aXFIwFKFEeiJAJSywQWx5A" elementId="de.toem.impulse.commands.geometry.configIcon" commandName="%command.name.geometry.configIcon" description="%command.description.geometry.configIcon"/>
+    <elements xsi:type="commands:Command" xmi:id="_aZ-rwFKFEeiJAJSywQWx5A" elementId="de.toem.impulse.commands.geometry.valueColumn" commandName="%command.name.geometry.valueColumn" description="%command.description.geometry.valueColumn"/>
+    <elements xsi:type="commands:Command" xmi:id="_adB_wFKFEeiJAJSywQWx5A" elementId="de.toem.impulse.commands.geometry.axis" commandName="%command.name.geometry.axis" description="%command.description.geometry.axis"/>
+    <elements xsi:type="commands:Command" xmi:id="_agAbQFKFEeiJAJSywQWx5A" elementId="de.toem.impulse.commands.geometry.grid" commandName="%command.name.geometry.grid" description="%command.description.geometry.grid"/>
+    <elements xsi:type="commands:Command" xmi:id="_ai-2wFKFEeiJAJSywQWx5A" elementId="de.toem.impulse.commands.geometry.fitVertical" commandName="%command.name.geometry.fitVertical" description="%command.description.geometry.fitVertical"/>
+    <elements xsi:type="commands:Command" xmi:id="_al4ZwFKFEeiJAJSywQWx5A" elementId="de.toem.impulse.commands.navigate.goInto" commandName="%command.name.navigate.goInto" description="%command.description.navigate.goInto"/>
+    <elements xsi:type="commands:Command" xmi:id="_ao21QFKFEeiJAJSywQWx5A" elementId="de.toem.impulse.commands.navigate.up" commandName="%command.name.navigate.up" description="%command.description.navigate.up"/>
+    <elements xsi:type="commands:Command" xmi:id="_jL33EPClEeiLG5T4WtR1ZQ" elementId="de.toem.impulse.commands.ports.add" commandName="%command.name.ports.add" description="%command.description.ports.add">
+      <parameters xmi:id="_sPLqoPClEeiLG5T4WtR1ZQ" elementId="de.toem.command.parameter.1" name="1"/>
+      <parameters xmi:id="_tPzaIPClEeiLG5T4WtR1ZQ" elementId="de.toem.command.parameter.2" name="2"/>
+    </elements>
+    <elements xsi:type="commands:Command" xmi:id="_arrfwFKFEeiJAJSywQWx5A" elementId="de.toem.impulse.commands.ports.edit" commandName="%command.name.ports.edit" description="%command.description.ports.edit"/>
+    <elements xsi:type="commands:Command" xmi:id="_i4oyAPClEeiLG5T4WtR1ZQ" elementId="de.toem.impulse.commands.ports.open" commandName="%command.name.ports.open" description="%command.description.ports.open"/>
+    <elements xsi:type="commands:Command" xmi:id="_SKY9sBMXEeiWhsbWq8LnkQ" elementId="de.toem.impulse.commands.ports.reset" commandName="%command.name.ports.reset" description="%command.description.ports.reset"/>
+    <elements xsi:type="commands:Command" xmi:id="_3tEKUBMWEeiWhsbWq8LnkQ" elementId="de.toem.impulse.commands.ports.save" commandName="%command.name.ports.save" description="%command.description.ports.save"/>
+    <elements xsi:type="commands:Command" xmi:id="_auWZQFKFEeiJAJSywQWx5A" elementId="de.toem.impulse.commands.ports.connect" commandName="%command.name.ports.connect" description="%command.description.ports.connect"/>
+    <elements xsi:type="commands:Command" xmi:id="_axP8QFKFEeiJAJSywQWx5A" elementId="de.toem.impulse.commands.ports.streaming" commandName="%command.name.ports.streaming" description="%command.description.ports.streaming"/>
+    <elements xsi:type="commands:Command" xmi:id="_a0OXwFKFEeiJAJSywQWx5A" elementId="de.toem.impulse.commands.ports.iterating" commandName="%command.name.ports.iterating" description="%command.description.ports.iterating"/>
+    <elements xsi:type="commands:Command" xmi:id="_a3DCQFKFEeiJAJSywQWx5A" elementId="de.toem.impulse.commands.ports.updating" commandName="%command.name.ports.updating" description="%command.description.ports.updating"/>
+    <elements xsi:type="commands:Command" xmi:id="_a5pDQFKFEeiJAJSywQWx5A" elementId="de.toem.impulse.commands.record.load" commandName="%command.name.record.load" description="%command.description.record.load">
+      <parameters xmi:id="_YlJ_MICJEeqLm-fIm8ppyA" elementId="de.toem.command.parameter.1" name="1"/>
+    </elements>
+    <elements xsi:type="commands:Command" xmi:id="_BqcacFKGEeiJAJSywQWx5A" elementId="de.toem.impulse.commands.record.unload" commandName="%command.name.record.unload" description="%command.description.record.unload"/>
+    <elements xsi:type="commands:Command" xmi:id="_BzEyAFKGEeiJAJSywQWx5A" elementId="de.toem.impulse.commands.record.openDiff" commandName="%command.name.record.openDiff" description="%command.description.record.openDiff"/>
+    <elements xsi:type="commands:Command" xmi:id="_B1hCAFKGEeiJAJSywQWx5A" elementId="de.toem.impulse.commands.showIn.textEditor" commandName="%command.name.showIn.textEditor" description="%command.description.showIn.textEditor"/>
+    <elements xsi:type="commands:Command" xmi:id="_B4BjcFKGEeiJAJSywQWx5A" elementId="de.toem.impulse.commands.unpageSignals" commandName="%command.name.unpageSignals" description="%command.description.unpageSignals"/>
+    <elements xsi:type="commands:Command" xmi:id="_B6xVcFKGEeiJAJSywQWx5A" elementId="de.toem.impulse.commands.support.preferences" commandName="%command.name.support.preferences" description="%command.description.support.preferences">
+      <parameters xmi:id="_y9jnIPClEeiLG5T4WtR1ZQ" elementId="de.toem.command.parameter.1" name="1"/>
+    </elements>
+    <elements xsi:type="commands:Command" xmi:id="_B9c2AFKGEeiJAJSywQWx5A" elementId="de.toem.impulse.commands.support.report" commandName="%command.name.support.report" description="%command.description.support.report"/>
+    <elements xsi:type="commands:Command" xmi:id="_B_ut8FKGEeiJAJSywQWx5A" elementId="de.toem.impulse.commands.support.help" commandName="%command.name.support.help" description="%command.description.support.help"/>
+    <elements xsi:type="commands:Command" xmi:id="_IeLlgFRHEemjW85ASTz47Q" elementId="de.toem.impulse.commands.views.enableGroups" commandName="%command.name.views.enableGroups" description="%command.description.views.enableGroups"/>
+    <elements xsi:type="commands:Command" xmi:id="_ZpKQIHFZEemFL_rK2BruLQ" elementId="de.toem.impulse.commands.about" commandName="%command.name.about" description="%command.description.about"/>
+    <elements xsi:type="commands:Command" xmi:id="_ohBFsO5fEem4GPtOXT198A" elementId="de.toem.impulse.commands.refresh" commandName="%command.name.refresh" description="%command.description.refresh">
+      <parameters xmi:id="_x_ZTwAIrEeqRUrMnTRg0mw" elementId="de.toem.command.parameter.1" name="1"/>
+    </elements>
+  </fragments>
+  <fragments xsi:type="fragment:StringModelFragment" xmi:id="_rB_tgFHuEeiTCsNo2tNg4Q" featurename="handlers" parentElementId="xpath:/">
+    <elements xsi:type="commands:Handler" xmi:id="__HMIoFKHEeiJAJSywQWx5A" elementId="de.toem.impulse.handler.view.add" contributionURI="bundleclass://de.toem.toolkits.ui/de.toem.toolkits.handler.PartCommandHandler" command="_eYQxIFKDEeiJAJSywQWx5A"/>
+    <elements xsi:type="commands:Handler" xmi:id="_GktqIFKIEeiJAJSywQWx5A" elementId="de.toem.impulse.handler.view.clone" contributionURI="bundleclass://de.toem.toolkits.ui/de.toem.toolkits.handler.PartCommandHandler" command="_OFIrcFKEEeiJAJSywQWx5A"/>
+    <elements xsi:type="commands:Handler" xmi:id="_GohzIFKIEeiJAJSywQWx5A" elementId="de.toem.impulse.handler.view.edit" contributionURI="bundleclass://de.toem.toolkits.ui/de.toem.toolkits.handler.PartCommandHandler" command="_OJF-YFKEEeiJAJSywQWx5A"/>
+    <elements xsi:type="commands:Handler" xmi:id="_GmsnIFKIEeiJAJSywQWx5A" elementId="de.toem.impulse.handler.view.delete" contributionURI="bundleclass://de.toem.toolkits.ui/de.toem.toolkits.handler.PartCommandHandler" command="_OK2R4FKEEeiJAJSywQWx5A"/>
+    <elements xsi:type="commands:Handler" xmi:id="_GqSGoFKIEeiJAJSywQWx5A" elementId="de.toem.impulse.handler.view.save" contributionURI="bundleclass://de.toem.toolkits.ui/de.toem.toolkits.handler.PartCommandHandler" command="_OMmlYFKEEeiJAJSywQWx5A"/>
+    <elements xsi:type="commands:Handler" xmi:id="_GsCaIFKIEeiJAJSywQWx5A" elementId="de.toem.impulse.handler.view.reset" contributionURI="bundleclass://de.toem.toolkits.ui/de.toem.toolkits.handler.PartCommandHandler" command="_OOW44FKEEeiJAJSywQWx5A"/>
+    <elements xsi:type="commands:Handler" xmi:id="_GvjBIFKIEeiJAJSywQWx5A" elementId="de.toem.impulse.handler.cursor.add" contributionURI="bundleclass://de.toem.toolkits.ui/de.toem.toolkits.handler.PartCommandHandler" command="_ORynYFKEEeiJAJSywQWx5A"/>
+    <elements xsi:type="commands:Handler" xmi:id="_GxYNIFKIEeiJAJSywQWx5A" elementId="de.toem.impulse.handler.cursor.edit" contributionURI="bundleclass://de.toem.toolkits.ui/de.toem.toolkits.handler.PartCommandHandler" command="_OTeCYFKEEeiJAJSywQWx5A"/>
+    <elements xsi:type="commands:Handler" xmi:id="_GzIgoFKIEeiJAJSywQWx5A" elementId="de.toem.impulse.handler.cursor.delete" contributionURI="bundleclass://de.toem.toolkits.ui/de.toem.toolkits.handler.PartCommandHandler" command="_OVJdYFKEEeiJAJSywQWx5A"/>
+    <elements xsi:type="commands:Handler" xmi:id="_G09soFKIEeiJAJSywQWx5A" elementId="de.toem.impulse.handler.cursor.deleteAll" contributionURI="bundleclass://de.toem.toolkits.ui/de.toem.toolkits.handler.PartCommandHandler" command="_OWrHYFKEEeiJAJSywQWx5A"/>
+    <elements xsi:type="commands:Handler" xmi:id="_G2pHoFKIEeiJAJSywQWx5A" elementId="de.toem.impulse.handler.show.prev" contributionURI="bundleclass://de.toem.toolkits.ui/de.toem.toolkits.handler.PartCommandHandler" command="_OYba4FKEEeiJAJSywQWx5A"/>
+    <elements xsi:type="commands:Handler" xmi:id="_G4KxoFKIEeiJAJSywQWx5A" elementId="de.toem.impulse.handler.show.next" contributionURI="bundleclass://de.toem.toolkits.ui/de.toem.toolkits.handler.PartCommandHandler"/>
+    <elements xsi:type="commands:Handler" xmi:id="_ModN4FKLEeiJAJSywQWx5A" elementId="de.toem.impulse.handler.activate.prev" contributionURI="bundleclass://de.toem.toolkits.ui/de.toem.toolkits.handler.PartCommandHandler" command="_tQ2gkFKEEeiJAJSywQWx5A"/>
+    <elements xsi:type="commands:Handler" xmi:id="_MqXSYFKLEeiJAJSywQWx5A" elementId="de.toem.impulse.handler.activate.next" contributionURI="bundleclass://de.toem.toolkits.ui/de.toem.toolkits.handler.PartCommandHandler"/>
+    <elements xsi:type="commands:Handler" xmi:id="_MsHl4FKLEeiJAJSywQWx5A" elementId="de.toem.impulse.handler.cursor.goto" contributionURI="bundleclass://de.toem.toolkits.ui/de.toem.toolkits.handler.PartCommandHandler" command="_tVqIEFKEEeiJAJSywQWx5A"/>
+    <elements xsi:type="commands:Handler" xmi:id="_Mt8x4FKLEeiJAJSywQWx5A" elementId="de.toem.impulse.handler.cursor.event.prev" contributionURI="bundleclass://de.toem.toolkits.ui/de.toem.toolkits.handler.PartCommandHandler"/>
+    <elements xsi:type="commands:Handler" xmi:id="_Mvx94FKLEeiJAJSywQWx5A" elementId="de.toem.impulse.handler.cursor.event.next" contributionURI="bundleclass://de.toem.toolkits.ui/de.toem.toolkits.handler.PartCommandHandler"/>
+    <elements xsi:type="commands:Handler" xmi:id="_Mxnw8FKLEeiJAJSywQWx5A" elementId="de.toem.impulse.handler.cursor.end" contributionURI="bundleclass://de.toem.toolkits.ui/de.toem.toolkits.handler.PartCommandHandler"/>
+    <elements xsi:type="commands:Handler" xmi:id="_MzW2UFKLEeiJAJSywQWx5A" elementId="de.toem.impulse.handler.cursor.pos1" contributionURI="bundleclass://de.toem.toolkits.ui/de.toem.toolkits.handler.PartCommandHandler"/>
+    <elements xsi:type="commands:Handler" xmi:id="_M1MpYFKLEeiJAJSywQWx5A" elementId="de.toem.impulse.handler.cursor.color" contributionURI="bundleclass://de.toem.toolkits.ui/de.toem.toolkits.handler.PartCommandHandler" command="_tg8yEFKEEeiJAJSywQWx5A"/>
+    <elements xsi:type="commands:Handler" xmi:id="_M28V0FKLEeiJAJSywQWx5A" elementId="de.toem.impulse.handler.cursorDetails" contributionURI="bundleclass://de.toem.toolkits.ui/de.toem.toolkits.handler.PartCommandHandler" command="_ABR5sFKFEeiJAJSywQWx5A"/>
+    <elements xsi:type="commands:Handler" xmi:id="_M4nw0FKLEeiJAJSywQWx5A" elementId="de.toem.impulse.handler.samples.color" contributionURI="bundleclass://de.toem.toolkits.ui/de.toem.toolkits.handler.PartCommandHandler" command="__7ZUIFKEEeiJAJSywQWx5A"/>
+    <elements xsi:type="commands:Handler" xmi:id="_M6OTUFKLEeiJAJSywQWx5A" elementId="de.toem.impulse.handler.axis.domain.zoom.in" contributionURI="bundleclass://de.toem.toolkits.ui/de.toem.toolkits.handler.PartCommandHandler" command="_AET_kFKFEeiJAJSywQWx5A"/>
+    <elements xsi:type="commands:Handler" xmi:id="_qe2O0FKLEeiJAJSywQWx5A" elementId="de.toem.impulse.handler.axis.domain.zoom.out" contributionURI="bundleclass://de.toem.toolkits.ui/de.toem.toolkits.handler.PartCommandHandler" command="_AG1vIFKFEeiJAJSywQWx5A"/>
+    <elements xsi:type="commands:Handler" xmi:id="_qgra0FKLEeiJAJSywQWx5A" elementId="de.toem.impulse.handler.axis.domain.zoom.fit" contributionURI="bundleclass://de.toem.toolkits.ui/de.toem.toolkits.handler.PartCommandHandler" command="_AJlhIFKFEeiJAJSywQWx5A"/>
+    <elements xsi:type="commands:Handler" xmi:id="_qibuUFKLEeiJAJSywQWx5A" elementId="de.toem.impulse.handler.axis.value.range.set" contributionURI="bundleclass://de.toem.toolkits.ui/de.toem.toolkits.handler.PartCommandHandler" command="_AMVTIFKFEeiJAJSywQWx5A"/>
+    <elements xsi:type="commands:Handler" xmi:id="_qkQ6UFKLEeiJAJSywQWx5A" elementId="de.toem.impulse.handler.geometry.signals" contributionURI="bundleclass://de.toem.toolkits.ui/de.toem.toolkits.handler.PartCommandHandler" command="_APFFIFKFEeiJAJSywQWx5A"/>
+    <elements xsi:type="commands:Handler" xmi:id="_qmBN0FKLEeiJAJSywQWx5A" elementId="de.toem.impulse.handler.geometry.namesRightAligned" contributionURI="bundleclass://de.toem.toolkits.ui/de.toem.toolkits.handler.PartCommandHandler" command="_aTlI0FKFEeiJAJSywQWx5A"/>
+    <elements xsi:type="commands:Handler" xmi:id="_qn7SUFKLEeiJAJSywQWx5A" elementId="de.toem.impulse.handler.geometry.configIcon" contributionURI="bundleclass://de.toem.toolkits.ui/de.toem.toolkits.handler.PartCommandHandler" command="_aXFIwFKFEeiJAJSywQWx5A"/>
+    <elements xsi:type="commands:Handler" xmi:id="_qprl0FKLEeiJAJSywQWx5A" elementId="de.toem.impulse.handler.geometry.valueColumn" contributionURI="bundleclass://de.toem.toolkits.ui/de.toem.toolkits.handler.PartCommandHandler" command="_aZ-rwFKFEeiJAJSywQWx5A"/>
+    <elements xsi:type="commands:Handler" xmi:id="_qrgx0FKLEeiJAJSywQWx5A" elementId="de.toem.impulse.handler.geometry.axis" contributionURI="bundleclass://de.toem.toolkits.ui/de.toem.toolkits.handler.PartCommandHandler" command="_adB_wFKFEeiJAJSywQWx5A"/>
+    <elements xsi:type="commands:Handler" xmi:id="_qtfHwFKLEeiJAJSywQWx5A" elementId="de.toem.impulse.handler.geometry.grid" contributionURI="bundleclass://de.toem.toolkits.ui/de.toem.toolkits.handler.PartCommandHandler" command="_agAbQFKFEeiJAJSywQWx5A"/>
+    <elements xsi:type="commands:Handler" xmi:id="_5qBYgFKLEeiJAJSywQWx5A" elementId="de.toem.impulse.handler.geometry.fitVertical" contributionURI="bundleclass://de.toem.toolkits.ui/de.toem.toolkits.handler.PartCommandHandler" command="_ai-2wFKFEeiJAJSywQWx5A"/>
+    <elements xsi:type="commands:Handler" xmi:id="_5r2kgFKLEeiJAJSywQWx5A" elementId="de.toem.impulse.handler.navigate.goInto" contributionURI="bundleclass://de.toem.toolkits.ui/de.toem.toolkits.handler.PartCommandHandler" command="_al4ZwFKFEeiJAJSywQWx5A"/>
+    <elements xsi:type="commands:Handler" xmi:id="_5th_gFKLEeiJAJSywQWx5A" elementId="de.toem.impulse.handler.navigate.up" contributionURI="bundleclass://de.toem.toolkits.ui/de.toem.toolkits.handler.PartCommandHandler" command="_ao21QFKFEeiJAJSywQWx5A"/>
+    <elements xsi:type="commands:Handler" xmi:id="_3EipYPFPEei8sNz7ITYzHQ" elementId="de.toem.impulse.handler.ports.add" contributionURI="bundleclass://de.toem.toolkits.ui/de.toem.toolkits.handler.PartCommandHandler" command="_jL33EPClEeiLG5T4WtR1ZQ"/>
+    <elements xsi:type="commands:Handler" xmi:id="_5vXLgFKLEeiJAJSywQWx5A" elementId="de.toem.impulse.handler.ports.edit" contributionURI="bundleclass://de.toem.toolkits.ui/de.toem.toolkits.handler.PartCommandHandler" command="_arrfwFKFEeiJAJSywQWx5A"/>
+    <elements xsi:type="commands:Handler" xmi:id="_OjBGAPFQEei8sNz7ITYzHQ" elementId="de.toem.impulse.handler.ports.open" contributionURI="bundleclass://de.toem.toolkits.ui/de.toem.toolkits.handler.PartCommandHandler" command="_i4oyAPClEeiLG5T4WtR1ZQ"/>
+    <elements xsi:type="commands:Handler" xmi:id="_5xMXgFKLEeiJAJSywQWx5A" elementId="de.toem.impulse.handler.ports.reset" contributionURI="bundleclass://de.toem.toolkits.ui/de.toem.toolkits.handler.PartCommandHandler" command="_SKY9sBMXEeiWhsbWq8LnkQ"/>
+    <elements xsi:type="commands:Handler" xmi:id="_5zBjgFKLEeiJAJSywQWx5A" elementId="de.toem.impulse.handler.ports.save" contributionURI="bundleclass://de.toem.toolkits.ui/de.toem.toolkits.handler.PartCommandHandler" command="_3tEKUBMWEeiWhsbWq8LnkQ"/>
+    <elements xsi:type="commands:Handler" xmi:id="_51AggFKLEeiJAJSywQWx5A" elementId="de.toem.impulse.handler.ports.connect" contributionURI="bundleclass://de.toem.toolkits.ui/de.toem.toolkits.handler.PartCommandHandler" command="_auWZQFKFEeiJAJSywQWx5A"/>
+    <elements xsi:type="commands:Handler" xmi:id="_53EWAFKLEeiJAJSywQWx5A" elementId="de.toem.impulse.handler.ports.streaming" contributionURI="bundleclass://de.toem.toolkits.ui/de.toem.toolkits.handler.PartCommandHandler" command="_axP8QFKFEeiJAJSywQWx5A"/>
+    <elements xsi:type="commands:Handler" xmi:id="_55ILgFKLEeiJAJSywQWx5A" elementId="de.toem.impulse.handler.ports.iterating" contributionURI="bundleclass://de.toem.toolkits.ui/de.toem.toolkits.handler.PartCommandHandler" command="_a0OXwFKFEeiJAJSywQWx5A"/>
+    <elements xsi:type="commands:Handler" xmi:id="_57HvkFKLEeiJAJSywQWx5A" elementId="de.toem.impulse.handler.ports.updating" contributionURI="bundleclass://de.toem.toolkits.ui/de.toem.toolkits.handler.PartCommandHandler" command="_a3DCQFKFEeiJAJSywQWx5A"/>
+    <elements xsi:type="commands:Handler" xmi:id="_WT9NYFKMEeiJAJSywQWx5A" elementId="de.toem.impulse.handler.record.load" contributionURI="bundleclass://de.toem.impulse.ui/de.toem.impulse.handler.RecordCommandHandler" command="_a5pDQFKFEeiJAJSywQWx5A"/>
+    <elements xsi:type="commands:Handler" xmi:id="_WWBC4FKMEeiJAJSywQWx5A" elementId="de.toem.impulse.handler.record.unload" contributionURI="bundleclass://de.toem.impulse.ui/de.toem.impulse.handler.RecordCommandHandler" command="_BqcacFKGEeiJAJSywQWx5A"/>
+    <elements xsi:type="commands:Handler" xmi:id="_WamA4FKMEeiJAJSywQWx5A" elementId="de.toem.impulse.handler.record.openDiff" contributionURI="bundleclass://de.toem.impulse.ui/de.toem.impulse.handler.RecordCommandHandler" command="_BzEyAFKGEeiJAJSywQWx5A"/>
+    <elements xsi:type="commands:Handler" xmi:id="_WYYaYFKMEeiJAJSywQWx5A" elementId="de.toem.impulse.handler.input.reload" contributionURI="bundleclass://de.toem.toolkits.ui/de.toem.toolkits.handler.PartCommandHandler" command="_BwPgcFKGEeiJAJSywQWx5A"/>
+    <elements xsi:type="commands:Handler" xmi:id="_Wc4f4FKMEeiJAJSywQWx5A" elementId="de.toem.impulse.handler.showIn.textEditor" contributionURI="bundleclass://de.toem.toolkits.ui/de.toem.toolkits.handler.ControllerCommandHandler" command="_B1hCAFKGEeiJAJSywQWx5A"/>
+    <elements xsi:type="commands:Handler" xmi:id="_Wfeg4FKMEeiJAJSywQWx5A" elementId="de.toem.impulse.handler.unpageSignals" contributionURI="bundleclass://de.toem.impulse.ui/de.toem.impulse.handler.RecordCommandHandler" command="_B4BjcFKGEeiJAJSywQWx5A"/>
+    <elements xsi:type="commands:Handler" xmi:id="_WhnO4FKMEeiJAJSywQWx5A" elementId="de.toem.impulse.handler.support.references" contributionURI="bundleclass://de.toem.toolkits.ui/de.toem.toolkits.handler.PartCommandHandler" command="_B6xVcFKGEeiJAJSywQWx5A"/>
+    <elements xsi:type="commands:Handler" xmi:id="_kZjPEFKMEeiJAJSywQWx5A" elementId="de.toem.impulse.handler.support.report" contributionURI="bundleclass://de.toem.toolkits.ui/de.toem.toolkits.handler.PartCommandHandler" command="_B9c2AFKGEeiJAJSywQWx5A"/>
+    <elements xsi:type="commands:Handler" xmi:id="_kcOIkFKMEeiJAJSywQWx5A" elementId="de.toem.impulse.handler.support.help" contributionURI="bundleclass://de.toem.toolkits.ui/de.toem.toolkits.handler.PartCommandHandler" command="_B_ut8FKGEeiJAJSywQWx5A"/>
+    <elements xsi:type="commands:Handler" xmi:id="_fvwOkFRHEemjW85ASTz47Q" elementId="de.toem.impulse.handler.views.enableGroups" contributionURI="bundleclass://de.toem.toolkits.ui/de.toem.toolkits.handler.PartCommandHandler" command="_IeLlgFRHEemjW85ASTz47Q"/>
+    <elements xsi:type="commands:Handler" xmi:id="_uZYWwHFZEemFL_rK2BruLQ" elementId="de.toem.impulse.handler.about" contributionURI="bundleclass://de.toem.toolkits.ui/de.toem.toolkits.handler.PartCommandHandler" command="_ZpKQIHFZEemFL_rK2BruLQ"/>
+    <elements xsi:type="commands:Handler" xmi:id="_Wxm94IXWEemfgbjRLUBPmA" elementId="de.toem.impulse.handler.goto" contributionURI="bundleclass://de.toem.toolkits.ui/de.toem.toolkits.handler.PartCommandHandler"/>
+    <elements xsi:type="commands:Handler" xmi:id="_7CNE0JDcEemJmqSb47sODQ" elementId="de.toem.impulse.handler.index.goto" contributionURI="bundleclass://de.toem.toolkits.ui/de.toem.toolkits.handler.PartCommandHandler"/>
+    <elements xsi:type="commands:Handler" xmi:id="_3a5EAO5fEem4GPtOXT198A" elementId="de.toem.impulse.handler.refresh" contributionURI="bundleclass://de.toem.toolkits.ui/de.toem.toolkits.handler.PartCommandHandler" command="_ohBFsO5fEem4GPtOXT198A"/>
+  </fragments>
+  <fragments xsi:type="fragment:StringModelFragment" xmi:id="_bzM2EKbHEeidZ5vxI5QOww" featurename="menuContributions" parentElementId="xpath:/">
+    <elements xsi:type="menu:MenuContribution" xmi:id="_uPem0Fd4EeiLFso-r3mB_A" elementId="de.toem.impulse.menucontribution.viewer.main" parentId="de.toem.impulse.editor.records.menu.main">
+      <children xsi:type="menu:HandledMenuItem" xmi:id="_yESVMFd4EeiLFso-r3mB_A" elementId="de.toem.impulse.menucontribution.viewer.main.0" label="%command.name.geometry.signals" iconURI="ri-funds-box-line" tooltip="%command.description.geometry.signals" type="Check" command="_APFFIFKFEeiJAJSywQWx5A"/>
+      <children xsi:type="menu:HandledMenuItem" xmi:id="_grgXIFp7EeiShepWThYpOw" elementId="de.toem.impulse.menucontribution.viewer.main.1" label="%command.name.geometry.details" iconURI="ri-ruler-line" tooltip="%command.description.geometry.details" type="Check" command="_ABR5sFKFEeiJAJSywQWx5A"/>
+      <children xsi:type="menu:Menu" xmi:id="_NOME4JHIEeixiKIjB6hQ9g" elementId="de.toem.impulse.menucontribution.viewer.main.2" label="%menu.label.displayOptions" iconURI="de-toem-toolkits-tlk-css-general-settings-image">
+        <children xsi:type="menu:HandledMenuItem" xmi:id="_Sr5qwJHIEeixiKIjB6hQ9g" elementId="0" label="%command.name.geometry.namesRightAligned" tooltip="%command.description.geometry.namesRightAligned" type="Check" command="_aTlI0FKFEeiJAJSywQWx5A"/>
+        <children xsi:type="menu:HandledMenuItem" xmi:id="_TVjrwJHIEeixiKIjB6hQ9g" elementId="0" label="%command.name.geometry.configIcon" tooltip="%command.description.geometry.configIcon" type="Check" command="_aXFIwFKFEeiJAJSywQWx5A"/>
+        <children xsi:type="menu:HandledMenuItem" xmi:id="_UGxGQJHIEeixiKIjB6hQ9g" elementId="0" label="%command.name.geometry.axis" tooltip="%command.description.geometry.axis" type="Check" command="_adB_wFKFEeiJAJSywQWx5A"/>
+        <children xsi:type="menu:HandledMenuItem" xmi:id="_UeQZMJHIEeixiKIjB6hQ9g" elementId="0" label="%command.name.geometry.grid" tooltip="%command.description.geometry.grid" type="Check" command="_agAbQFKFEeiJAJSywQWx5A"/>
+        <children xsi:type="menu:HandledMenuItem" xmi:id="_Ux8xQJHIEeixiKIjB6hQ9g" elementId="0" label="%command.name.geometry.fitVertical" tooltip="%command.description.geometry.fitVertical" type="Check" command="_ai-2wFKFEeiJAJSywQWx5A"/>
+      </children>
+      <children xsi:type="menu:MenuSeparator" xmi:id="_U5jiUFqXEeiShepWThYpOw" elementId="de.toem.impulse.menucontribution.viewer.main.3"/>
+      <children xsi:type="menu:HandledMenuItem" xmi:id="_V0_P0FqXEeiShepWThYpOw" elementId="0de.toem.impulse.menucontribution.viewer.main.4" toBeRendered="false" label="%command.name.support.help" iconURI="de-toem-toolkits-tlk-css-general-help-image" tooltip="%command.description.support.help" type="Check" command="_B_ut8FKGEeiJAJSywQWx5A"/>
+      <children xsi:type="menu:HandledMenuItem" xmi:id="_aYhscFqXEeiShepWThYpOw" elementId="0de.toem.impulse.menucontribution.viewer.main.5" toBeRendered="false" label="%command.name.support.report" iconURI="codicon-error" tooltip="%command.description.support.report" command="_B9c2AFKGEeiJAJSywQWx5A"/>
+      <children xsi:type="menu:HandledMenuItem" xmi:id="_agdgcFqXEeiShepWThYpOw" elementId="0de.toem.impulse.menucontribution.viewer.main.6" toBeRendered="false" label="%command.name.support.preferences" tooltip="%command.description.support.preferences" command="_B6xVcFKGEeiJAJSywQWx5A"/>
+      <children xsi:type="menu:HandledMenuItem" xmi:id="_a0EY8FqXEeiShepWThYpOw" elementId="de.toem.impulse.menucontribution.viewer.main.7" toBeRendered="false" label="" tooltip="" command="_qIFVkFqXEeiShepWThYpOw"/>
+      <children xsi:type="menu:HandledMenuItem" xmi:id="_vIwaIFqXEeiShepWThYpOw" elementId="de.toem.impulse.menucontribution.viewer.main.8" toBeRendered="false" label="" tooltip="" command="_xWNJIFqXEeiShepWThYpOw"/>
+      <children xsi:type="menu:Menu" xmi:id="_dr6IoFwfEeidy8LLSO4t_A" elementId="de.toem.impulse.menucontribution.viewer.main.9" label="%command.name.samples.reload" iconURI="ri-refresh-line" tooltip="%command.description.samples.reload">
+        <children xsi:type="menu:DynamicMenuContribution" xmi:id="_i8FBwFwfEeidy8LLSO4t_A" elementId="de.toem.impulse.commands.samples.reload" contributionURI="bundleclass://de.toem.toolkits.ui/de.toem.toolkits.menu.PartCommandMenuContribution"/>
+      </children>
+      <children xsi:type="menu:Menu" xmi:id="_W13XIAIqEeqRUrMnTRg0mw" elementId="de.toem.impulse.menucontribution.viewer.main.10" label="%command.name.refresh" iconURI="codicon-refresh" tooltip="%command.description.refresh">
+        <visibleWhen xsi:type="ui:CoreExpression" xmi:id="_fSPcYCgREeytqoOx7s_FRA"/>
+        <children xsi:type="menu:HandledMenuItem" xmi:id="_czqyUAIqEeqRUrMnTRg0mw" elementId="de.toem.impulse.menucontribution.viewer.main.10.0" label="%command.name.refresh-all" iconURI="" tooltip="%command.description.refresh-all" command="_ohBFsO5fEem4GPtOXT198A"/>
+        <children xsi:type="menu:HandledMenuItem" xmi:id="_Vo-30AIrEeqRUrMnTRg0mw" elementId="de.toem.impulse.menucontribution.viewer.main.10.1" label="%command.name.refresh-signals" iconURI="" tooltip="%command.description.refresh-signals" command="_ohBFsO5fEem4GPtOXT198A">
+          <parameters xmi:id="_poxAAAIrEeqRUrMnTRg0mw" elementId="de.toem.impulse.ui.parameter.00" name="de.toem.command.parameter.1" value="signals"/>
+        </children>
+        <children xsi:type="menu:HandledMenuItem" xmi:id="_Y5MEUAIrEeqRUrMnTRg0mw" elementId="de.toem.impulse.menucontribution.viewer.main.10.2" label="%command.name.refresh-plots" iconURI="" tooltip="%command.description.refresh-plots" command="_ohBFsO5fEem4GPtOXT198A">
+          <parameters xmi:id="_tNMJAAIrEeqRUrMnTRg0mw" elementId="de.toem.impulse.ui.parameter.00" name="de.toem.command.parameter.1" value="plots"/>
+        </children>
+      </children>
+      <children xsi:type="menu:HandledMenuItem" xmi:id="_FxWMMO5gEem4GPtOXT198A" elementId="de.toem.impulse.menucontribution.viewer.main.11" label="%command.name.about" tooltip="%command.description.about" command="_ZpKQIHFZEemFL_rK2BruLQ"/>
+    </elements>
+    <elements xsi:type="menu:MenuContribution" xmi:id="_zKO0IJbzEeihDovBfyKGZw" elementId="de.toem.impulse.menucontribution.viewer.tree.showIn" positionInParent="endof=group.showIn" parentId="de.toem.impulse.popupmenu.viewer.tree">
+      <children xsi:type="menu:HandledMenuItem" xmi:id="_zKO0IZbzEeihDovBfyKGZw" elementId="de.toem.impulse.menucontribution.viewer.tree.showIn.0" label="%command.name.navigate.goInto" iconURI="ri-folder-shared-line" tooltip="%command.description.navigate.goInto" command="_al4ZwFKFEeiJAJSywQWx5A"/>
+      <children xsi:type="menu:Menu" xmi:id="_K9U14Jb0EeihDovBfyKGZw" elementId="de.toem.impulse.menucontribution.viewer.tree.showIn.1" label="%menu.label.showIn">
+        <children xsi:type="menu:HandledMenuItem" xmi:id="_K9U14Zb0EeihDovBfyKGZw" elementId="de.toem.impulse.menucontribution.viewer.tree.showIn.1.0" label="%command.label.controller.showIn-samples.1" iconURI="platform:/plugin/de.toem.impulse.ui/icons/commands/de.toem.toolkits.commands.controller.showIn-samples.png" tooltip="%command.description.controller.showIn-samples.1" command="_dT92AJb0EeihDovBfyKGZw">
+          <parameters xmi:id="_o8XcgJb0EeihDovBfyKGZw" elementId="de.toem.impulse.ui.parameter.00" name="de.toem.command.parameter.1" value="de.toem.impulse.parts.samples"/>
+        </children>
+        <children xsi:type="menu:HandledMenuItem" xmi:id="_0kumwJb0EeihDovBfyKGZw" elementId="de.toem.impulse.menucontribution.viewer.tree.showIn.1.1" label="%command.label.controller.showIn-samples.2" iconURI="platform:/plugin/de.toem.impulse.ui/icons/commands/de.toem.toolkits.commands.controller.showIn-samples.png" tooltip="%command.description.controller.showIn-samples.2" command="_dT92AJb0EeihDovBfyKGZw">
+          <parameters xmi:id="_0kumwZb0EeihDovBfyKGZw" elementId="1" name="de.toem.command.parameter.1" value="de.toem.impulse.parts.samples.2"/>
+        </children>
+        <children xsi:type="menu:HandledMenuItem" xmi:id="_01NSwJb0EeihDovBfyKGZw" elementId="de.toem.impulse.menucontribution.viewer.tree.showIn.1.2" label="%command.label.controller.showIn-samples.3" iconURI="platform:/plugin/de.toem.impulse.ui/icons/commands/de.toem.toolkits.commands.controller.showIn-samples.png" tooltip="%command.description.controller.showIn-samples.3" command="_dT92AJb0EeihDovBfyKGZw">
+          <parameters xmi:id="_01NSwZb0EeihDovBfyKGZw" elementId="2" name="de.toem.command.parameter.1" value="de.toem.impulse.parts.samples.3"/>
+        </children>
+        <children xsi:type="menu:HandledMenuItem" xmi:id="_07T6wJb0EeihDovBfyKGZw" elementId="de.toem.impulse.menucontribution.viewer.tree.showIn.1.3" label="%command.label.controller.showIn-samples.4" iconURI="platform:/plugin/de.toem.impulse.ui/icons/commands/de.toem.toolkits.commands.controller.showIn-samples.png" tooltip="%command.description.controller.showIn-samples.5" command="_dT92AJb0EeihDovBfyKGZw">
+          <parameters xmi:id="_07T6wZb0EeihDovBfyKGZw" elementId="3" name="de.toem.command.parameter.1" value="de.toem.impulse.parts.samples.4"/>
+        </children>
+        <children xsi:type="menu:HandledMenuItem" xmi:id="_1waWwJb0EeihDovBfyKGZw" elementId="de.toem.impulse.menucontribution.viewer.tree.showIn.1.4" toBeRendered="false" label="%command.label.controller.showIn-signals" iconURI="platform:/plugin/de.toem.impulse.ui/icons/commands/de.toem.toolkits.commands.controller.showIn-signals.png" tooltip="%command.description.controller.showIn-signals" command="_dT92AJb0EeihDovBfyKGZw">
+          <parameters xmi:id="_1waWwZb0EeihDovBfyKGZw" elementId="4" name="de.toem.command.parameter.1" value="de.toem.impulse.views.records.table"/>
+        </children>
+        <children xsi:type="menu:HandledMenuItem" xmi:id="_3PBCwJb0EeihDovBfyKGZw" elementId="de.toem.impulse.menucontribution.viewer.tree.showIn.1.5" label="%command.label.controller.showIn-sample" iconURI="platform:/plugin/de.toem.impulse.ui/icons/commands/de.toem.toolkits.commands.controller.showIn-sample.png" tooltip="%command.description.controller.showIn-sample" command="_dT92AJb0EeihDovBfyKGZw">
+          <parameters xmi:id="_3PBCwZb0EeihDovBfyKGZw" elementId="5" name="de.toem.command.parameter.1" value="de.toem.impulse.parts.sample"/>
+        </children>
+      </children>
+    </elements>
+    <elements xsi:type="menu:MenuContribution" xmi:id="_BuHasJb8EeihDovBfyKGZw" elementId="de.toem.impulse.menucontribution.viewer.tree.reorganize" positionInParent="endof=group.reorganize" parentId="de.toem.impulse.popupmenu.viewer.tree">
+      <children xsi:type="menu:Menu" xmi:id="_BuHaspb8EeihDovBfyKGZw" elementId="de.toem.impulse.menucontribution.viewer.tree.reorganize.0" label="%menu.label.axis" tooltip="%menu.description.axis">
+        <children xsi:type="menu:HandledMenuItem" xmi:id="_QftmwJb8EeihDovBfyKGZw" elementId="de.toem.impulse.menucontribution.viewer.tree.reorganize.0.1" label="%command.label.axis.value.range.set-auto" tooltip="%command.description.axis.value.range.set-auto" command="_AMVTIFKFEeiJAJSywQWx5A">
+          <parameters xmi:id="_FIGjQKn2EemMQcpTs7GveA" elementId="0" name="de.toem.command.parameter.1" value="auto"/>
+        </children>
+        <children xsi:type="menu:DynamicMenuContribution" xmi:id="_Z4xn4Jb8EeihDovBfyKGZw" elementId="de.toem.impulse.menucontribution.viewer.tree.reorganize.0.2_de.toem.impulse.commands.axis.value.range.set" contributionURI="bundleclass://de.toem.toolkits.ui/de.toem.toolkits.menu.ControllerCommandMenuContribution"/>
+      </children>
+      <children xsi:type="menu:Menu" xmi:id="_mAsb8Jb8EeihDovBfyKGZw" elementId="de.toem.impulse.menucontribution.viewer.tree.reorganize.1" toBeRendered="false" label="%menu.label.setColor">
+        <children xsi:type="menu:DynamicMenuContribution" xmi:id="_wVKVYJb8EeihDovBfyKGZw" elementId="de.toem.impulse.menucontribution.viewer.tree.reorganize.1.0_de.toem.impulse.commands.plot.color" contributionURI="bundleclass://de.toem.toolkits.ui/de.toem.toolkits.menu.ControllerCommandMenuContribution"/>
+        <children xsi:type="menu:HandledMenuItem" xmi:id="_8AbpsJb8EeihDovBfyKGZw" elementId="de.toem.impulse.menucontribution.viewer.tree.reorganize.1.1" label="%command.label.plot.color-multiple" tooltip="%command.description.plot.color-multiple" command="__7ZUIFKEEeiJAJSywQWx5A">
+          <parameters xmi:id="_WF2d8Jb-EeihDovBfyKGZw" elementId="0" name="de.toem.command.parameter.1" value="multiple"/>
+        </children>
+        <children xsi:type="menu:HandledMenuItem" xmi:id="_L_IsoJb-EeihDovBfyKGZw" elementId="de.toem.impulse.menucontribution.viewer.tree.reorganize.1.2" label="%command.label.plot.color-other" tooltip="%command.description.plot.color-other" command="__7ZUIFKEEeiJAJSywQWx5A"/>
+      </children>
+      <children xsi:type="menu:HandledMenuItem" xmi:id="_d0WasJb-EeihDovBfyKGZw" elementId="de.toem.impulse.menucontribution.viewer.tree.reorganize.2" toBeRendered="false" label="%command.name.find" iconURI="de-toem-toolkits-tlk-css-general-find-image" tooltip="%command.description.find" command="_c_008HL4Eeiza8VFP7JOFw"/>
+    </elements>
+    <elements xsi:type="menu:MenuContribution" xmi:id="_S4oKoJcXEeihDovBfyKGZw" elementId="de.toem.impulse.menucontribution.viewer.plots.reorganize" positionInParent="endof=group.reorganize" parentId="de.toem.impulse.popupmenu.viewer.plots">
+      <children xsi:type="menu:HandledMenuItem" xmi:id="_cR0HkJcXEeihDovBfyKGZw" elementId="de.toem.impulse.menucontribution.viewer.plots.reorganize.0" toBeRendered="false" label="%command.name.find" iconURI="de-toem-toolkits-tlk-css-general-find-image" tooltip="%command.description.find" command="_c_008HL4Eeiza8VFP7JOFw"/>
+    </elements>
+    <elements xsi:type="menu:MenuContribution" xmi:id="_P8j0YJcSEeihDovBfyKGZw" elementId="de.toem.impulse.menucontribution.viewer.plots.showIn" positionInParent="endof=group.showIn" parentId="de.toem.impulse.popupmenu.viewer.plots">
+      <children xsi:type="menu:Menu" xmi:id="_P8j0YpcSEeihDovBfyKGZw" elementId="de.toem.impulse.menucontribution.viewer.plots.showIn.1" label="%menu.label.showIn">
+        <children xsi:type="menu:HandledMenuItem" xmi:id="_P8j0Y5cSEeihDovBfyKGZw" elementId="de.toem.impulse.menucontribution.viewer.plots.showIn.1.0" label="%command.label.controller.showIn-samples.1" iconURI="platform:/plugin/de.toem.impulse.ui/icons/commands/de.toem.toolkits.commands.controller.showIn-samples.png" tooltip="%command.description.controller.showIn-samples.1" command="_dT92AJb0EeihDovBfyKGZw">
+          <parameters xmi:id="_P8j0ZJcSEeihDovBfyKGZw" elementId="de.toem.impulse.ui.parameter.00" name="de.toem.command.parameter.1" value="de.toem.impulse.parts.samples"/>
+        </children>
+        <children xsi:type="menu:HandledMenuItem" xmi:id="_P8j0ZZcSEeihDovBfyKGZw" elementId="de.toem.impulse.menucontribution.viewer.plots.showIn.1.1" label="%command.label.controller.showIn-samples.2" iconURI="platform:/plugin/de.toem.impulse.ui/icons/commands/de.toem.toolkits.commands.controller.showIn-samples.png" tooltip="%command.description.controller.showIn-samples.2" command="_dT92AJb0EeihDovBfyKGZw">
+          <parameters xmi:id="_P8j0ZpcSEeihDovBfyKGZw" elementId="1" name="de.toem.command.parameter.1" value="de.toem.impulse.parts.samples.2"/>
+        </children>
+        <children xsi:type="menu:HandledMenuItem" xmi:id="_P8j0Z5cSEeihDovBfyKGZw" elementId="de.toem.impulse.menucontribution.viewer.plots.showIn.1.2" label="%command.label.controller.showIn-samples.3" iconURI="platform:/plugin/de.toem.impulse.ui/icons/commands/de.toem.toolkits.commands.controller.showIn-samples.png" tooltip="%command.description.controller.showIn-samples.3" command="_dT92AJb0EeihDovBfyKGZw">
+          <parameters xmi:id="_P8j0aJcSEeihDovBfyKGZw" elementId="2" name="de.toem.command.parameter.1" value="de.toem.impulse.parts.samples.3"/>
+        </children>
+        <children xsi:type="menu:HandledMenuItem" xmi:id="_P8j0aZcSEeihDovBfyKGZw" elementId="de.toem.impulse.menucontribution.viewer.plots.showIn.1.3" label="%command.label.controller.showIn-samples.4" iconURI="platform:/plugin/de.toem.impulse.ui/icons/commands/de.toem.toolkits.commands.controller.showIn-samples.png" tooltip="%command.description.controller.showIn-samples.5" command="_dT92AJb0EeihDovBfyKGZw">
+          <parameters xmi:id="_P8j0apcSEeihDovBfyKGZw" elementId="3" name="de.toem.command.parameter.1" value="de.toem.impulse.parts.samples.4"/>
+        </children>
+        <children xsi:type="menu:HandledMenuItem" xmi:id="_P8j0a5cSEeihDovBfyKGZw" elementId="de.toem.impulse.menucontribution.viewer.plots.showIn.1.4" toBeRendered="false" label="%command.label.controller.showIn-signals" iconURI="platform:/plugin/de.toem.impulse.ui/icons/commands/de.toem.toolkits.commands.controller.showIn-samples.png" tooltip="%command.description.controller.showIn-signals" command="_dT92AJb0EeihDovBfyKGZw">
+          <parameters xmi:id="_P8j0bJcSEeihDovBfyKGZw" elementId="4" name="de.toem.command.parameter.1" value="de.toem.impulse.views.records.table"/>
+        </children>
+        <children xsi:type="menu:HandledMenuItem" xmi:id="_P8j0bZcSEeihDovBfyKGZw" elementId="de.toem.impulse.menucontribution.viewer.plots.showIn.1.5" label="%command.label.controller.showIn-sample" iconURI="platform:/plugin/de.toem.impulse.ui/icons/commands/de.toem.toolkits.commands.controller.showIn-sample.png" tooltip="%command.description.controller.showIn-sample" command="_dT92AJb0EeihDovBfyKGZw">
+          <parameters xmi:id="_P8j0bpcSEeihDovBfyKGZw" elementId="5" name="de.toem.command.parameter.1" value="de.toem.impulse.parts.sample"/>
+        </children>
+      </children>
+    </elements>
+    <elements xsi:type="menu:MenuContribution" xmi:id="_rqz74JC2Eei4n7Jv6pU6FA" elementId="de.toem.impulse.menucontribution.viewer.header.reorganize" positionInParent="endof=group.reorganize" parentId="de.toem.impulse.popupmenu.viewer.header">
+      <children xsi:type="menu:HandledMenuItem" xmi:id="_2j410KeBEei_m_d4jzPpJw" elementId="de.toem.impulse.menucontribution.viewer.header.reorganize.0" label="%command.name.geometry.namesRightAligned" tooltip="%command.description.geometry.namesRightAligned" type="Check" command="_aTlI0FKFEeiJAJSywQWx5A"/>
+      <children xsi:type="menu:HandledMenuItem" xmi:id="_3l9W0KeBEei_m_d4jzPpJw" elementId="de.toem.impulse.menucontribution.viewer.header.reorganize.1" label="%command.name.geometry.configIcon" tooltip="%command.description.geometry.configIcon" type="Check" command="_aXFIwFKFEeiJAJSywQWx5A"/>
+      <children xsi:type="menu:HandledMenuItem" xmi:id="_6L0l0KeBEei_m_d4jzPpJw" elementId="de.toem.impulse.menucontribution.viewer.header.reorganize.2" label="%command.name.geometry.axis" tooltip="%command.description.geometry.axis" type="Check" command="_adB_wFKFEeiJAJSywQWx5A"/>
+      <children xsi:type="menu:HandledMenuItem" xmi:id="_6nSZ0KeBEei_m_d4jzPpJw" elementId="de.toem.impulse.menucontribution.viewer.header.reorganize.3" label="%command.name.geometry.grid" tooltip="%command.description.geometry.grid" type="Check" command="_agAbQFKFEeiJAJSywQWx5A"/>
+      <children xsi:type="menu:HandledMenuItem" xmi:id="_67Ii4KeBEei_m_d4jzPpJw" elementId="de.toem.impulse.menucontribution.viewer.header.reorganize.4" label="%command.name.geometry.fitVertical" tooltip="%command.description.geometry.fitVertical" type="Check" command="_ai-2wFKFEeiJAJSywQWx5A"/>
+    </elements>
+    <elements xsi:type="menu:MenuContribution" xmi:id="_puiVQKbXEeidZ5vxI5QOww" elementId="de.toem.impulse.menucontribution.viewer.cursor.new" positionInParent="endof=group.new" parentId="de.toem.impulse.popupmenu.viewer.cursor">
+      <children xsi:type="menu:HandledMenuItem" xmi:id="_nxKtILQeEeiX1MEGkgFhVA" elementId="de.toem.impulse.menucontribution.viewer.cursor.new.0" label="%command.name.cursor.add" iconURI="de-toem-toolkits-tlk-css-general-add-image" tooltip="%command.description.cursor.add" command="_ORynYFKEEeiJAJSywQWx5A"/>
+    </elements>
+    <elements xsi:type="menu:MenuContribution" xmi:id="_aghWcLQeEeiX1MEGkgFhVA" elementId="de.toem.impulse.menucontribution.viewer.cursor.open" positionInParent="endof=group.open" parentId="de.toem.impulse.popupmenu.viewer.cursor">
+      <children xsi:type="menu:HandledMenuItem" xmi:id="_pmbloLQeEeiX1MEGkgFhVA" elementId="de.toem.impulse.menucontribution.viewer.cursor.open.0" label="%command.name.cursor.edit" iconURI="de-toem-toolkits-tlk-css-general-edit-image" tooltip="%command.description.cursor.edit" command="_OTeCYFKEEeiJAJSywQWx5A"/>
+    </elements>
+    <elements xsi:type="menu:MenuContribution" xmi:id="_bAjhYLQeEeiX1MEGkgFhVA" elementId="de.toem.impulse.menucontribution.viewer.cursor.edit" positionInParent="endof=group.edit" parentId="de.toem.impulse.popupmenu.viewer.cursor">
+      <children xsi:type="menu:HandledMenuItem" xmi:id="_rSKusLQeEeiX1MEGkgFhVA" elementId="de.toem.impulse.menucontribution.viewer.cursor.edit.0" label="%command.name.cursor.delete" iconURI="de-toem-toolkits-tlk-css-general-delete-image" tooltip="%command.description.cursor.delete" command="_OVJdYFKEEeiJAJSywQWx5A"/>
+      <children xsi:type="menu:HandledMenuItem" xmi:id="_scBSsLQeEeiX1MEGkgFhVA" elementId="de.toem.impulse.menucontribution.viewer.cursor.edit.1" label="%command.name.cursor.deleteAll" iconURI="de-toem-toolkits-tlk-css-general-delete-all-image" tooltip="%command.description.cursor.deleteAll" command="_OWrHYFKEEeiJAJSywQWx5A"/>
+    </elements>
+    <elements xsi:type="menu:MenuContribution" xmi:id="_lRxSgLQeEeiX1MEGkgFhVA" elementId="de.toem.impulse.menucontribution.viewer.cursor.reorganize" positionInParent="endof=group.reorganize" parentId="de.toem.impulse.popupmenu.viewer.cursor">
+      <children xsi:type="menu:HandledMenuItem" xmi:id="_xXg8ULQeEeiX1MEGkgFhVA" elementId="de.toem.impulse.menucontribution.viewer.cursor.reorganize.0" label="%command.name.cursor.goto-pos1" iconURI="ri-skip-back-line" tooltip="%command.description.cursor.goto-pos1" command="_tVqIEFKEEeiJAJSywQWx5A">
+        <parameters xmi:id="_xXg8UbQeEeiX1MEGkgFhVA" elementId="0" name="de.toem.command.parameter.1" value="pos1"/>
+      </children>
+      <children xsi:type="menu:HandledMenuItem" xmi:id="_x_Q40LQeEeiX1MEGkgFhVA" elementId="de.toem.impulse.menucontribution.viewer.cursor.reorganize.1" label="%command.name.cursor.goto-prev" iconURI="codicon-triangle-left" tooltip="%command.description.cursor.goto-prev" command="_tVqIEFKEEeiJAJSywQWx5A">
+        <parameters xmi:id="_x_Q40bQeEeiX1MEGkgFhVA" elementId="0" name="de.toem.command.parameter.1" value="prev"/>
+      </children>
+      <children xsi:type="menu:HandledMenuItem" xmi:id="_yTkU4LQeEeiX1MEGkgFhVA" elementId="de.toem.impulse.menucontribution.viewer.cursor.reorganize.2" label="%command.name.cursor.goto-next" iconURI="codicon-triangle-left" tooltip="%command.description.cursor.goto-next" command="_tVqIEFKEEeiJAJSywQWx5A">
+        <parameters xmi:id="_yTkU4bQeEeiX1MEGkgFhVA" elementId="0" name="de.toem.command.parameter.1" value="next"/>
+      </children>
+      <children xsi:type="menu:HandledMenuItem" xmi:id="_yo_yULQeEeiX1MEGkgFhVA" elementId="de.toem.impulse.menucontribution.viewer.cursor.reorganize.3" label="%command.name.cursor.goto-end" iconURI="ri-skip-forward-line" tooltip="%command.description.cursor.goto-end" command="_tVqIEFKEEeiJAJSywQWx5A">
+        <parameters xmi:id="_yo_yUbQeEeiX1MEGkgFhVA" elementId="0" name="de.toem.command.parameter.1" value="end"/>
+      </children>
+      <children xsi:type="menu:HandledMenuItem" xmi:id="_zASQ8LQeEeiX1MEGkgFhVA" elementId="de.toem.impulse.menucontribution.viewer.cursor.reorganize.4" toBeRendered="false" label="%command.name.cursor.goto-units" iconURI="ri-walk-line" tooltip="%command.description.cursor.goto-units" command="_tVqIEFKEEeiJAJSywQWx5A">
+        <parameters xmi:id="_zASQ8bQeEeiX1MEGkgFhVA" elementId="0" name="de.toem.command.parameter.1" value="units"/>
+      </children>
+      <children xsi:type="menu:HandledMenuItem" xmi:id="_zWApULQeEeiX1MEGkgFhVA" elementId="de.toem.impulse.menucontribution.viewer.cursor.reorganize.5" toBeRendered="false" label="%command.name.find" iconURI="de-toem-toolkits-tlk-css-general-find-image" tooltip="%command.description.find" command="_c_008HL4Eeiza8VFP7JOFw"/>
+      <children xsi:type="menu:Menu" xmi:id="_0S0P0LQeEeiX1MEGkgFhVA" elementId="de.toem.impulse.menucontribution.viewer.cursor.reorganize.6" label="%command.name.cursor.activate">
+        <children xsi:type="menu:HandledMenuItem" xmi:id="_0S0P0bQeEeiX1MEGkgFhVA" elementId="de.toem.impulse.menucontribution.viewer.cursor.reorganize.60" label="%command.name.cursor.activate-prev" iconURI="platform:/plugin/de.toem.impulse.ui/icons/commands/de.toem.impulse.commands.cursor.activate-prev.png" tooltip="%command.description.cursor.activate-prev" command="_tQ2gkFKEEeiJAJSywQWx5A">
+          <parameters xmi:id="_0S0P0rQeEeiX1MEGkgFhVA" elementId="0" name="de.toem.command.parameter.1" value="prev"/>
+        </children>
+        <children xsi:type="menu:HandledMenuItem" xmi:id="_0S0P07QeEeiX1MEGkgFhVA" elementId="de.toem.impulse.menucontribution.viewer.cursor.reorganize.6.1" label="%command.name.cursor.activate-next" iconURI="platform:/plugin/de.toem.impulse.ui/icons/commands/de.toem.impulse.commands.cursor.activate-next.png" tooltip="%command.description.cursor.activate-next" command="_tQ2gkFKEEeiJAJSywQWx5A">
+          <parameters xmi:id="_0S0P1LQeEeiX1MEGkgFhVA" elementId="0" name="de.toem.command.parameter.1" value="next"/>
+        </children>
+        <children xsi:type="menu:HandledMenuItem" xmi:id="_0S0P1bQeEeiX1MEGkgFhVA" elementId="de.toem.impulse.menucontribution.viewer.cursor.reorganize.6.2" label="%command.name.cursor.activate-0" iconURI="platform:/plugin/de.toem.impulse.ui/icons/commands/de.toem.impulse.commands.cursor.activate-0.png" tooltip="%command.description.cursor.activate-0" command="_tQ2gkFKEEeiJAJSywQWx5A">
+          <parameters xmi:id="_0S0P1rQeEeiX1MEGkgFhVA" elementId="0" name="de.toem.command.parameter.1" value="0"/>
+        </children>
+        <children xsi:type="menu:HandledMenuItem" xmi:id="_0S0P17QeEeiX1MEGkgFhVA" elementId="de.toem.impulse.menucontribution.viewer.cursor.reorganize.6.3" label="%command.name.cursor.activate-1" iconURI="platform:/plugin/de.toem.impulse.ui/icons/commands/de.toem.impulse.commands.cursor.activate-1.png" tooltip="%command.description.cursor.activate-1" command="_tQ2gkFKEEeiJAJSywQWx5A">
+          <parameters xmi:id="_0S0P2LQeEeiX1MEGkgFhVA" elementId="0" name="de.toem.command.parameter.1" value="1"/>
+        </children>
+        <children xsi:type="menu:HandledMenuItem" xmi:id="_0S0P2bQeEeiX1MEGkgFhVA" elementId="de.toem.impulse.menucontribution.viewer.cursor.reorganize.6.4" label="%command.name.cursor.activate-2" iconURI="platform:/plugin/de.toem.impulse.ui/icons/commands/de.toem.impulse.commands.cursor.activate-2.png" tooltip="%command.description.cursor.activate-2" command="_tQ2gkFKEEeiJAJSywQWx5A">
+          <parameters xmi:id="_0S0P2rQeEeiX1MEGkgFhVA" elementId="0" name="de.toem.command.parameter.1" value="2"/>
+        </children>
+        <children xsi:type="menu:HandledMenuItem" xmi:id="_0S0P27QeEeiX1MEGkgFhVA" elementId="de.toem.impulse.menucontribution.viewer.cursor.reorganize.6.5" label="%command.name.cursor.activate-3" iconURI="platform:/plugin/de.toem.impulse.ui/icons/commands/de.toem.impulse.commands.cursor.activate-3.png" tooltip="%command.description.cursor.activate-3" command="_tQ2gkFKEEeiJAJSywQWx5A">
+          <parameters xmi:id="_0S0P3LQeEeiX1MEGkgFhVA" elementId="0" name="de.toem.command.parameter.1" value="3"/>
+        </children>
+      </children>
+      <children xsi:type="menu:Menu" xmi:id="_02YP4LQeEeiX1MEGkgFhVA" elementId="de.toem.impulse.menucontribution.viewer.cursor.reorganize.7" label="%command.name.cursor.show">
+        <children xsi:type="menu:HandledMenuItem" xmi:id="_AV74MHr4EempAc-b1AO7xg" elementId="de.toem.impulse.toolbarcontribution.viewer.main.14.15.0" label="%command.name.cursor.show-active" iconURI="platform:/plugin/de.toem.impulse.ui/icons/commands/de.toem.impulse.commands.cursor.show-0.png" tooltip="%command.description.cursor.show-active" command="_OYba4FKEEeiJAJSywQWx5A">
+          <parameters xmi:id="_AV74MXr4EempAc-b1AO7xg" elementId="0" name="de.toem.command.parameter.1" value="active"/>
+        </children>
+        <children xsi:type="menu:HandledMenuItem" xmi:id="_02YP4bQeEeiX1MEGkgFhVA" elementId="de.toem.impulse.menucontribution.viewer.cursor.reorganize.7.0" label="%command.name.cursor.show-0" iconURI="platform:/plugin/de.toem.impulse.ui/icons/commands/de.toem.impulse.commands.cursor.show-0.png" tooltip="%command.description.cursor.show-0" command="_OYba4FKEEeiJAJSywQWx5A">
+          <parameters xmi:id="_02YP4rQeEeiX1MEGkgFhVA" elementId="0" name="de.toem.command.parameter.1" value="0"/>
+        </children>
+        <children xsi:type="menu:HandledMenuItem" xmi:id="_02YP47QeEeiX1MEGkgFhVA" elementId="de.toem.impulse.menucontribution.viewer.cursor.reorganize.7.1" label="%command.name.cursor.show-1" iconURI="platform:/plugin/de.toem.impulse.ui/icons/commands/de.toem.impulse.commands.cursor.show-1.png" tooltip="%command.description.cursor.show-1" command="_OYba4FKEEeiJAJSywQWx5A">
+          <parameters xmi:id="_02YP5LQeEeiX1MEGkgFhVA" elementId="0" name="de.toem.command.parameter.1" value="1"/>
+        </children>
+        <children xsi:type="menu:HandledMenuItem" xmi:id="_02YP5bQeEeiX1MEGkgFhVA" elementId="de.toem.impulse.menucontribution.viewer.cursor.reorganize.7.2" label="%command.name.cursor.show-2" iconURI="platform:/plugin/de.toem.impulse.ui/icons/commands/de.toem.impulse.commands.cursor.show-2.png" tooltip="%command.description.cursor.show-2" command="_OYba4FKEEeiJAJSywQWx5A">
+          <parameters xmi:id="_02YP5rQeEeiX1MEGkgFhVA" elementId="0" name="de.toem.command.parameter.1" value="2"/>
+        </children>
+        <children xsi:type="menu:HandledMenuItem" xmi:id="_02YP57QeEeiX1MEGkgFhVA" elementId="de.toem.impulse.menucontribution.viewer.cursor.reorganize.7.3" label="%command.name.cursor.show-3" iconURI="platform:/plugin/de.toem.impulse.ui/icons/commands/de.toem.impulse.commands.cursor.show-3.png" tooltip="%command.description.cursor.show-3" command="_OYba4FKEEeiJAJSywQWx5A">
+          <parameters xmi:id="_02YP6LQeEeiX1MEGkgFhVA" elementId="0" name="de.toem.command.parameter.1" value="3"/>
+        </children>
+      </children>
+    </elements>
+    <elements xsi:type="menu:MenuContribution" xmi:id="_7qZ9AHrSEempAc-b1AO7xg" elementId="de.toem.impulse.menucontribution.viewer.signals.open" positionInParent="endof=group.open" parentId="de.toem.impulse.popupmenu.viewer.signals">
+      <children xsi:type="menu:HandledMenuItem" xmi:id="_7qZ9AXrSEempAc-b1AO7xg" elementId="de.toem.impulse.menucontribution.viewer.signals.open.0" label="%command.name.controller.execute.viewer.signal" iconURI="" tooltip="%command.description.controller.execute.viewer.signal" command="_8BRvcHrTEempAc-b1AO7xg"/>
+    </elements>
+    <elements xsi:type="menu:MenuContribution" xmi:id="_Qc57MNWQEeuS39MSnHAanw" elementId="de.toem.impulse.menucontribution.viewer.scope.open" positionInParent="endof=group.open" parentId="de.toem.impulse.popupmenu.viewer.scope">
+      <children xsi:type="menu:HandledMenuItem" xmi:id="_Qc57MdWQEeuS39MSnHAanw" elementId="de.toem.impulse.menucontribution.viewer.scope.open.0" toBeRendered="false" label="%command.name.controller.execute.viewer.scope" iconURI="" tooltip="%command.description.controller.execute.viewer.scope" command="_8BRvcHrTEempAc-b1AO7xg"/>
+    </elements>
+  </fragments>
+  <fragments xsi:type="fragment:StringModelFragment" xmi:id="_DHkmQE6VEei4OeXKtmplqw" featurename="menuContributions" parentElementId="xpath:/">
+    <elements xsi:type="menu:MenuContribution" xmi:id="_OswLcFT9EeiXFe-I1pigzw" elementId="de.toem.impulse.menucontribution.samples.main" parentId="de.toem.impulse.menu.samples.main">
+      <children xsi:type="menu:HandledMenuItem" xmi:id="_yOabIMYREeiCdvW5am-vpQ" elementId="de.toem.impulse.menucontribution.samples.main.0" label="%command.name.views.config" iconURI="de-toem-toolkits-tlk-css-general-settings-image" tooltip="%command.description.views.config" command="_dVl-QEnzEeiaDvEoSpia5Q"/>
+      <children xsi:type="menu:HandledMenuItem" xmi:id="_Q-0ycDBlEeqZ45adnF1lNQ" elementId="de.toem.impulse.menucontribution.samples.main.0" toBeRendered="false" label="%command.name.support.preferences " iconURI="" tooltip="%command.description.support.preferences " command="_B6xVcFKGEeiJAJSywQWx5A"/>
+      <children xsi:type="menu:MenuSeparator" xmi:id="_Dd3UQMYTEeiCdvW5am-vpQ" elementId="de.toem.impulse.menucontribution.samples.main.s1"/>
+      <children xsi:type="menu:HandledMenuItem" xmi:id="_TN-68FT9EeiXFe-I1pigzw" elementId="de.toem.impulse.menucontribution.samples.main.2" label="%command.name.views.inputSync" iconURI="codicon-link" tooltip="%command.description.views.inputSync" type="Check" command="_bs_owEnzEeiaDvEoSpia5Q"/>
+      <children xsi:type="menu:HandledMenuItem" xmi:id="_UcfVcFT9EeiXFe-I1pigzw" elementId="de.toem.impulse.menucontribution.samples.main.3" label="%command.name.views.refreshInput" iconURI="codicon-refresh" tooltip="%command.description.views.refreshInput" type="Check" command="_eIfa0EnzEeiaDvEoSpia5Q"/>
+      <children xsi:type="menu:HandledMenuItem" xmi:id="_06mbsFRHEemjW85ASTz47Q" elementId="de.toem.impulse.menucontribution.samples.main.4" label="%command.name.views.selectionSync" iconURI="ri-align-bottom" tooltip="%command.description.views.selectionSync" type="Check" command="_chkgUEnzEeiaDvEoSpia5Q"/>
+      <children xsi:type="menu:HandledMenuItem" xmi:id="_U0EH8FT9EeiXFe-I1pigzw" elementId="de.toem.impulse.menucontribution.samples.main.5" label="%command.name.views.enableGroups" iconURI="" tooltip="%command.description.views.enableGroups" type="Check" command="_IeLlgFRHEemjW85ASTz47Q"/>
+      <children xsi:type="menu:MenuSeparator" xmi:id="_EcVusMYTEeiCdvW5am-vpQ" elementId="de.toem.impulse.menucontribution.samples.main.s6"/>
+      <children xsi:type="menu:HandledMenuItem" xmi:id="_HzCPoMYREeiCdvW5am-vpQ" elementId="de.toem.impulse.menucontribution.samples.main.7" toBeRendered="false" iconURI="de-toem-toolkits-tlk-css-general-print-image" command="_xWNJIFqXEeiShepWThYpOw"/>
+      <children xsi:type="menu:HandledMenuItem" xmi:id="_H-nNgMYREeiCdvW5am-vpQ" elementId="de.toem.impulse.menucontribution.samples.main.8" toBeRendered="false" label="%command.name.views.defaults" iconURI="" tooltip="%command.description.views.defaults" command="_e1lKUEnzEeiaDvEoSpia5Q"/>
+      <children xsi:type="menu:HandledMenuItem" xmi:id="_N1q-gHFaEemFL_rK2BruLQ" elementId="de.toem.impulse.menucontribution.samples.main.9" toBeRendered="false" label="%command.name.about" tooltip="%command.description.about" command="_ZpKQIHFZEemFL_rK2BruLQ"/>
+    </elements>
+    <elements xsi:type="menu:MenuContribution" xmi:id="_d27aIFT-EeiXFe-I1pigzw" elementId="de.toem.impulse.menucontribution.samples.context.showIn" positionInParent="endof=group.showIn" parentId="de.toem.impulse.menu.samples.context">
+      <children xsi:type="menu:Menu" xmi:id="_fHle0FUAEeiXFe-I1pigzw" elementId="de.toem.impulse.menucontribution.samples.context.showIn.0" label="%menu.label.showIn">
+        <children xsi:type="menu:HandledMenuItem" xmi:id="_j4KuYFT_EeiXFe-I1pigzw" elementId="de.toem.impulse.menucontribution.samples.context.showIn.0.commandnameshowintexteditor" toBeRendered="false" label="%command.name.showIn.textEditor " tooltip="%command.description.showIn.textEditor " command="_B1hCAFKGEeiJAJSywQWx5A"/>
+      </children>
+    </elements>
+    <elements xsi:type="menu:MenuContribution" xmi:id="_uhs44FT_EeiXFe-I1pigzw" elementId="de.toem.impulse.menucontribution.samples.context.reorganize" positionInParent="endof=group.reorganize" parentId="de.toem.impulse.menu.samples.context">
+      <children xsi:type="menu:HandledMenuItem" xmi:id="_1kUD4M38EeihkrZep98EFQ" elementId="de.toem.impulse.menucontribution.samples.context.reorganize.0" label="%command.name.find" iconURI="de-toem-toolkits-tlk-css-general-find-image" tooltip="%command.description.find" command="_c_008HL4Eeiza8VFP7JOFw"/>
+    </elements>
+    <elements xsi:type="menu:MenuContribution" xmi:id="_loP6UJCnEei4n7Jv6pU6FA" elementId="de.toem.impulse.menucontribution.sample.main" parentId="de.toem.impulse.menu.sample.main">
+      <children xsi:type="menu:HandledMenuItem" xmi:id="_ZeC98NCHEeiIhKRx7_aCJw" elementId="de.toem.impulse.menucontribution.sample.main.0" label="%command.name.views.config" iconURI="de-toem-toolkits-tlk-css-general-settings-image" tooltip="%command.description.views.config" command="_dVl-QEnzEeiaDvEoSpia5Q"/>
+      <children xsi:type="menu:HandledMenuItem" xmi:id="_cz5jADBlEeqZ45adnF1lNQ" elementId="de.toem.impulse.menucontribution.sample.main.1" label="%command.name.support.preferences " iconURI="" tooltip="%command.description.support.preferences " command="_B6xVcFKGEeiJAJSywQWx5A"/>
+      <children xsi:type="menu:MenuSeparator" xmi:id="_asBM8NCHEeiIhKRx7_aCJw" elementId="de.toem.impulse.menucontribution.sample.main.s1"/>
+      <children xsi:type="menu:HandledMenuItem" xmi:id="_bBP2ENCHEeiIhKRx7_aCJw" elementId="de.toem.impulse.menucontribution.sample.main.2" label="%command.name.views.inputSync" iconURI="codicon-link" tooltip="%command.description.views.inputSync" type="Check" command="_bs_owEnzEeiaDvEoSpia5Q"/>
+      <children xsi:type="menu:HandledMenuItem" xmi:id="_bTjHANCHEeiIhKRx7_aCJw" elementId="de.toem.impulse.menucontribution.sample.main.3" label="%command.name.views.refreshInput" iconURI="codicon-refresh" tooltip="%command.description.views.refreshInput" type="Check" command="_eIfa0EnzEeiaDvEoSpia5Q"/>
+      <children xsi:type="menu:HandledMenuItem" xmi:id="_bli18NCHEeiIhKRx7_aCJw" elementId="de.toem.impulse.menucontribution.sample.main.4" label="%command.name.views.selectionSync" iconURI="ri-align-bottom" tooltip="%command.description.views.selectionSync" type="Check" command="_chkgUEnzEeiaDvEoSpia5Q"/>
+      <children xsi:type="menu:HandledMenuItem" xmi:id="_BOIp4FRIEemjW85ASTz47Q" elementId="de.toem.impulse.menucontribution.sample.main.5" label="%command.name.views.enableGroups" iconURI="" tooltip="%command.description.views.enableGroups" type="Check" command="_IeLlgFRHEemjW85ASTz47Q"/>
+      <children xsi:type="menu:MenuSeparator" xmi:id="_b2QygNCHEeiIhKRx7_aCJw" elementId="de.toem.impulse.menucontribution.sample.main.s6"/>
+      <children xsi:type="menu:HandledMenuItem" xmi:id="_cGDiANCHEeiIhKRx7_aCJw" elementId="de.toem.impulse.menucontribution.sample.main.7" iconURI="de-toem-toolkits-tlk-css-general-print-image" command="_xWNJIFqXEeiShepWThYpOw"/>
+      <children xsi:type="menu:HandledMenuItem" xmi:id="_cUUAcNCHEeiIhKRx7_aCJw" elementId="de.toem.impulse.menucontribution.sample.main.8" label="%command.name.views.defaults" iconURI="" tooltip="%command.description.views.defaults" command="_e1lKUEnzEeiaDvEoSpia5Q"/>
+      <children xsi:type="menu:HandledMenuItem" xmi:id="_Saa8EHFaEemFL_rK2BruLQ" elementId="de.toem.impulse.menucontribution.sample.main.9" label="%command.name.about" tooltip="%command.description.about" command="_ZpKQIHFZEemFL_rK2BruLQ"/>
+    </elements>
+    <elements xsi:type="menu:MenuContribution" xmi:id="_-6fSoIKyEemiH9iefvjXNQ" elementId="de.toem.impulse.ui.menucontribution.sample.context.open" positionInParent="endof=group.open" parentId="de.toem.impulse.menu.sample.context">
+      <children xsi:type="menu:HandledMenuItem" xmi:id="_-6fSoYKyEemiH9iefvjXNQ" elementId="de.toem.impulse.ui.menucontribution.sample.context.open.0" label="%command.name.goto-target" iconURI="codicon-debug-step-over" tooltip="%command.description.goto-target" command="_tVqIEFKEEeiJAJSywQWx5A">
+        <parameters xmi:id="_nZIQsGx9EeyEKM0IbjZFXw" elementId="0" name="de.toem.command.parameter.1" value="target"/>
+      </children>
+    </elements>
+    <elements xsi:type="menu:MenuContribution" xmi:id="_vii8QJDTEeiNp-kdrJiNRw" elementId="de.toem.impulse.ui.menucontribution.sample.context.reorganize" positionInParent="endof=group.reorganize" parentId="de.toem.impulse.menu.sample.context"/>
+    <elements xsi:type="menu:MenuContribution" xmi:id="_JMlcsE6VEei4OeXKtmplqw" elementId="de.toem.impulse.menucontribution.ports.main" parentId="de.toem.impulse.menu.ports.main">
+      <children xsi:type="menu:HandledMenuItem" xmi:id="_8edGoPFKEei8sNz7ITYzHQ" elementId="de.toem.impulse.menucontribution.ports.main.0" label="%command.name.views.config" iconURI="de-toem-toolkits-tlk-css-general-settings-image" tooltip="%command.description.views.config" type="Check" command="_dVl-QEnzEeiaDvEoSpia5Q"/>
+      <children xsi:type="menu:MenuSeparator" xmi:id="_9rStMPFKEei8sNz7ITYzHQ" elementId="de.toem.impulse.menucontribution.ports.main.0"/>
+      <children xsi:type="menu:HandledMenuItem" xmi:id="_3jNUoPFKEei8sNz7ITYzHQ" elementId="de.toem.impulse.menucontribution.ports.main.2" label="%command.name.support.preferences " iconURI="" tooltip="%command.description.support.preferences " command="_B6xVcFKGEeiJAJSywQWx5A"/>
+      <children xsi:type="menu:HandledMenuItem" xmi:id="_0-caMFT8EeiXFe-I1pigzw" elementId="de.toem.impulse.menucontribution.ports.main.3" label="%command.name.ports.save" iconURI="de-toem-toolkits-tlk-css-general-save-image" tooltip="%command.description.ports.save" command="_3tEKUBMWEeiWhsbWq8LnkQ"/>
+      <children xsi:type="menu:HandledMenuItem" xmi:id="_1gsysFT8EeiXFe-I1pigzw" elementId="de.toem.impulse.menucontribution.ports.main.4" label="%command.name.ports.reset" iconURI="" tooltip="%command.description.ports.reset" command="_SKY9sBMXEeiWhsbWq8LnkQ"/>
+      <children xsi:type="menu:MenuSeparator" xmi:id="__0xiMPFKEei8sNz7ITYzHQ" elementId="de.toem.impulse.menucontribution.ports.main.5"/>
+      <children xsi:type="menu:HandledMenuItem" xmi:id="_AML8oPFLEei8sNz7ITYzHQ" elementId="de.toem.impulse.menucontribution.ports.main.6" iconURI="de-toem-toolkits-tlk-css-general-print-image" command="_xWNJIFqXEeiShepWThYpOw"/>
+      <children xsi:type="menu:HandledMenuItem" xmi:id="_AlhpsPFLEei8sNz7ITYzHQ" elementId="de.toem.impulse.menucontribution.ports.main.7" label="%command.name.views.defaults" iconURI="" tooltip="%command.description.views.defaults" command="_e1lKUEnzEeiaDvEoSpia5Q"/>
+      <children xsi:type="menu:HandledMenuItem" xmi:id="_VredIHFaEemFL_rK2BruLQ" elementId="de.toem.impulse.menucontribution.ports.main.8" label="%command.name.about" tooltip="%command.description.about" command="_ZpKQIHFZEemFL_rK2BruLQ"/>
+    </elements>
+    <elements xsi:type="menu:MenuContribution" xmi:id="_Lj9RwH4XEemsKKG0WuXxkw" elementId="de.toem.impulse.menucontribution.ports.context.open" positionInParent="endof=group.open" parentId="de.toem.impulse.menu.ports.context">
+      <children xsi:type="menu:HandledMenuItem" xmi:id="_Lj9RwX4XEemsKKG0WuXxkw" elementId="de.toem.impulse.menucontribution.viewer.cursor.open.0" label="%command.name.ports.open" iconURI="de-toem-toolkits-tlk-css-general-open-image" tooltip="%command.description.ports.open" command="_vF7aAA2zEeiAprUmm3_Rlg"/>
+    </elements>
+    <elements xsi:type="menu:MenuContribution" xmi:id="_J9h_ALT_EeiIxdWBNo8j-g" elementId="de.toem.impulse.menucontribution.resource.additions" positionInParent="after=additions" parentId="popup">
+      <children xsi:type="menu:Menu" xmi:id="_VwzYwLT_EeiIxdWBNo8j-g" elementId="de.toem.impulse.menucontribution.resource.additions.0" visible="false" label="%menu.label.impulse" iconURI="platform:/plugin/de.toem.impulse.ui/icons/parts/de.toem.impulse.parts.viewer.png">
+        <visibleWhen xsi:type="ui:CoreExpression" xmi:id="_kFxBQLUBEeiIxdWBNo8j-g" coreExpressionId="de.toem.impulse.definition.isRecord"/>
+        <children xsi:type="menu:HandledMenuItem" xmi:id="_bqd60LT_EeiIxdWBNo8j-g" elementId="de.toem.impulse.menucontribution.resource.additions.0.0" label="%command.name.record.load" iconURI="ri-refresh-line" tooltip="%command.description.record.load" command="_a5pDQFKFEeiJAJSywQWx5A"/>
+        <children xsi:type="menu:Menu" xmi:id="_97RC0IABEeqQyOhSP_UITg" elementId="de.toem.impulse.menucontribution.resource.additions.0.1" label="%command.name.record.load-options" iconURI="" tooltip="%command.description.samples.reload">
+          <children xsi:type="menu:DynamicMenuContribution" xmi:id="_97RC0YABEeqQyOhSP_UITg" elementId="de.toem.impulse.commands.record.load" contributionURI="bundleclass://de.toem.toolkits.ui/de.toem.toolkits.menu.ElementCommandMenuContribution"/>
+        </children>
+        <children xsi:type="menu:HandledMenuItem" xmi:id="_cCDUYLT_EeiIxdWBNo8j-g" elementId="de.toem.impulse.menucontribution.resource.additions.0.2" label="%command.name.record.unload" iconURI="de-toem-toolkits-tlk-css-general-delete-image" tooltip="%command.description.record.unload" command="_BqcacFKGEeiJAJSywQWx5A"/>
+        <children xsi:type="menu:HandledMenuItem" xmi:id="_cgj1ULT_EeiIxdWBNo8j-g" elementId="de.toem.impulse.menucontribution.resource.additions.0.3" label="%command.name.record.openDiff" iconURI="platform:/plugin/de.toem.impulse.ui/icons/commands/de.toem.impulse.commands.axis.domain.zoom.in.png" tooltip="%command.description.record.openDiff" command="_BzEyAFKGEeiJAJSywQWx5A"/>
+      </children>
+    </elements>
+  </fragments>
+  <fragments xsi:type="fragment:StringModelFragment" xmi:id="__y6LsFTjEeiXFe-I1pigzw" featurename="toolBarContributions" parentElementId="xpath:/">
+    <elements xsi:type="menu:ToolBarContribution" xmi:id="_ZnYwMFUBEeiXFe-I1pigzw" elementId="de.toem.impulse.toolbarcontribution.viewer.main" parentId="de.toem.impulse.editor.records.toolbar.main">
+      <children xsi:type="menu:HandledToolItem" xmi:id="_P010kFjREeiwwIisQTEQmA" elementId="de.toem.impulse.toolbarcontribution.viewer.main.0" label="%command.name.ports.edit" iconURI="platform:/plugin/de.toem.impulse.ui/icons/commands/de.toem.impulse.commands.ports.edit.png" tooltip="%command.description.ports.edit" command="_arrfwFKFEeiJAJSywQWx5A"/>
+      <children xsi:type="menu:HandledToolItem" xmi:id="_MTnwkFjREeiwwIisQTEQmA" elementId="de.toem.impulse.toolbarcontribution.viewer.main.2" label="%command.name.ports.streaming" iconURI="platform:/plugin/de.toem.impulse.ui/icons/commands/de.toem.impulse.commands.ports.streaming.png" tooltip="%command.description.ports.streaming" type="Check" command="_axP8QFKFEeiJAJSywQWx5A"/>
+      <children xsi:type="menu:HandledToolItem" xmi:id="_MZfvEFjREeiwwIisQTEQmA" elementId="de.toem.impulse.toolbarcontribution.viewer.main.1" label="%command.name.ports.connect" iconURI="platform:/plugin/de.toem.impulse.ui/icons/commands/de.toem.impulse.commands.ports.connect.png" tooltip="%command.description.ports.connect" type="Check" command="_auWZQFKFEeiJAJSywQWx5A"/>
+      <children xsi:type="menu:HandledToolItem" xmi:id="_MLTiEFjREeiwwIisQTEQmA" elementId="de.toem.impulse.toolbarcontribution.viewer.main.3" label="%command.name.ports.iterating" iconURI="platform:/plugin/de.toem.impulse.ui/icons/commands/de.toem.impulse.commands.ports.iterating.png" tooltip="%command.description.ports.iterating" type="Check" command="_a0OXwFKFEeiJAJSywQWx5A"/>
+      <children xsi:type="menu:HandledToolItem" xmi:id="_LsHrsFjREeiwwIisQTEQmA" elementId="de.toem.impulse.toolbarcontribution.viewer.main.4" label="%command.name.ports.updating" iconURI="platform:/plugin/de.toem.impulse.ui/icons/commands/de.toem.impulse.commands.ports.updating.png" tooltip="%command.description.ports.updating" type="Check" command="_a3DCQFKFEeiJAJSywQWx5A"/>
+      <children xsi:type="menu:ToolBarSeparator" xmi:id="_KFCZIFjREeiwwIisQTEQmA" elementId="de.toem.impulse.toolbarcontribution.viewer.main.5"/>
+      <children xsi:type="menu:HandledToolItem" xmi:id="_RkLWIFjPEeiwwIisQTEQmA" elementId="de.toem.impulse.toolbarcontribution.viewer.main.18" label="%command.name.geometry.signals" iconURI="ri-funds-box-line" tooltip="%command.description.geometry.signals" type="Check" command="_APFFIFKFEeiJAJSywQWx5A"/>
+      <children xsi:type="menu:HandledToolItem" xmi:id="_QmSxkFjPEeiwwIisQTEQmA" elementId="de.toem.impulse.toolbarcontribution.viewer.main.7" label="%command.name.samples.reload" iconURI="ri-refresh-line" tooltip="%command.description.samples.reload" command="_BwPgcFKGEeiJAJSywQWx5A">
+        <menu xmi:id="_xJ3KcFjPEeiwwIisQTEQmA" elementId="de.toem.impulse.toolbarcontribution.viewer.main.7.menu" label="">
+          <children xsi:type="menu:HandledMenuItem" xmi:id="_hXMdwOn3EeuSz-Ka64_jrA" elementId="de.toem.impulse.toolbarcontribution.viewer.main.7.menu.0" label="%command.name.samples.reader.edit" iconURI="codicon-edit" tooltip="%command.description.samples.reader.edit" command="_uNfssOn1EeuSz-Ka64_jrA"/>
+          <children xsi:type="menu:DynamicMenuContribution" xmi:id="_v5gMgFqVEeiShepWThYpOw" elementId="de.toem.impulse.toolbarcontribution.viewer.main.7.menu_de.toem.impulse.commands.samples.reload" contributionURI="bundleclass://de.toem.toolkits.ui/de.toem.toolkits.menu.PartCommandMenuContribution"/>
+        </menu>
+      </children>
+      <children xsi:type="menu:HandledToolItem" xmi:id="_ci77UFUBEeiXFe-I1pigzw" elementId="de.toem.impulse.toolbarcontribution.viewer.main.16" label="%command.name.views.open" iconURI="ri-layout-masonry-line" tooltip="%command.description.views.open" command="_nrOWULF9EeuGgfrmOeX3IQ">
+        <menu xmi:id="_Dch7kFdGEeipNdhXWvU0Fg" elementId="de.toem.impulse.toolbarcontribution.viewer.main.15.menu">
+          <children xsi:type="menu:HandledMenuItem" xmi:id="_KnoQUFdGEeipNdhXWvU0Fg" elementId="de.toem.impulse.toolbarcontribution.viewer.main.15.menu.0" label="%command.name.view.add" iconURI="de-toem-toolkits-tlk-css-general-add-image" tooltip="%command.description.view.add" command="_eYQxIFKDEeiJAJSywQWx5A"/>
+          <children xsi:type="menu:HandledMenuItem" xmi:id="_O8G9QFdGEeipNdhXWvU0Fg" elementId="de.toem.impulse.toolbarcontribution.viewer.main.15.menu.1" label="%command.name.view.clone" tooltip="%command.description.view.clone" command="_OFIrcFKEEeiJAJSywQWx5A"/>
+          <children xsi:type="menu:HandledMenuItem" xmi:id="_WsqvgFdGEeipNdhXWvU0Fg" elementId="de.toem.impulse.toolbarcontribution.viewer.main.15.menu.2" label="%command.name.view.edit" iconURI="de-toem-toolkits-tlk-css-general-edit-image" tooltip="%command.description.view.edit" command="_OJF-YFKEEeiJAJSywQWx5A"/>
+          <children xsi:type="menu:HandledMenuItem" xmi:id="_aeWRYFdGEeipNdhXWvU0Fg" elementId="de.toem.impulse.toolbarcontribution.viewer.main.15.menu.3" label="%command.name.view.delete" iconURI="de-toem-toolkits-tlk-css-general-delete-image" tooltip="%command.description.view.delete" command="_OK2R4FKEEeiJAJSywQWx5A"/>
+          <children xsi:type="menu:HandledMenuItem" xmi:id="_azZ7YFdGEeipNdhXWvU0Fg" elementId="de.toem.impulse.toolbarcontribution.viewer.main.15.menu.4" label="%command.name.view.save" iconURI="de-toem-toolkits-tlk-css-general-save-image" tooltip="%command.description.view.save" command="_OMmlYFKEEeiJAJSywQWx5A"/>
+          <children xsi:type="menu:HandledMenuItem" xmi:id="_a4l9YFdGEeipNdhXWvU0Fg" elementId="de.toem.impulse.toolbarcontribution.viewer.main.15.menu.5" label="%command.name.view.reset" tooltip="%command.description.view.reset" command="_OOW44FKEEeiJAJSywQWx5A"/>
+        </menu>
+      </children>
+      <children xsi:type="menu:HandledToolItem" xmi:id="_R_L3IFjPEeiwwIisQTEQmA" elementId="de.toem.impulse.toolbarcontribution.viewer.main.6" label="%command.name.navigate.up" iconURI="ri-folder-upload-line" tooltip="%command.description.navigate.up" command="_ao21QFKFEeiJAJSywQWx5A"/>
+      <children xsi:type="menu:ToolBarSeparator" xmi:id="_SPqjIFjPEeiwwIisQTEQmA" elementId="de.toem.impulse.toolbarcontribution.viewer.main.8"/>
+      <children xsi:type="menu:HandledToolItem" xmi:id="_N7A-cFjMEeiwwIisQTEQmA" elementId="de.toem.impulse.toolbarcontribution.viewer.main.15" label="%command.name.geometry.details" iconURI="ri-ruler-line" tooltip="%command.description.geometry.details" type="Check" command="_ABR5sFKFEeiJAJSywQWx5A">
+        <menu xmi:id="_Da2aIFpzEeiShepWThYpOw" elementId="de.toem.impulse.toolbarcontribution.viewer.main.14.menu">
+          <children xsi:type="menu:HandledMenuItem" xmi:id="_F3hQ4FpzEeiShepWThYpOw" elementId="de.toem.impulse.toolbarcontribution.viewer.main.14.0" label="%command.name.cursor.add" iconURI="de-toem-toolkits-tlk-css-general-add-image" tooltip="%command.description.cursor.add" command="_ORynYFKEEeiJAJSywQWx5A"/>
+          <children xsi:type="menu:MenuSeparator" xmi:id="_zcw_0JC3Eei4n7Jv6pU6FA" elementId="de.toem.impulse.toolbarcontribution.viewer.main.14.1"/>
+          <children xsi:type="menu:HandledMenuItem" xmi:id="_OGUeUFpzEeiShepWThYpOw" elementId="de.toem.impulse.toolbarcontribution.viewer.main.14.2" label="%command.name.cursor.edit" iconURI="de-toem-toolkits-tlk-css-general-edit-image" tooltip="%command.description.cursor.edit" command="_OTeCYFKEEeiJAJSywQWx5A"/>
+          <children xsi:type="menu:MenuSeparator" xmi:id="_J7QCwLQdEeiX1MEGkgFhVA" elementId="de.toem.impulse.toolbarcontribution.viewer.main.14.3"/>
+          <children xsi:type="menu:HandledMenuItem" xmi:id="_OR6DQFpzEeiShepWThYpOw" elementId="de.toem.impulse.toolbarcontribution.viewer.main.14.4" label="%command.name.cursor.delete" iconURI="de-toem-toolkits-tlk-css-general-delete-image" tooltip="%command.description.cursor.delete" command="_OVJdYFKEEeiJAJSywQWx5A"/>
+          <children xsi:type="menu:HandledMenuItem" xmi:id="_ObbysFpzEeiShepWThYpOw" elementId="de.toem.impulse.toolbarcontribution.viewer.main.14.5" label="%command.name.cursor.deleteAll" iconURI="de-toem-toolkits-tlk-css-general-delete-all-image" tooltip="%command.description.cursor.deleteAll" command="_OWrHYFKEEeiJAJSywQWx5A"/>
+          <children xsi:type="menu:MenuSeparator" xmi:id="_59EEEJC3Eei4n7Jv6pU6FA" elementId="de.toem.impulse.toolbarcontribution.viewer.main.14.6"/>
+          <children xsi:type="menu:HandledMenuItem" xmi:id="_jS3HkJC4Eei4n7Jv6pU6FA" elementId="de.toem.impulse.toolbarcontribution.viewer.main.14.7" label="%command.name.cursor.goto-pos1" iconURI="ri-skip-back-line" tooltip="%command.description.cursor.goto-pos1" command="_tVqIEFKEEeiJAJSywQWx5A">
+            <parameters xmi:id="_0h1tgKbcEeidZ5vxI5QOww" elementId="0" name="de.toem.command.parameter.1" value="pos1"/>
+          </children>
+          <children xsi:type="menu:HandledMenuItem" xmi:id="_jZt9gJC4Eei4n7Jv6pU6FA" elementId="de.toem.impulse.toolbarcontribution.viewer.main.14.8" label="%command.name.cursor.goto-prev" iconURI="codicon-triangle-left" tooltip="%command.description.cursor.goto-prev" command="_tVqIEFKEEeiJAJSywQWx5A">
+            <parameters xmi:id="_9uhfgKbcEeidZ5vxI5QOww" elementId="0" name="de.toem.command.parameter.1" value="prev"/>
+          </children>
+          <children xsi:type="menu:HandledMenuItem" xmi:id="_f7izcFpzEeiShepWThYpOw" elementId="de.toem.impulse.toolbarcontribution.viewer.main.14.9" label="%command.name.cursor.goto-next" iconURI="codicon-triangle-left" tooltip="%command.description.cursor.goto-next" command="_tVqIEFKEEeiJAJSywQWx5A">
+            <parameters xmi:id="_-3ddgKbcEeidZ5vxI5QOww" elementId="0" name="de.toem.command.parameter.1" value="next"/>
+          </children>
+          <children xsi:type="menu:HandledMenuItem" xmi:id="_f_SD8FpzEeiShepWThYpOw" elementId="de.toem.impulse.toolbarcontribution.viewer.main.14.10" label="%command.name.cursor.goto-end" iconURI="ri-skip-forward-line" tooltip="%command.description.cursor.goto-end" command="_tVqIEFKEEeiJAJSywQWx5A">
+            <parameters xmi:id="_AC588KbdEeidZ5vxI5QOww" elementId="0" name="de.toem.command.parameter.1" value="end"/>
+          </children>
+          <children xsi:type="menu:HandledMenuItem" xmi:id="_WaimwJC3Eei4n7Jv6pU6FA" elementId="de.toem.impulse.toolbarcontribution.viewer.main.14.11" label="%command.name.cursor.goto-units" iconURI="ri-walk-line" tooltip="%command.description.cursor.goto-units" command="_tVqIEFKEEeiJAJSywQWx5A">
+            <parameters xmi:id="_BNm1gKbdEeidZ5vxI5QOww" elementId="0" name="de.toem.command.parameter.1" value="units"/>
+          </children>
+          <children xsi:type="menu:HandledMenuItem" xmi:id="_V8tbQJC3Eei4n7Jv6pU6FA" elementId="de.toem.impulse.toolbarcontribution.viewer.main.14.12" label="%command.name.find" iconURI="de-toem-toolkits-tlk-css-general-find-image" tooltip="%command.description.find" command="_c_008HL4Eeiza8VFP7JOFw"/>
+          <children xsi:type="menu:MenuSeparator" xmi:id="_-fwMIJC3Eei4n7Jv6pU6FA" elementId="de.toem.impulse.toolbarcontribution.viewer.main.14.13"/>
+          <children xsi:type="menu:Menu" xmi:id="_HH1ikKd9Eei_m_d4jzPpJw" elementId="de.toem.impulse.toolbarcontribution.viewer.main.14.14" label="%command.name.cursor.activate">
+            <children xsi:type="menu:HandledMenuItem" xmi:id="__ukvsJC3Eei4n7Jv6pU6FA" elementId="de.toem.impulse.toolbarcontribution.viewer.main.14.14.0" label="%command.name.cursor.activate-prev" iconURI="platform:/plugin/de.toem.impulse.ui/icons/commands/de.toem.impulse.commands.cursor.activate-prev.png" tooltip="%command.description.cursor.activate-prev" command="_tQ2gkFKEEeiJAJSywQWx5A">
+              <parameters xmi:id="_I48wkKbdEeidZ5vxI5QOww" elementId="0" name="de.toem.command.parameter.1" value="prev"/>
+            </children>
+            <children xsi:type="menu:HandledMenuItem" xmi:id="_EibgQJC4Eei4n7Jv6pU6FA" elementId="de.toem.impulse.toolbarcontribution.viewer.main.14.14.1" label="%command.name.cursor.activate-next" iconURI="platform:/plugin/de.toem.impulse.ui/icons/commands/de.toem.impulse.commands.cursor.activate-next.png" tooltip="%command.description.cursor.activate-next" command="_tQ2gkFKEEeiJAJSywQWx5A">
+              <parameters xmi:id="_Nq5coKbdEeidZ5vxI5QOww" elementId="0" name="de.toem.command.parameter.1" value="next"/>
+            </children>
+            <children xsi:type="menu:HandledMenuItem" xmi:id="_TXCqYKd9Eei_m_d4jzPpJw" elementId="de.toem.impulse.toolbarcontribution.viewer.main.14.14.2" label="%command.name.cursor.activate-0" iconURI="platform:/plugin/de.toem.impulse.ui/icons/commands/de.toem.impulse.commands.cursor.activate-0.png" tooltip="%command.description.cursor.activate-0" command="_tQ2gkFKEEeiJAJSywQWx5A">
+              <parameters xmi:id="_TXCqYad9Eei_m_d4jzPpJw" elementId="0" name="de.toem.command.parameter.1" value="0"/>
+            </children>
+            <children xsi:type="menu:HandledMenuItem" xmi:id="_Um6W0Kd9Eei_m_d4jzPpJw" elementId="de.toem.impulse.toolbarcontribution.viewer.main.14.14.3" label="%command.name.cursor.activate-1" iconURI="platform:/plugin/de.toem.impulse.ui/icons/commands/de.toem.impulse.commands.cursor.activate-1.png" tooltip="%command.description.cursor.activate-1" command="_tQ2gkFKEEeiJAJSywQWx5A">
+              <parameters xmi:id="_Um6W0ad9Eei_m_d4jzPpJw" elementId="0" name="de.toem.command.parameter.1" value="1"/>
+            </children>
+            <children xsi:type="menu:HandledMenuItem" xmi:id="_U08y0Kd9Eei_m_d4jzPpJw" elementId="de.toem.impulse.toolbarcontribution.viewer.main.14.14.4" label="%command.name.cursor.activate-2" iconURI="platform:/plugin/de.toem.impulse.ui/icons/commands/de.toem.impulse.commands.cursor.activate-2.png" tooltip="%command.description.cursor.activate-2" command="_tQ2gkFKEEeiJAJSywQWx5A">
+              <parameters xmi:id="_U08y0ad9Eei_m_d4jzPpJw" elementId="0" name="de.toem.command.parameter.1" value="2"/>
+            </children>
+            <children xsi:type="menu:HandledMenuItem" xmi:id="_U37OUKd9Eei_m_d4jzPpJw" elementId="de.toem.impulse.toolbarcontribution.viewer.main.14.14.5" label="%command.name.cursor.activate-3" iconURI="platform:/plugin/de.toem.impulse.ui/icons/commands/de.toem.impulse.commands.cursor.activate-3.png" tooltip="%command.description.cursor.activate-3" command="_tQ2gkFKEEeiJAJSywQWx5A">
+              <parameters xmi:id="_U37OUad9Eei_m_d4jzPpJw" elementId="0" name="de.toem.command.parameter.1" value="3"/>
+            </children>
+          </children>
+          <children xsi:type="menu:Menu" xmi:id="_MbEWwKd9Eei_m_d4jzPpJw" elementId="de.toem.impulse.toolbarcontribution.viewer.main.14.15" label="%command.name.cursor.show">
+            <children xsi:type="menu:HandledMenuItem" xmi:id="_p16csLWKEeiyaZ9U2GowEA" elementId="de.toem.impulse.toolbarcontribution.viewer.main.14.15.0" label="%command.name.cursor.show-active" iconURI="platform:/plugin/de.toem.impulse.ui/icons/commands/de.toem.impulse.commands.cursor.show-0.png" tooltip="%command.description.cursor.show-active" command="_OYba4FKEEeiJAJSywQWx5A">
+              <parameters xmi:id="_p16csbWKEeiyaZ9U2GowEA" elementId="0" name="de.toem.command.parameter.1" value="active"/>
+            </children>
+            <children xsi:type="menu:HandledMenuItem" xmi:id="_h0RI8Kd9Eei_m_d4jzPpJw" elementId="de.toem.impulse.toolbarcontribution.viewer.main.14.15.0" label="%command.name.cursor.show-0" iconURI="platform:/plugin/de.toem.impulse.ui/icons/commands/de.toem.impulse.commands.cursor.show-0.png" tooltip="%command.description.cursor.show-0" command="_OYba4FKEEeiJAJSywQWx5A">
+              <parameters xmi:id="_h0RwAKd9Eei_m_d4jzPpJw" elementId="0" name="de.toem.command.parameter.1" value="0"/>
+            </children>
+            <children xsi:type="menu:HandledMenuItem" xmi:id="_h3e1AKd9Eei_m_d4jzPpJw" elementId="de.toem.impulse.toolbarcontribution.viewer.main.14.15.1" label="%command.name.cursor.show-1" iconURI="platform:/plugin/de.toem.impulse.ui/icons/commands/de.toem.impulse.commands.cursor.show-1.png" tooltip="%command.description.cursor.show-1" command="_OYba4FKEEeiJAJSywQWx5A">
+              <parameters xmi:id="_h3e1Aad9Eei_m_d4jzPpJw" elementId="0" name="de.toem.command.parameter.1" value="1"/>
+            </children>
+            <children xsi:type="menu:HandledMenuItem" xmi:id="_h6hh8Kd9Eei_m_d4jzPpJw" elementId="de.toem.impulse.toolbarcontribution.viewer.main.14.15.2" label="%command.name.cursor.show-2" iconURI="platform:/plugin/de.toem.impulse.ui/icons/commands/de.toem.impulse.commands.cursor.show-2.png" tooltip="%command.description.cursor.show-2" command="_OYba4FKEEeiJAJSywQWx5A">
+              <parameters xmi:id="_h6hh8ad9Eei_m_d4jzPpJw" elementId="0" name="de.toem.command.parameter.1" value="2"/>
+            </children>
+            <children xsi:type="menu:HandledMenuItem" xmi:id="_h9bE8Kd9Eei_m_d4jzPpJw" elementId="de.toem.impulse.toolbarcontribution.viewer.main.14.15.3" label="%command.name.cursor.show-3" iconURI="platform:/plugin/de.toem.impulse.ui/icons/commands/de.toem.impulse.commands.cursor.show-3.png" tooltip="%command.description.cursor.show-3" command="_OYba4FKEEeiJAJSywQWx5A">
+              <parameters xmi:id="_h9bE8ad9Eei_m_d4jzPpJw" elementId="0" name="de.toem.command.parameter.1" value="3"/>
+            </children>
+          </children>
+        </menu>
+      </children>
+      <children xsi:type="menu:HandledToolItem" xmi:id="_ad8BkFjOEeiwwIisQTEQmA" elementId="de.toem.impulse.toolbarcontribution.viewer.main.9" label="%command.name.axis.domain.zoom.in" iconURI="codicon-zoom-in" tooltip="%command.description.axis.domain.zoom.in" command="_AET_kFKFEeiJAJSywQWx5A"/>
+      <children xsi:type="menu:HandledToolItem" xmi:id="_Z5yLoFjOEeiwwIisQTEQmA" elementId="de.toem.impulse.toolbarcontribution.viewer.main.10" label="%command.name.axis.domain.zoom.fit" iconURI="ri-artboard-2-fill" tooltip="%command.description.axis.domain.zoom.fit" command="_AJlhIFKFEeiJAJSywQWx5A"/>
+      <children xsi:type="menu:HandledToolItem" xmi:id="_aNOsEFjOEeiwwIisQTEQmA" elementId="de.toem.impulse.toolbarcontribution.viewer.main.11" label="%command.name.axis.domain.zoom.out" iconURI="codicon-zoom-out" tooltip="%command.description.axis.domain.zoom.out" command="_AG1vIFKFEeiJAJSywQWx5A"/>
+      <children xsi:type="menu:HandledToolItem" xmi:id="_tsMyMJDKEemJmqSb47sODQ" elementId="de.toem.impulse.toolbarcontribution.viewer.main.12" toBeRendered="false" label="%command.name.goto-back" iconURI="codicon-debug-step-back" tooltip="%command.description.goto-back" command="_tVqIEFKEEeiJAJSywQWx5A">
+        <parameters xmi:id="_tsNZQJDKEemJmqSb47sODQ" elementId="0" name="de.toem.command.parameter.1" value="back"/>
+      </children>
+      <children xsi:type="menu:HandledToolItem" xmi:id="_Om6zgAZwEeyi7Ygj_h5Cpg" elementId="de.toem.impulse.toolbarcontribution.viewer.main.12" toBeRendered="false" label="%command.name.goto-forward" iconURI="codicon-debug-step-over" tooltip="%command.description.goto-forward" command="_tVqIEFKEEeiJAJSywQWx5A">
+        <parameters xmi:id="_Om6zgQZwEeyi7Ygj_h5Cpg" elementId="0" name="de.toem.command.parameter.1" value="forward"/>
+      </children>
+      <children xsi:type="menu:HandledToolItem" xmi:id="_KjKZoP9eEeuTmpkiOgtVww" elementId="de.toem.impulse.toolbarcontribution.viewer.main.14" label="%command.name.cursor.goto-pos1" iconURI="ri-skip-back-line" tooltip="%command.description.cursor.goto-pos1" command="_tVqIEFKEEeiJAJSywQWx5A">
+        <parameters xmi:id="_KjKZof9eEeuTmpkiOgtVww" elementId="0" name="de.toem.command.parameter.1" value="pos1"/>
+      </children>
+      <children xsi:type="menu:HandledToolItem" xmi:id="_5YzWkFd2EeiLFso-r3mB_A" elementId="de.toem.impulse.toolbarcontribution.viewer.main.15" label="%command.name.cursor.goto-prev" iconURI="codicon-triangle-left" tooltip="%command.description.cursor.goto-prev" command="_tVqIEFKEEeiJAJSywQWx5A">
+        <parameters xmi:id="_H3LlYKweEeiANKwgi41mXA" elementId="0" name="de.toem.command.parameter.1" value="prev"/>
+      </children>
+      <children xsi:type="menu:HandledToolItem" xmi:id="_55clgFd2EeiLFso-r3mB_A" elementId="de.toem.impulse.toolbarcontribution.viewer.main.16" label="%command.name.cursor.goto-next" iconURI="codicon-triangle-right" tooltip="%command.description.cursor.goto-next" command="_tVqIEFKEEeiJAJSywQWx5A">
+        <parameters xmi:id="_Gi-LgKweEeiANKwgi41mXA" elementId="0" name="de.toem.command.parameter.1" value="next"/>
+      </children>
+      <children xsi:type="menu:HandledToolItem" xmi:id="_LPfUIP9eEeuTmpkiOgtVww" elementId="de.toem.impulse.toolbarcontribution.viewer.main.17" label="%command.name.cursor.goto-end" iconURI="ri-skip-forward-line" tooltip="%command.description.cursor.goto-end" command="_tVqIEFKEEeiJAJSywQWx5A">
+        <parameters xmi:id="_LPfUIf9eEeuTmpkiOgtVww" elementId="0" name="de.toem.command.parameter.1" value="end"/>
+      </children>
+    </elements>
+    <elements xsi:type="menu:ToolBarContribution" xmi:id="_XnIsgFT9EeiXFe-I1pigzw" elementId="de.toem.impulse.toolbarcontribution.samples.main" accessibilityPhrase="" parentId="de.toem.impulse.toolbar.samples.main">
+      <children xsi:type="menu:HandledToolItem" xmi:id="_avBqgFT9EeiXFe-I1pigzw" elementId="de.toem.impulse.toolbarcontribution.samples.main.0" label="%command.name.views.inputSync" iconURI="codicon-link" tooltip="%command.description.views.inputSync" type="Check" command="_bs_owEnzEeiaDvEoSpia5Q"/>
+      <children xsi:type="menu:HandledToolItem" xmi:id="_c1xUkFT9EeiXFe-I1pigzw" elementId="de.toem.impulse.toolbarcontribution.samples.main.1" label="%command.name.views.selectionSync" iconURI="ri-align-bottom" tooltip="%command.description.views.selectionSync" type="Check" command="_chkgUEnzEeiaDvEoSpia5Q"/>
+      <children xsi:type="menu:HandledToolItem" xmi:id="_bBf6kFT9EeiXFe-I1pigzw" elementId="de.toem.impulse.toolbarcontribution.samples.main.2" label="%command.name.views.refreshInput" iconURI="codicon-refresh" tooltip="%command.description.views.refreshInput" type="Check" command="_eIfa0EnzEeiaDvEoSpia5Q"/>
+      <children xsi:type="menu:ToolControl" xmi:id="_aM7DAFT9EeiXFe-I1pigzw" elementId="de.toem.impulse.toolControl.samples.input" toBeRendered="false" contributionURI="bundleclass://de.toem.toolkits.ui/de.toem.toolkits.eclipse.part.session.PartToolControl"/>
+      <children xsi:type="menu:HandledToolItem" xmi:id="_5fYssPkUEeuV2IS-6TElJw" elementId="de.toem.impulse.toolbarcontribution.samples.main.5" label="%command.name.goto-back" iconURI="codicon-debug-step-back" tooltip="%command.description.goto-back" command="_tVqIEFKEEeiJAJSywQWx5A">
+        <parameters xmi:id="_5fYssfkUEeuV2IS-6TElJw" elementId="0" name="de.toem.command.parameter.1" value="back"/>
+      </children>
+      <children xsi:type="menu:HandledToolItem" xmi:id="_5fah4PkUEeuV2IS-6TElJw" elementId="de.toem.impulse.toolbarcontribution.samples.main.6" label="%command.name.index.goto-pos1" iconURI="ri-skip-back-line" tooltip="%command.description.index.goto-pos1" command="_tVqIEFKEEeiJAJSywQWx5A">
+        <parameters xmi:id="_5fah4fkUEeuV2IS-6TElJw" elementId="0" name="de.toem.command.parameter.1" value="pos1"/>
+      </children>
+      <children xsi:type="menu:HandledToolItem" xmi:id="_5fbI8PkUEeuV2IS-6TElJw" elementId="de.toem.impulse.toolbarcontribution.samples.main.7" label="%command.name.index.goto-prev" iconURI="codicon-triangle-left" tooltip="%command.description.index.goto-prev" command="_tVqIEFKEEeiJAJSywQWx5A">
+        <parameters xmi:id="_5fbI8fkUEeuV2IS-6TElJw" elementId="0" name="de.toem.command.parameter.1" value="prev"/>
+      </children>
+      <children xsi:type="menu:HandledToolItem" xmi:id="_5fbwAPkUEeuV2IS-6TElJw" elementId="de.toem.impulse.toolbarcontribution.samples.main.8" label="%command.name.index.goto-next" iconURI="codicon-triangle-right" tooltip="%command.description.index.goto-next" command="_tVqIEFKEEeiJAJSywQWx5A">
+        <parameters xmi:id="_5fbwAfkUEeuV2IS-6TElJw" elementId="0" name="de.toem.command.parameter.1" value="next"/>
+      </children>
+      <children xsi:type="menu:HandledToolItem" xmi:id="_5fcXEPkUEeuV2IS-6TElJw" elementId="de.toem.impulse.toolbarcontribution.samples.main.9" label="%command.name.index.goto-end" iconURI="ri-skip-forward-line" tooltip="%command.description.index.goto-end" command="_tVqIEFKEEeiJAJSywQWx5A">
+        <parameters xmi:id="_5fcXEfkUEeuV2IS-6TElJw" elementId="0" name="de.toem.command.parameter.1" value="end"/>
+      </children>
+      <children xsi:type="menu:HandledToolItem" xmi:id="_de70AIaaEeiP8Z7yOyfIEw" elementId="de.toem.impulse.toolbarcontribution.samples.main.4" label="%command.name.views.config" iconURI="de-toem-toolkits-tlk-css-general-settings-image" tooltip="%command.description.views.config" command="_dVl-QEnzEeiaDvEoSpia5Q"/>
+    </elements>
+    <elements xsi:type="menu:ToolBarContribution" xmi:id="_LZPYMI_VEeiBIvEam9S0bA" elementId="de.toem.impulse.toolbarcontribution.sample.main" accessibilityPhrase="" parentId="de.toem.impulse.toolbar.sample.main">
+      <children xsi:type="menu:HandledToolItem" xmi:id="_LZPYMo_VEeiBIvEam9S0bA" elementId="de.toem.impulse.toolbarcontribution.sample.main.0" label="%command.name.views.inputSync" iconURI="codicon-link" tooltip="%command.description.views.inputSync" type="Check" command="_bs_owEnzEeiaDvEoSpia5Q"/>
+      <children xsi:type="menu:HandledToolItem" xmi:id="_LZPYNI_VEeiBIvEam9S0bA" elementId="de.toem.impulse.toolbarcontribution.sample.main.1" label="%command.name.views.selectionSync" iconURI="ri-align-bottom" tooltip="%command.description.views.selectionSync" type="Check" command="_chkgUEnzEeiaDvEoSpia5Q"/>
+      <children xsi:type="menu:HandledToolItem" xmi:id="_LZPYM4_VEeiBIvEam9S0bA" elementId="de.toem.impulse.toolbarcontribution.sample.main.2" label="%command.name.views.refreshInput" iconURI="codicon-refresh" tooltip="%command.description.views.refreshInput" type="Check" command="_eIfa0EnzEeiaDvEoSpia5Q"/>
+      <children xsi:type="menu:ToolControl" xmi:id="_Q6QwwI_VEeiBIvEam9S0bA" elementId="de.toem.impulse.toolControl.samples.input" contributionURI="bundleclass://de.toem.toolkits.ui/de.toem.toolkits.eclipse.part.session.PartToolControl"/>
+      <children xsi:type="menu:HandledToolItem" xmi:id="_GvqUIPkOEeuV2IS-6TElJw" elementId="de.toem.impulse.toolbarcontribution.sample.main.5" label="%command.name.goto-target" iconURI="codicon-debug-step-over" tooltip="%command.description.goto-target" command="_tVqIEFKEEeiJAJSywQWx5A">
+        <parameters xmi:id="_GvqUIfkOEeuV2IS-6TElJw" elementId="0" name="de.toem.command.parameter.1" value="target"/>
+      </children>
+      <children xsi:type="menu:HandledToolItem" xmi:id="_GvriQPkOEeuV2IS-6TElJw" elementId="de.toem.impulse.toolbarcontribution.sample.main.6" label="%command.name.index.goto-pos1" iconURI="ri-skip-back-line" tooltip="%command.description.index.goto-pos1" command="_tVqIEFKEEeiJAJSywQWx5A">
+        <parameters xmi:id="_GvriQfkOEeuV2IS-6TElJw" elementId="0" name="de.toem.command.parameter.1" value="pos1"/>
+      </children>
+      <children xsi:type="menu:HandledToolItem" xmi:id="_GvriQvkOEeuV2IS-6TElJw" elementId="de.toem.impulse.toolbarcontribution.sample.main.7" label="%command.name.index.goto-prev" iconURI="codicon-triangle-left" tooltip="%command.description.index.goto-prev" command="_tVqIEFKEEeiJAJSywQWx5A">
+        <parameters xmi:id="_GvriQ_kOEeuV2IS-6TElJw" elementId="0" name="de.toem.command.parameter.1" value="prev"/>
+      </children>
+      <children xsi:type="menu:HandledToolItem" xmi:id="_GvsJUPkOEeuV2IS-6TElJw" elementId="de.toem.impulse.toolbarcontribution.sample.main.8" label="%command.name.index.goto-next" iconURI="codicon-triangle-right" tooltip="%command.description.index.goto-next" command="_tVqIEFKEEeiJAJSywQWx5A">
+        <parameters xmi:id="_GvsJUfkOEeuV2IS-6TElJw" elementId="0" name="de.toem.command.parameter.1" value="next"/>
+      </children>
+      <children xsi:type="menu:HandledToolItem" xmi:id="_GvswYPkOEeuV2IS-6TElJw" elementId="de.toem.impulse.toolbarcontribution.sample.main.9" label="%command.name.index.goto-end" iconURI="ri-skip-forward-line" tooltip="%command.description.index.goto-end" command="_tVqIEFKEEeiJAJSywQWx5A">
+        <parameters xmi:id="_GvswYfkOEeuV2IS-6TElJw" elementId="0" name="de.toem.command.parameter.1" value="end"/>
+      </children>
+      <children xsi:type="menu:HandledToolItem" xmi:id="_LZPYNY_VEeiBIvEam9S0bA" elementId="de.toem.impulse.toolbarcontribution.sample.main.4" label="%command.name.views.config" iconURI="de-toem-toolkits-tlk-css-general-settings-image" tooltip="%command.description.views.config" command="_dVl-QEnzEeiaDvEoSpia5Q"/>
+    </elements>
+    <elements xsi:type="menu:ToolBarContribution" xmi:id="_B-508NBxEeiIhKRx7_aCJw" elementId="de.toem.impulse.toolbarcontribution.sample.navigation" accessibilityPhrase="" parentId="de.toem.impulse.toolbar.sample.navigation">
+      <children xsi:type="menu:HandledToolItem" xmi:id="_ba0BIIIGEemlLdi2UkYiJw" elementId="de.toem.impulse.toolbarcontribution.sample.navigation.0" label="%command.name.goto-back" iconURI="codicon-debug-step-back" tooltip="%command.description.goto-back">
+        <parameters xmi:id="_ba0BIYIGEemlLdi2UkYiJw" elementId="0" name="de.toem.command.parameter.1" value="back"/>
+      </children>
+      <children xsi:type="menu:HandledToolItem" xmi:id="_B-508dBxEeiIhKRx7_aCJw" elementId="de.toem.impulse.toolbarcontribution.sample.navigation.0" label="%command.name.index.goto-pos1" iconURI="ri-skip-back-line" tooltip="%command.description.index.goto-pos1">
+        <parameters xmi:id="_B-508tBxEeiIhKRx7_aCJw" elementId="0" name="de.toem.command.parameter.1" value="pos1"/>
+      </children>
+      <children xsi:type="menu:HandledToolItem" xmi:id="_B-509dBxEeiIhKRx7_aCJw" elementId="de.toem.impulse.toolbarcontribution.sample.navigation.2" label="%command.name.index.goto-prev" iconURI="codicon-triangle-left" tooltip="%command.description.index.goto-prev">
+        <parameters xmi:id="_B-509tBxEeiIhKRx7_aCJw" elementId="0" name="de.toem.command.parameter.1" value="prev"/>
+      </children>
+      <children xsi:type="menu:HandledToolItem" xmi:id="_B-5089BxEeiIhKRx7_aCJw" elementId="de.toem.impulse.toolbarcontribution.sample.navigation.1" label="%command.name.index.goto-next" iconURI="codicon-triangle-right" tooltip="%command.description.index.goto-next">
+        <parameters xmi:id="_B-509NBxEeiIhKRx7_aCJw" elementId="0" name="de.toem.command.parameter.1" value="next"/>
+      </children>
+      <children xsi:type="menu:HandledToolItem" xmi:id="_B-5099BxEeiIhKRx7_aCJw" elementId="de.toem.impulse.toolbarcontribution.sample.navigation.3" label="%command.name.index.goto-end" iconURI="ri-skip-forward-line" tooltip="%command.description.index.goto-end">
+        <parameters xmi:id="_B-50-NBxEeiIhKRx7_aCJw" elementId="0" name="de.toem.command.parameter.1" value="end"/>
+      </children>
+    </elements>
+    <elements xsi:type="menu:ToolBarContribution" xmi:id="_kxS9gFT5EeiXFe-I1pigzw" elementId="de.toem.impulse.toolbarcontribution.ports.main" accessibilityPhrase="" parentId="de.toem.impulse.toolbar.ports.main">
+      <children xsi:type="menu:HandledToolItem" xmi:id="_fW-igFT8EeiXFe-I1pigzw" elementId="de.toem.impulse.toolbarcontribution.ports.main.0" label="%command.name.ports.add" iconURI="de-toem-toolkits-tlk-css-general-add-image" tooltip="%command.description.ports.add" command="_jL33EPClEeiLG5T4WtR1ZQ">
+        <menu xmi:id="_fW-igVT8EeiXFe-I1pigzw" elementId="de.toem.impulse.menu.ports.add">
+          <children xsi:type="menu:DynamicMenuContribution" xmi:id="_fW-iglT8EeiXFe-I1pigzw" elementId="de.toem.impulse.dynamicmenucontribution_de.toem.impulse.commands.ports.add" contributionURI="bundleclass://de.toem.toolkits.ui/de.toem.toolkits.menu.PartCommandMenuContribution"/>
+        </menu>
+      </children>
+      <children xsi:type="menu:HandledToolItem" xmi:id="_lCvDEPFKEei8sNz7ITYzHQ" elementId="de.toem.impulse.toolbarcontribution.ports.main.commandnameportsedit" label="%command.name.ports.edit" iconURI="de-toem-toolkits-tlk-css-general-edit-image" tooltip="%command.description.ports.edit" type="Check" command="_arrfwFKFEeiJAJSywQWx5A"/>
+      <children xsi:type="menu:HandledToolItem" xmi:id="_fEyd8PFKEei8sNz7ITYzHQ" elementId="de.toem.impulse.toolbarcontribution.ports.main.commandnameportsopen" label="%command.name.ports.open" iconURI="de-toem-toolkits-tlk-css-general-open-image" tooltip="%command.description.ports.open" type="Check" command="_i4oyAPClEeiLG5T4WtR1ZQ"/>
+      <children xsi:type="menu:HandledToolItem" xmi:id="_YMN5oJAQEeiBIvEam9S0bA" elementId="de.toem.impulse.toolbarcontribution.ports.main.2" iconURI="de-toem-toolkits-tlk-css-general-settings-image" command="_dVl-QEnzEeiaDvEoSpia5Q"/>
+    </elements>
+    <elements xsi:type="menu:ToolBarContribution" xmi:id="_G3nU8GLFEeqldfldb-ppuQ" elementId="de.toem.impulse.toolbarcontribution.status.heap" accessibilityPhrase="" parentId="de.toem.impulse.toolbar.status">
+      <children xsi:type="menu:ToolControl" xmi:id="_G3nU9GLFEeqldfldb-ppuQ" elementId="de.toem.impulse.toolControl.heap" contributionURI="bundleclass://de.toem.impulse.ui/de.toem.impulse.ui.PageableStatus"/>
+      <children xsi:type="menu:HandledToolItem" xmi:id="_gz4DcGnoEeqd-PUNVcGerw" elementId="de.toem.impulse.toolbarcontribution.status.heap.1" label="%command.name.unpageSignals" iconURI="de-toem-toolkits-tlk-css-general-delete-all-image" tooltip="%command.description.unpageSignals" command="_B4BjcFKGEeiJAJSywQWx5A"/>
+    </elements>
+  </fragments>
+  <fragments xsi:type="fragment:StringModelFragment" xmi:id="_mp7q8GQfEeiZUPYsbApwmA" featurename="rootContext" parentElementId="xpath:/">
+    <elements xsi:type="commands:BindingContext" xmi:id="_scRdAGQfEeiZUPYsbApwmA" elementId="de.toem.impulse.bindingcontext.impulseViewer" name="impulse Viewer"/>
+    <elements xsi:type="commands:BindingContext" xmi:id="_17_E0P9eEeuTmpkiOgtVww" elementId="de.toem.impulse.bindingcontext.goto" name="Goto"/>
+  </fragments>
+  <fragments xsi:type="fragment:StringModelFragment" xmi:id="_y4LbYGQdEeiZUPYsbApwmA" featurename="bindingTables" parentElementId="xpath:/">
+    <elements xsi:type="commands:BindingTable" xmi:id="_10y9gGQdEeiZUPYsbApwmA" elementId="de.toem.impulse.ui.bindingtable.impulse" bindingContext="_scRdAGQfEeiZUPYsbApwmA">
+      <bindings xmi:id="_3fx4oGQdEeiZUPYsbApwmA" elementId="de.toem.impulse.ui.bindingtable.impulse.show.0" keySequence="M1+M3+A" command="_OYba4FKEEeiJAJSywQWx5A">
+        <parameters xmi:id="_Y0rOoKb3EeidZ5vxI5QOww" elementId="0" name="de.toem.command.parameter.1" value="active"/>
+      </bindings>
+      <bindings xmi:id="__1LX0Kd9Eei_m_d4jzPpJw" elementId="de.toem.impulse.ui.bindingtable.impulse.show.1" keySequence="M1+M3+0" command="_OYba4FKEEeiJAJSywQWx5A">
+        <parameters xmi:id="__1LX0ad9Eei_m_d4jzPpJw" elementId="0" name="de.toem.command.parameter.1" value="0"/>
+      </bindings>
+      <bindings xmi:id="__9zIUKd9Eei_m_d4jzPpJw" elementId="de.toem.impulse.ui.bindingtable.impulse.show.2" keySequence="M1+M3+1" command="_OYba4FKEEeiJAJSywQWx5A">
+        <parameters xmi:id="__9zIUad9Eei_m_d4jzPpJw" elementId="0" name="de.toem.command.parameter.1" value="1"/>
+      </bindings>
+      <bindings xmi:id="_AQfa0Kd-Eei_m_d4jzPpJw" elementId="de.toem.impulse.ui.bindingtable.impulse.show.3" keySequence="M1+M3+2" command="_OYba4FKEEeiJAJSywQWx5A">
+        <parameters xmi:id="_AQfa0ad-Eei_m_d4jzPpJw" elementId="0" name="de.toem.command.parameter.1" value="2"/>
+      </bindings>
+      <bindings xmi:id="_AV6GUKd-Eei_m_d4jzPpJw" elementId="de.toem.impulse.ui.bindingtable.impulse.show.4" keySequence="M1+M3+3" command="_OYba4FKEEeiJAJSywQWx5A">
+        <parameters xmi:id="_AV6GUad-Eei_m_d4jzPpJw" elementId="0" name="de.toem.command.parameter.1" value="3"/>
+      </bindings>
+      <bindings xmi:id="_TltXYJCmEei4n7Jv6pU6FA" elementId="de.toem.impulse.ui.bindingtable.impulse.activate.0" keySequence="M1+M2+P" command="_tQ2gkFKEEeiJAJSywQWx5A">
+        <parameters xmi:id="_iwpIgKb3EeidZ5vxI5QOww" elementId="0" name="de.toem.command.parameter.1" value="prev"/>
+      </bindings>
+      <bindings xmi:id="_TeO2YJCmEei4n7Jv6pU6FA" elementId="de.toem.impulse.ui.bindingtable.impulse.activate.1" keySequence="M1+M2+N" command="_tQ2gkFKEEeiJAJSywQWx5A">
+        <parameters xmi:id="_hSa3AKb3EeidZ5vxI5QOww" elementId="0" name="de.toem.command.parameter.1" value="next"/>
+      </bindings>
+      <bindings xmi:id="_EP298Kd_Eei_m_d4jzPpJw" elementId="de.toem.impulse.ui.bindingtable.impulse.activate.2" keySequence="M1+M2+0" command="_tQ2gkFKEEeiJAJSywQWx5A">
+        <parameters xmi:id="_EP298ad_Eei_m_d4jzPpJw" elementId="0" name="de.toem.command.parameter.1" value="0"/>
+      </bindings>
+      <bindings xmi:id="_Ff5pgKd_Eei_m_d4jzPpJw" elementId="de.toem.impulse.ui.bindingtable.impulse.activate.3" keySequence="M1+M2+1" command="_tQ2gkFKEEeiJAJSywQWx5A">
+        <parameters xmi:id="_Ff5pgad_Eei_m_d4jzPpJw" elementId="0" name="de.toem.command.parameter.1" value="1"/>
+      </bindings>
+      <bindings xmi:id="_Fudp8Kd_Eei_m_d4jzPpJw" elementId="de.toem.impulse.ui.bindingtable.impulse.activate.4" keySequence="M1+M2+2" command="_tQ2gkFKEEeiJAJSywQWx5A">
+        <parameters xmi:id="_Fudp8ad_Eei_m_d4jzPpJw" elementId="0" name="de.toem.command.parameter.1" value="2"/>
+      </bindings>
+      <bindings xmi:id="_F-aKcKd_Eei_m_d4jzPpJw" elementId="de.toem.impulse.ui.bindingtable.impulse.activate.5" keySequence="M1+M2+3" command="_tQ2gkFKEEeiJAJSywQWx5A">
+        <parameters xmi:id="_F-aKcad_Eei_m_d4jzPpJw" elementId="0" name="de.toem.command.parameter.1" value="3"/>
+      </bindings>
+      <bindings xmi:id="_Tt8tYJCmEei4n7Jv6pU6FA" elementId="de.toem.impulse.ui.bindingtable.impulse.zoom.0" keySequence="NUMPAD_ADD" command="_AET_kFKFEeiJAJSywQWx5A"/>
+      <bindings xmi:id="_TvtA4JCmEei4n7Jv6pU6FA" elementId="de.toem.impulse.ui.bindingtable.impulse.zoom.1" keySequence="M1++" command="_AET_kFKFEeiJAJSywQWx5A"/>
+      <bindings xmi:id="_TxX00JCmEei4n7Jv6pU6FA" elementId="de.toem.impulse.ui.bindingtable.impulse.zoom.2" keySequence="NUMPAD_SUBTRACT" command="_AG1vIFKFEeiJAJSywQWx5A"/>
+      <bindings xmi:id="_Ty--YJCmEei4n7Jv6pU6FA" elementId="de.toem.impulse.ui.bindingtable.impulse.zoom.3" keySequence="M1+-" command="_AG1vIFKFEeiJAJSywQWx5A"/>
+      <bindings xmi:id="_T0lg4JCmEei4n7Jv6pU6FA" elementId="de.toem.impulse.ui.bindingtable.impulse.zoom.4" keySequence="NUMPAD_MULTIPLY" command="_AJlhIFKFEeiJAJSywQWx5A"/>
+      <bindings xmi:id="_q3ifIJCmEei4n7Jv6pU6FA" elementId="de.toem.impulse.ui.bindingtable.impulse.zoom.5" keySequence="M1+*" command="_AJlhIFKFEeiJAJSywQWx5A"/>
+      <bindings xmi:id="_q-QLIJCmEei4n7Jv6pU6FA" elementId="de.toem.impulse.ui.bindingtable.impulse.new.0" keySequence="M1+M2+C" command="_ORynYFKEEeiJAJSywQWx5A"/>
+      <bindings xmi:id="_q_7mIJCmEei4n7Jv6pU6FA" elementId="de.toem.impulse.ui.bindingtable.impulse.geometry.0" keySequence="M1+M2+D" command="_ABR5sFKFEeiJAJSywQWx5A"/>
+      <bindings xmi:id="_rBTfIJCmEei4n7Jv6pU6FA" elementId="de.toem.impulse.ui.bindingtable.impulse.geometry.1" keySequence="M1+M2+S" command="_APFFIFKFEeiJAJSywQWx5A"/>
+    </elements>
+    <elements xsi:type="commands:BindingTable" xmi:id="_YT8B4P9eEeuTmpkiOgtVww" elementId="de.toem.impulse.ui.bindingtable.goto" bindingContext="_17_E0P9eEeuTmpkiOgtVww">
+      <bindings xmi:id="_YT8B9_9eEeuTmpkiOgtVww" elementId="de.toem.impulse.ui.bindingtable.impulse.goto.0" keySequence="M1+M2+ARROW_LEFT" command="_tVqIEFKEEeiJAJSywQWx5A">
+        <parameters xmi:id="_YT8B-P9eEeuTmpkiOgtVww" elementId="0" name="de.toem.command.parameter.1" value="prev"/>
+      </bindings>
+      <bindings xmi:id="_YT8B-f9eEeuTmpkiOgtVww" elementId="de.toem.impulse.ui.bindingtable.impulse.goto.1" keySequence="M1+M2+ARROW_RIGHT" command="_tVqIEFKEEeiJAJSywQWx5A">
+        <parameters xmi:id="_YT8B-v9eEeuTmpkiOgtVww" elementId="0" name="de.toem.command.parameter.1" value="next"/>
+      </bindings>
+      <bindings xmi:id="_YT8B-_9eEeuTmpkiOgtVww" elementId="de.toem.impulse.ui.bindingtable.impulse.goto.2" keySequence="M1+M2+HOME" command="_tVqIEFKEEeiJAJSywQWx5A">
+        <parameters xmi:id="_YT8B_P9eEeuTmpkiOgtVww" elementId="0" name="de.toem.command.parameter.1" value="pos1"/>
+      </bindings>
+      <bindings xmi:id="_YT8B_f9eEeuTmpkiOgtVww" elementId="de.toem.impulse.ui.bindingtable.impulse.goto.3" keySequence="M1+M2+END" command="_tVqIEFKEEeiJAJSywQWx5A">
+        <parameters xmi:id="_YT8B_v9eEeuTmpkiOgtVww" elementId="0" name="de.toem.command.parameter.1" value="end"/>
+      </bindings>
+    </elements>
+  </fragments>
+  <fragments xsi:type="fragment:StringModelFragment" xmi:id="_ry7fQGLHEeqldfldb-ppuQ" featurename="trimContributions" parentElementId="xpath:/">
+    <elements xsi:type="menu:TrimContribution" xmi:id="_jktEIGLIEeqldfldb-ppuQ" elementId="de.toem.impulse.ui.trimcontribution.0" parentId="org.eclipse.ui.trim.status">
+      <children xsi:type="menu:ToolBar" xmi:id="_smz90GLIEeqldfldb-ppuQ" elementId="de.toem.impulse.toolbar.status"/>
+    </elements>
+  </fragments>
+</fragment:ModelFragments>

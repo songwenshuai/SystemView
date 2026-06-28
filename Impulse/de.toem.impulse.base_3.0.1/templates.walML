@@ -1,0 +1,355 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<document coverType="" cellType="wallet" version="2">
+    <cell name="New Wallet" type="wallet">
+        <cell name="Logic 1 bit" type="template.configuration.samples">
+            <fd name="usePattern">true</fd>
+            <fd name="signalType">Logic</fd>
+            <fd name="descriptorRegular">true</fd>
+            <fd name="signalDescriptor">bits=1\D</fd>
+            <fd name="version">5</fd>
+            <fd name="enabled">false</fd>
+            <fd name="description">Automatic instantiation example</fd>
+            <cell name="" type="configuration.samples">
+                <fd name="color">5630407</fd>
+                <fd name="style">1</fd>
+                <fd name="bValueFormat">1</fd>
+            </cell>
+        </cell>
+        <cell name="Logic Vector" type="template.configuration.samples">
+            <fd name="usePattern">true</fd>
+            <fd name="processType">Discrete</fd>
+            <fd name="signalType">Logic</fd>
+            <fd name="descriptorRegular">true</fd>
+            <fd name="signalDescriptor">bits=([2-9]\D|\d{2,})</fd>
+            <fd name="version">5</fd>
+            <fd name="enabled">false</fd>
+            <fd name="description">Automatic instantiation example</fd>
+            <cell name="" type="configuration.samples">
+                <fd name="color">14155891</fd>
+                <fd name="bValueFormat">1</fd>
+            </cell>
+        </cell>
+        <cell name="Logic Vector (Complex)" type="template.configuration.samples">
+            <fd name="usePattern">true</fd>
+            <fd name="processType">Discrete</fd>
+            <fd name="signalType">Logic</fd>
+            <fd name="descriptorRegular">true</fd>
+            <fd name="signalDescriptor">bits=([2-9]\D|\d{2,})</fd>
+            <fd name="version">5</fd>
+            <fd name="enabled">false</fd>
+            <fd name="description">Automatic instantiation example</fd>
+            <cell name="" type="configuration.samples">
+                <fd name="production">de.toem.impulse.production.logic</fd>
+                <fd name="color">10331904</fd>
+                <fd name="bValueFormat">1</fd>
+            </cell>
+            <cell name="${name} additional" type="configuration.folder">
+                <cell name="unamed" type="configuration.samples">
+                    <fd name="production">de.toem.impulse.production.logic</fd>
+                    <fd name="color">10331904</fd>
+                    <fd name="bValueFormat">1</fd>
+                    <cell name="New Signal Reference" type="configuration.reference"/>
+                </cell>
+            </cell>
+        </cell>
+        <cell name="Float" type="template.configuration.samples">
+            <fd name="usePattern">true</fd>
+            <fd name="signalType">Float</fd>
+            <fd name="version">5</fd>
+            <fd name="enabled">false</fd>
+            <fd name="description">Automatic instantiation example</fd>
+            <cell name="" type="configuration.samples">
+                <fd name="transformLinearB">10.0</fd>
+                <fd name="color">15770378</fd>
+                <fd name="style">4</fd>
+                <fd name="combine">true</fd>
+                <fd name="annotation">true</fd>
+            </cell>
+        </cell>
+        <cell name="Gantt" type="template.configuration.samples">
+            <fd name="usePattern">true</fd>
+            <fd name="signalDescriptor">gantt</fd>
+            <fd name="version">5</fd>
+            <fd name="enabled">false</fd>
+            <fd name="description">Automatic instantiation example</fd>
+            <cell name="" type="configuration.samples">
+                <fd name="color">20719</fd>
+                <fd name="style">10</fd>
+                <fd name="bValueFormat">262150</fd>
+                <fd name="columnValueFormat">327686</fd>
+                <fd name="annotation">true</fd>
+                <fd name="aModifier">true</fd>
+            </cell>
+        </cell>
+        <cell name="Integer To Text" type="template.configuration.samples">
+            <fd name="useInMenu">true</fd>
+            <fd name="group">Scripting - Integer</fd>
+            <fd name="version">5</fd>
+            <fd name="description">Script example</fd>
+            <cell name="Integer To Text" type="configuration.samples">
+                <fd name="production">de.toem.impulse.production.script.js</fd>
+                <fd name="processType">Discrete</fd>
+                <fd name="signalType">Text</fd>
+                <fd name="definition">// in0         : Primary input (de.toem.impulse.samples.ISamplePointer,de.toem.impulse.samples.IReadableSamples)&lt;br/&gt;// in1..       : Additional inputs (de.toem.impulse.samples.ISamplePointer,de.toem.impulse.samples.IReadableSamples)&lt;br/&gt;// input:      : An array of all inputs&lt;br/&gt;// out         : Output signal writer (? extends de.toem.impulse.samples.ISamplesWriter)&lt;br/&gt;// iter        : Sample iterator  (de.toem.impulse.samples.ISamplesIterator)&lt;br/&gt;// progress    : Progress control (de.toem.impulse.samples.producer.IScriptProgress)&lt;br/&gt;// console     : Console output (de.toem.impulse.scripting.IScriptConsole)&lt;br/&gt;&lt;br/&gt;while ( iter.hasNext()) {&lt;br/&gt;    var current = iter.next(out);&lt;br/&gt;    if (!input[0].isNone()) {&lt;br/&gt;        switch (input[0].intValue()) {&lt;br/&gt;            case 1:&lt;br/&gt;                txt = "Its1";&lt;br/&gt;                break;&lt;br/&gt;            case 2:&lt;br/&gt;                txt = "Its2";&lt;br/&gt;                break;&lt;br/&gt;            case 4:&lt;br/&gt;                txt = "Its4";&lt;br/&gt;                break;&lt;br/&gt;            default:&lt;br/&gt;                txt = "unknown";&lt;br/&gt;        }&lt;br/&gt;        out.write(current, false, txt);&lt;br/&gt;    }&lt;br/&gt;}&lt;br/&gt;progress.cont();  // Indicates that the script can be re-called if the input signals grow</fd>
+                <fd name="color">7178084</fd>
+                <fd name="preferedHeight">true</fd>
+                <fd name="preferedHeightValue">27</fd>
+            </cell>
+        </cell>
+        <cell name="Float Add" type="template.configuration.samples">
+            <fd name="useInMenu">true</fd>
+            <fd name="group">Scripting - Float</fd>
+            <fd name="version">5</fd>
+            <fd name="description">Script example</fd>
+            <cell name="Add" type="configuration.samples">
+                <fd name="production">de.toem.impulse.production.script.js</fd>
+                <fd name="processType">Discrete</fd>
+                <fd name="signalType">Float</fd>
+                <fd name="definition">// in0         : Primary input (de.toem.impulse.samples.ISamplePointer,de.toem.impulse.samples.IReadableSamples)&lt;br/&gt;// in1..       : Additional inputs (de.toem.impulse.samples.ISamplePointer,de.toem.impulse.samples.IReadableSamples)&lt;br/&gt;// input:      : An array of all inputs&lt;br/&gt;// out         : Output signal writer (? extends de.toem.impulse.samples.ISamplesWriter)&lt;br/&gt;// iter        : Sample iterator  (de.toem.impulse.samples.ISamplesIterator)&lt;br/&gt;// progress    : Progress control (de.toem.impulse.samples.producer.IScriptProgress)&lt;br/&gt;// console     : Console output (de.toem.impulse.scripting.IScriptConsole)&lt;br/&gt;&lt;br/&gt;while ( iter.hasNext()) {&lt;br/&gt;    var current = iter.next(out);&lt;br/&gt;    out.write(current, false, input[0].floatValue() +  input[1].floatValue());&lt;br/&gt;}&lt;br/&gt;progress.cont();  // Indicates that the script can be re-called if the input signals grow</fd>
+                <fd name="color">16410624</fd>
+                <fd name="style">4</fd>
+                <fd name="preferedHeight">true</fd>
+                <fd name="preferedHeightValue">89</fd>
+            </cell>
+        </cell>
+        <cell name="Float Delta" type="template.configuration.samples">
+            <fd name="useInMenu">true</fd>
+            <fd name="group">Scripting - Float</fd>
+            <fd name="version">6</fd>
+            <fd name="description">Script example</fd>
+            <cell name="Delta" type="configuration.samples">
+                <fd name="production">de.toem.impulse.production.script.js</fd>
+                <fd name="processType">Discrete</fd>
+                <fd name="signalType">Float</fd>
+                <fd name="definition">// in0         : Primary input (de.toem.impulse.samples.ISamplePointer,de.toem.impulse.samples.IReadableSamples)&lt;br/&gt;// in1..       : Additional inputs (de.toem.impulse.samples.ISamplePointer,de.toem.impulse.samples.IReadableSamples)&lt;br/&gt;// input:      : An array of all inputs&lt;br/&gt;// out         : Output signal writer (? extends de.toem.impulse.samples.ISamplesWriter)&lt;br/&gt;// iter        : Sample iterator  (de.toem.impulse.samples.ISamplesIterator)&lt;br/&gt;// progress    : Progress control (de.toem.impulse.samples.producer.IScriptProgress)&lt;br/&gt;// console     : Console output (de.toem.impulse.scripting.IScriptConsole)&lt;br/&gt;&lt;br/&gt;while ( iter.hasNext()) {&lt;br/&gt;    var current = iter.next(out);&lt;br/&gt;    out.write(current, false, input[0].floatValue() -  input[1].floatValue());&lt;br/&gt;}&lt;br/&gt;progress.cont();  // Indicates that the script can be re-called if the input signals grow</fd>
+                <fd name="color">16410624</fd>
+                <fd name="style">4</fd>
+                <fd name="preferedHeight">true</fd>
+                <fd name="preferedHeightValue">89</fd>
+            </cell>
+        </cell>
+        <cell name="Float Sin Generator" type="template.configuration.samples">
+            <fd name="useInMenu">true</fd>
+            <fd name="group">Scripting - Float</fd>
+            <fd name="version">5</fd>
+            <fd name="description">Script example</fd>
+            <cell name="Sinus" type="configuration.samples">
+                <fd name="production">de.toem.impulse.production.script.js</fd>
+                <fd name="processType">Discrete</fd>
+                <fd name="signalType">Float</fd>
+                <fd name="domainBase">ms</fd>
+                <fd name="end">1000</fd>
+                <fd name="definition">// in0         : Primary input (de.toem.impulse.samples.ISamplePointer,de.toem.impulse.samples.IReadableSamples)&lt;br/&gt;// in1..       : Additional inputs (de.toem.impulse.samples.ISamplePointer,de.toem.impulse.samples.IReadableSamples)&lt;br/&gt;// input:      : An array of all inputs&lt;br/&gt;// out         : Output signal writer (? extends de.toem.impulse.samples.ISamplesWriter)&lt;br/&gt;// iter        : Sample iterator  (de.toem.impulse.samples.ISamplesIterator)&lt;br/&gt;// progress    : Progress control (de.toem.impulse.samples.producer.IScriptProgress)&lt;br/&gt;// console     : Console output (de.toem.impulse.scripting.IScriptConsole)&lt;br/&gt;&lt;br/&gt;for (var current =0;current&lt;1000;current++) {&lt;br/&gt;    out.write(current, false, Math.sin(current /100.0));&lt;br/&gt;}</fd>
+                <fd name="color">16410624</fd>
+                <fd name="style">4</fd>
+                <fd name="preferedHeight">true</fd>
+                <fd name="preferedHeightValue">89</fd>
+            </cell>
+        </cell>
+        <cell name="Float Integration" type="template.configuration.samples">
+            <fd name="useInMenu">true</fd>
+            <fd name="group">Scripting - Float</fd>
+            <fd name="version">5</fd>
+            <fd name="description">Script example</fd>
+            <cell name="Integration" type="configuration.samples">
+                <fd name="production">de.toem.impulse.production.script.js</fd>
+                <fd name="processType">Discrete</fd>
+                <fd name="signalType">Float</fd>
+                <fd name="definition">// in0         : Primary input (de.toem.impulse.samples.ISamplePointer,de.toem.impulse.samples.IReadableSamples)&lt;br/&gt;// in1..       : Additional inputs (de.toem.impulse.samples.ISamplePointer,de.toem.impulse.samples.IReadableSamples)&lt;br/&gt;// input:      : An array of all inputs&lt;br/&gt;// out         : Output signal writer (? extends de.toem.impulse.samples.ISamplesWriter)&lt;br/&gt;// iter        : Sample iterator  (de.toem.impulse.samples.ISamplesIterator)&lt;br/&gt;// progress    : Progress control (de.toem.impulse.samples.producer.IScriptProgress)&lt;br/&gt;// console     : Console output (de.toem.impulse.scripting.IScriptConsole)&lt;br/&gt;&lt;br/&gt;// variables&lt;br/&gt;var integral;&lt;br/&gt;var lastpos;&lt;br/&gt;var lastval;&lt;br/&gt;&lt;br/&gt;// iterate&lt;br/&gt;while (iter.hasNext()) {&lt;br/&gt;    var current = iter.next(out);&lt;br/&gt;    var pos = out.getDomainBase().toCommonBase(current);&lt;br/&gt;&lt;br/&gt;    if (lastpos != null &amp;&amp; lastval != null) {&lt;br/&gt;        var delta = pos - lastpos;&lt;br/&gt;        integral += lastval * delta;&lt;br/&gt;    } else&lt;br/&gt;        integral = 0;&lt;br/&gt;    lastpos = pos;&lt;br/&gt;    lastval = input[0].floatValue();&lt;br/&gt;&lt;br/&gt;&lt;br/&gt;    out.writeFloat(current, false, integral);&lt;br/&gt;}&lt;br/&gt;progress.cont();</fd>
+                <fd name="color">16410624</fd>
+                <fd name="style">4</fd>
+                <fd name="preferedHeight">true</fd>
+                <fd name="preferedHeightValue">89</fd>
+            </cell>
+        </cell>
+        <cell name="Float Derivation" type="template.configuration.samples">
+            <fd name="useInMenu">true</fd>
+            <fd name="group">Scripting - Float</fd>
+            <fd name="version">5</fd>
+            <fd name="description">Script example</fd>
+            <cell name="Derivation" type="configuration.samples">
+                <fd name="production">de.toem.impulse.production.script.js</fd>
+                <fd name="processType">Discrete</fd>
+                <fd name="signalType">Float</fd>
+                <fd name="definition">// in0         : Primary input (de.toem.impulse.samples.ISamplePointer,de.toem.impulse.samples.IReadableSamples)&lt;br/&gt;// in1..       : Additional inputs (de.toem.impulse.samples.ISamplePointer,de.toem.impulse.samples.IReadableSamples)&lt;br/&gt;// input:      : An array of all inputs&lt;br/&gt;// out         : Output signal writer (? extends de.toem.impulse.samples.ISamplesWriter)&lt;br/&gt;// iter        : Sample iterator  (de.toem.impulse.samples.ISamplesIterator)&lt;br/&gt;// progress    : Progress control (de.toem.impulse.samples.producer.IScriptProgress)&lt;br/&gt;// console     : Console output (de.toem.impulse.scripting.IScriptConsole)&lt;br/&gt;&lt;br/&gt;// variables&lt;br/&gt;var lastpos;&lt;br/&gt;var lastval;&lt;br/&gt;&lt;br/&gt;// iterate&lt;br/&gt;while (iter.hasNext()) {&lt;br/&gt;    var current = iter.next(out);&lt;br/&gt;    var pos = out.getDomainBase().toCommonBase(current);&lt;br/&gt;&lt;br/&gt;    if (lastpos != null &amp;&amp; lastval != null) {&lt;br/&gt;        var deltapos = pos - lastpos;&lt;br/&gt;        var deltaval = input[0].floatValue() - lastval;&lt;br/&gt;        out.writeFloat(current, false, deltapos &gt; 0 ? deltaval / deltapos : 0);&lt;br/&gt;    }&lt;br/&gt;    lastpos = pos;&lt;br/&gt;    lastval = input[0].floatValue();&lt;br/&gt;}&lt;br/&gt;progress.cont();</fd>
+                <fd name="color">16410624</fd>
+                <fd name="style">4</fd>
+                <fd name="preferedHeight">true</fd>
+                <fd name="preferedHeightValue">89</fd>
+            </cell>
+        </cell>
+        <cell name="Analyze Logic" type="template.configuration.samples">
+            <fd name="useInMenu">true</fd>
+            <fd name="group">Scripting - Logic</fd>
+            <fd name="version">5</fd>
+            <fd name="description">Script example</fd>
+            <cell name="Analyze Logic" type="configuration.samples">
+                <fd name="production">de.toem.impulse.production.script.js</fd>
+                <fd name="processType">Discrete</fd>
+                <fd name="signalType">Integer</fd>
+                <fd name="definition">// in0         : Primary input (de.toem.impulse.samples.ISamplePointer,de.toem.impulse.samples.IReadableSamples)&lt;br/&gt;// in1..       : Additional inputs (de.toem.impulse.samples.ISamplePointer,de.toem.impulse.samples.IReadableSamples)&lt;br/&gt;// input:      : An array of all inputs&lt;br/&gt;// out         : Output signal writer (? extends de.toem.impulse.samples.ISamplesWriter)&lt;br/&gt;// iter        : Sample iterator  (de.toem.impulse.samples.ISamplesIterator)&lt;br/&gt;// progress    : Progress control (de.toem.impulse.samples.producer.IScriptProgress)&lt;br/&gt;// console     : Console output (de.toem.impulse.scripting.IScriptConsole)&lt;br/&gt;&lt;br/&gt;// variables&lt;br/&gt;var start;&lt;br/&gt;&lt;br/&gt;// iterate&lt;br/&gt;while (iter.hasNext()) {&lt;br/&gt;    var current = iter.next(out);&lt;br/&gt;    if (!input[0].isNone()) {&lt;br/&gt;        if (input[0].logicState() == STATE_1)&lt;br/&gt;            start = current;&lt;br/&gt;        if (input[0].logicState() == STATE_0 &amp;&amp; start != null) {&lt;br/&gt;            out.write(start, false, current - start);&lt;br/&gt;            start = null;&lt;br/&gt;        }&lt;br/&gt;    }&lt;br/&gt;}&lt;br/&gt;progress.cont();&lt;br/&gt;// LOGIC STATES&lt;br/&gt;//  Level 2 - 1 Bit&lt;br/&gt;//  0: '0'	strong drive, logic zero&lt;br/&gt;//  1: '1'	strong drive, logic one&lt;br/&gt;//  Level 4 - 2 Bits&lt;br/&gt;//  2: 'Z'	high impedance&lt;br/&gt;//  3: 'X' strong drive, unknown logic value&lt;br/&gt;//  Level 16 - 4 Bits&lt;br/&gt;//  4: 'L' weak drive, logic zero&lt;br/&gt;//  5: 'H'	weak drive, logic one&lt;br/&gt;//  6: 'U' uninitialized&lt;br/&gt;//  7: 'W' weak drive, unknown logic value&lt;br/&gt;//  8: '-'	(STATE_D) don't care&lt;br/&gt;//  9 - 14: 'J', 'K', 'M', 'N', 'O', 'P' to be defined by the user</fd>
+                <fd name="color">10331904</fd>
+            </cell>
+        </cell>
+        <cell name="Analyze Logic Vector" type="template.configuration.samples">
+            <fd name="useInMenu">true</fd>
+            <fd name="group">Scripting - Logic</fd>
+            <fd name="version">5</fd>
+            <fd name="description">Script example</fd>
+            <cell name="Analyze Logic Vector" type="configuration.samples">
+                <fd name="production">de.toem.impulse.production.script.js</fd>
+                <fd name="processType">Discrete</fd>
+                <fd name="signalType">Integer</fd>
+                <fd name="definition">// in0         : Primary input (de.toem.impulse.samples.ISamplePointer,de.toem.impulse.samples.IReadableSamples)&lt;br/&gt;// in1..       : Additional inputs (de.toem.impulse.samples.ISamplePointer,de.toem.impulse.samples.IReadableSamples)&lt;br/&gt;// input:      : An array of all inputs&lt;br/&gt;// out         : Output signal writer (? extends de.toem.impulse.samples.ISamplesWriter)&lt;br/&gt;// iter        : Sample iterator  (de.toem.impulse.samples.ISamplesIterator)&lt;br/&gt;// progress    : Progress control (de.toem.impulse.samples.producer.IScriptProgress)&lt;br/&gt;// console     : Console output (de.toem.impulse.scripting.IScriptConsole)&lt;br/&gt;&lt;br/&gt;// variables&lt;br/&gt;var start;&lt;br/&gt;&lt;br/&gt;// iterate&lt;br/&gt;while (iter.hasNext()) {&lt;br/&gt;    var current = iter.next(out);&lt;br/&gt;    if (!input[0].isNone()) {&lt;br/&gt;        if (input[0].logicValue().getState(1) == STATE_1)&lt;br/&gt;            start = current;&lt;br/&gt;        if (input[0].logicValue().getState(1) == STATE_0 &amp;&amp; start != null) {&lt;br/&gt;            out.write(start, false, current - start);&lt;br/&gt;            start = null;&lt;br/&gt;        }&lt;br/&gt;    }&lt;br/&gt;}&lt;br/&gt;progress.cont();  // Indicates that the script can be re-called if new data arrives&lt;br/&gt;&lt;br/&gt;// LOGIC STATES&lt;br/&gt;//  Level 2 - 1 Bit&lt;br/&gt;//  0: '0'	strong drive, logic zero&lt;br/&gt;//  1: '1'	strong drive, logic one&lt;br/&gt;//  Level 4 - 2 Bits&lt;br/&gt;//  2: 'Z'	high impedance&lt;br/&gt;//  3: 'X' strong drive, unknown logic value&lt;br/&gt;//  Level 16 - 4 Bits&lt;br/&gt;//  4: 'L' weak drive, logic zero&lt;br/&gt;//  5: 'H'	weak drive, logic one&lt;br/&gt;//  6: 'U' uninitialized&lt;br/&gt;//  7: 'W' weak drive, unknown logic value&lt;br/&gt;//  8: '-'	(STATE_D) don't care&lt;br/&gt;//  9 - 14: 'J', 'K', 'M', 'N', 'O', 'P' to be defined by the user</fd>
+            </cell>
+        </cell>
+        <cell name="Generate Logic" type="template.configuration.samples">
+            <fd name="useInMenu">true</fd>
+            <fd name="group">Scripting - Logic</fd>
+            <fd name="version">5</fd>
+            <fd name="description">Script example</fd>
+            <cell name="Generate Logic" type="configuration.samples">
+                <fd name="production">de.toem.impulse.production.script.js</fd>
+                <fd name="processType">Discrete</fd>
+                <fd name="signalType">Logic</fd>
+                <fd name="signalDescriptor">default/32/0/0/0/-1</fd>
+                <fd name="domainBase">ns</fd>
+                <fd name="end">1000</fd>
+                <fd name="definition">// in0         : Primary input (de.toem.impulse.samples.ISamplePointer,de.toem.impulse.samples.IReadableSamples)&lt;br/&gt;// in1..       : Additional inputs (de.toem.impulse.samples.ISamplePointer,de.toem.impulse.samples.IReadableSamples)&lt;br/&gt;// input:      : An array of all inputs&lt;br/&gt;// out         : Output signal writer (? extends de.toem.impulse.samples.ISamplesWriter)&lt;br/&gt;// iter        : Sample iterator  (de.toem.impulse.samples.ISamplesIterator)&lt;br/&gt;// progress    : Progress control (de.toem.impulse.samples.producer.IScriptProgress)&lt;br/&gt;// console     : Console output (de.toem.impulse.scripting.IScriptConsole)&lt;br/&gt;&lt;br/&gt;out.write(100, false, Logic.valueOfBoolean(false));&lt;br/&gt;out.write(200, false, Logic.valueOfBoolean(true));&lt;br/&gt;out.write(300, false, Logic.valueOfLong(0));&lt;br/&gt;out.write(400, false, Logic.valueOfLong(1));&lt;br/&gt;out.write(500, false, Logic.valueOf("uuxx1001"));&lt;br/&gt;out.write(600, false, Logic.valueOf("0100000"));&lt;br/&gt;out.write(700, false, Logic.valueOfLong(0x10000));&lt;br/&gt;out.write(800, false, Logic.valueOf("u"));</fd>
+                <fd name="color">10331904</fd>
+                <fd name="preferedHeight">true</fd>
+                <fd name="preferedHeightValue">35</fd>
+            </cell>
+        </cell>
+        <cell name="I2C Protocol Decoder" type="template.configuration.samples">
+            <fd name="useInMenu">true</fd>
+            <fd name="group">Scripting - Protocol Decoder</fd>
+            <fd name="version">6</fd>
+            <fd name="description">Script example</fd>
+            <cell name="I2C Protocol Decoder" type="configuration.samples">
+                <fd name="production">de.toem.impulse.production.script.js</fd>
+                <fd name="processType">Discrete</fd>
+                <fd name="signalType">Struct</fd>
+                <fd name="definition">// add sources in the order: sda, scl&lt;br/&gt;// parameters&lt;br/&gt;var sda /*:ISamplePointer:*/ = input[0]; // sda input&lt;br/&gt;var scl /*:ISamplePointer:*/ = input[1]; // scl input&lt;br/&gt;&lt;br/&gt;// in0         : Primary input (de.toem.impulse.samples.ISamplePointer,de.toem.impulse.samples.IReadableSamples)&lt;br/&gt;// in1..       : Additional inputs (de.toem.impulse.samples.ISamplePointer,de.toem.impulse.samples.IReadableSamples)&lt;br/&gt;// input:      : An array of all inputs&lt;br/&gt;// out         : Output signal writer (? extends de.toem.impulse.samples.ISamplesWriter)&lt;br/&gt;// iter        : Sample iterator  (de.toem.impulse.samples.ISamplesIterator)&lt;br/&gt;// progress    : Progress control (de.toem.impulse.samples.producer.IScriptProgress)&lt;br/&gt;// console     : Console output (de.toem.impulse.scripting.IScriptConsole)&lt;br/&gt;&lt;br/&gt;&lt;br/&gt;// state&lt;br/&gt;var states, state, started, pos, bits, address, byt, bytes, write, members, extAddressing;&lt;br/&gt;&lt;br/&gt;// init&lt;br/&gt;if (state == null) {&lt;br/&gt;&lt;br/&gt;    // signal&lt;br/&gt;    members = out.createMembers(6);&lt;br/&gt;    out.createMember(members, 0, "RW",&lt;br/&gt;        ISample.STRUCT_TYPE_ENUM, null, -1);&lt;br/&gt;    out.createMember(members, 1, "Address",&lt;br/&gt;        ISample.STRUCT_TYPE_INTEGER, null, ISample.FORMAT_HEXADECIMAL);&lt;br/&gt;    out.createMember(members, 2, "Data",&lt;br/&gt;        ISample.STRUCT_TYPE_BINARY, null, ISample.FORMAT_HEXADECIMAL);&lt;br/&gt;    out.createMember(members, 3, "Bytes",&lt;br/&gt;        ISample.STRUCT_TYPE_INTEGER, null, -1);&lt;br/&gt;    out.createMember(members, 4, "Duration",&lt;br/&gt;        ISample.STRUCT_TYPE_INTEGER, null, -1);&lt;br/&gt;    out.createMember(members, 5, "Addressing",&lt;br/&gt;        ISample.STRUCT_TYPE_ENUM, null, -1);&lt;br/&gt;&lt;br/&gt;    // states&lt;br/&gt;    states = {&lt;br/&gt;        INIT: 0,&lt;br/&gt;        STARTED: 1,&lt;br/&gt;        GOT_ADDRESS: 2,&lt;br/&gt;        READ_DATA: 3&lt;br/&gt;    };&lt;br/&gt;    state = states.INIT;&lt;br/&gt;}&lt;br/&gt;&lt;br/&gt;// iterate&lt;br/&gt;progress.cont();&lt;br/&gt;while (iter.hasNext()) {&lt;br/&gt;    var current = iter.next(out);&lt;br/&gt;&lt;br/&gt;    // start condition&lt;br/&gt;    if (sda.isEdge(-1) &amp;&amp; scl.isHigh()) {&lt;br/&gt;        state = states.STARTED;&lt;br/&gt;        started = current;&lt;br/&gt;        bytes = 0;&lt;br/&gt;        extAddressing = null;&lt;br/&gt;        bits = 0;&lt;br/&gt;        continue;&lt;br/&gt;    }&lt;br/&gt;&lt;br/&gt;    // stop condition&lt;br/&gt;    if (state != states.INIT &amp;&amp; sda.isEdge(1) &amp;&amp; scl.isHigh()) {&lt;br/&gt;        state = 0;&lt;br/&gt;        members[0].setValue(read == 1 ? "Read" : "Write");&lt;br/&gt;        members[1].setValue(new java.lang.Integer(address));&lt;br/&gt;        members[2].setValue(new java.math.BigInteger(data, 16)&lt;br/&gt;            .toByteArray());&lt;br/&gt;        members[3].setValue(new java.lang.Integer(bytes));&lt;br/&gt;        members[4].setValue(new java.lang.Long(current - started));&lt;br/&gt;        members[5].setValue(extAddressing ? "10 Bit" : "7 Bit");&lt;br/&gt;        out.write(started, false, members);&lt;br/&gt;        continue;&lt;br/&gt;    }&lt;br/&gt;&lt;br/&gt;    // address&lt;br/&gt;    if (state == states.STARTED &amp;&amp; scl.isEdge(1)) {&lt;br/&gt;        if (bits == 0) {&lt;br/&gt;            address = 0;&lt;br/&gt;            data = "";&lt;br/&gt;            pos = current;&lt;br/&gt;        }&lt;br/&gt;        bits++;&lt;br/&gt;        address = (address &lt;&lt; 1) | (sda.isHigh() ? 1 : 0);&lt;br/&gt;        if (bits == 7) {&lt;br/&gt;            state = states.GOT_ADDRESS;&lt;br/&gt;            bits = 0;&lt;br/&gt;        }&lt;br/&gt;        continue;&lt;br/&gt;    }&lt;br/&gt;&lt;br/&gt;    // rw / ackn&lt;br/&gt;    if (state == states.GOT_ADDRESS &amp;&amp; scl.isEdge(1)) {&lt;br/&gt;        bits++;&lt;br/&gt;        if (bits == 1) { // rw&lt;br/&gt;            read = sda.isHigh();&lt;br/&gt;        }&lt;br/&gt;        if (bits == 2) { // ackn&lt;br/&gt;            var ackn = sda.isHigh();&lt;br/&gt;            state = states.READ_DATA;&lt;br/&gt;            bits = 0;&lt;br/&gt;        }&lt;br/&gt;        continue;&lt;br/&gt;    }&lt;br/&gt;&lt;br/&gt;    // data&lt;br/&gt;    if (state == states.READ_DATA &amp;&amp; scl.isEdge(1)) {&lt;br/&gt;        if (bits == 0) {&lt;br/&gt;            byt = 0;&lt;br/&gt;            pos = current;&lt;br/&gt;        }&lt;br/&gt;        bits++;&lt;br/&gt;        byt = (byt &lt;&lt; 1) | (sda.isHigh() ? 1 : 0);&lt;br/&gt;        if (bits == 8) {&lt;br/&gt;            if (extAddressing == null) {&lt;br/&gt;                if ((address &amp; 0x7c) == 0x78) {&lt;br/&gt;                    address = (address &amp; 3) &lt;&lt; 8 | byt;&lt;br/&gt;                    extAddressing = 1;&lt;br/&gt;                } else {&lt;br/&gt;                    extAddressing = 0;&lt;br/&gt;                    bytes++;&lt;br/&gt;                    data += byt.toString(16);&lt;br/&gt;                }&lt;br/&gt;            } else {&lt;br/&gt;                bytes++;&lt;br/&gt;                data += byt.toString(16);&lt;br/&gt;            }&lt;br/&gt;        }&lt;br/&gt;        if (bits == 9) { // ackn&lt;br/&gt;            var ackn = sda.isHigh();&lt;br/&gt;            bits = 0;&lt;br/&gt;        }&lt;br/&gt;        continue;&lt;br/&gt;    }&lt;br/&gt;}</fd>
+                <fd name="color">20719</fd>
+                <fd name="style">6</fd>
+                <fd name="preferedHeight">true</fd>
+                <fd name="preferedHeightValue">111</fd>
+            </cell>
+        </cell>
+        <cell name="Birt Chart" type="template.configuration.samples">
+            <fd name="useInMenu">true</fd>
+            <fd name="group">Scripting - Charts</fd>
+            <fd name="version">6</fd>
+            <fd name="description">Script example</fd>
+            <cell name="Birt Chart" type="configuration.samples">
+                <fd name="production">de.toem.impulse.production.script.js</fd>
+                <fd name="processType">Discrete</fd>
+                <fd name="signalType">Struct</fd>
+                <fd name="signalDescriptor">default/32/0/0/0/-1</fd>
+                <fd name="domainBase">n</fd>
+                <fd name="end">1</fd>
+                <fd name="definition">// in0         : Primary input (de.toem.impulse.samples.ISamplePointer,de.toem.impulse.samples.IReadableSamples)&lt;br/&gt;// in1..       : Additional inputs (de.toem.impulse.samples.ISamplePointer,de.toem.impulse.samples.IReadableSamples)&lt;br/&gt;// input:      : An array of all inputs&lt;br/&gt;// out         : Output signal writer (? extends de.toem.impulse.samples.ISamplesWriter)&lt;br/&gt;// iter        : Sample iterator  (de.toem.impulse.samples.ISamplesIterator)&lt;br/&gt;// progress    : Progress control (de.toem.impulse.samples.producer.IScriptProgress)&lt;br/&gt;// console     : Console output (de.toem.impulse.scripting.IScriptConsole)&lt;br/&gt;&lt;br/&gt;// struct signal&lt;br/&gt;var members /*:[Lde.toem.impulse.values.StructMember;:*/  = out.createMembers(7);&lt;br/&gt;out.createMember(members,0,"A",	ISample.STRUCT_TYPE_INTEGER,null,-1);&lt;br/&gt;out.createMember(members,1,"B",	ISample.STRUCT_TYPE_INTEGER,null,-1);&lt;br/&gt;out.createMember(members,2,"C",	ISample.STRUCT_TYPE_INTEGER,null,-1);&lt;br/&gt;out.createMember(members,3,"D",	ISample.STRUCT_TYPE_INTEGER,null,-1);&lt;br/&gt;out.createMember(members,4,"E",	ISample.STRUCT_TYPE_INTEGER,null,-1);&lt;br/&gt;out.createMember(members,5,"F",	ISample.STRUCT_TYPE_INTEGER,null,-1);&lt;br/&gt;out.createMember(members,6,"Label",	ISample.STRUCT_TYPE_TEXT,"LABEL",-1);&lt;br/&gt;&lt;br/&gt;// Analyze your input 1&lt;br/&gt;// ......&lt;br/&gt;&lt;br/&gt;members[0].setIntValue(1); &lt;br/&gt;members[1].setIntValue(8);&lt;br/&gt;members[2].setIntValue(5);&lt;br/&gt;members[3].setIntValue(12);&lt;br/&gt;members[4].setIntValue(12);&lt;br/&gt;members[5].setIntValue(12);&lt;br/&gt;members[6].setStringValue("Series 1");&lt;br/&gt;out.write(0,false,members);&lt;br/&gt;&lt;br/&gt;// Analyze your input 2&lt;br/&gt;// ......&lt;br/&gt;&lt;br/&gt;members[0].setIntValue(14);&lt;br/&gt;members[1].setIntValue(15);&lt;br/&gt;members[2].setIntValue(16);&lt;br/&gt;members[3].setIntValue(17);&lt;br/&gt;members[4].setIntValue(18);&lt;br/&gt;members[5].setIntValue(19);&lt;br/&gt;members[6].setStringValue("Series 2");&lt;br/&gt;out.write(1,false,members);</fd>
+                <fd name="color">10331904</fd>
+                <fd name="style">8</fd>
+                <fd name="styleDescriptor">Pie Chart (Birt)@14422145099645</fd>
+                <fd name="preferedHeight">true</fd>
+                <fd name="preferedHeightValue">35</fd>
+            </cell>
+        </cell>
+        <cell name="XY Chart" type="template.configuration.samples">
+            <fd name="useInMenu">true</fd>
+            <fd name="group">Scripting - Charts</fd>
+            <fd name="version">6</fd>
+            <fd name="description">Script example</fd>
+            <cell name="XY Chart" type="configuration.samples">
+                <fd name="production">de.toem.impulse.production.script.js</fd>
+                <fd name="processType">Discrete</fd>
+                <fd name="signalType">FloatArray</fd>
+                <fd name="signalDescriptor">default/2/0/0/0/-1</fd>
+                <fd name="domainBase">us</fd>
+                <fd name="end">100000</fd>
+                <fd name="definition">// in0         : Primary input (de.toem.impulse.samples.ISamplePointer,de.toem.impulse.samples.IReadableSamples)&lt;br/&gt;// in1..       : Additional inputs (de.toem.impulse.samples.ISamplePointer,de.toem.impulse.samples.IReadableSamples)&lt;br/&gt;// input:      : An array of all inputs&lt;br/&gt;// out         : Output signal writer (? extends de.toem.impulse.samples.ISamplesWriter)&lt;br/&gt;// iter        : Sample iterator  (de.toem.impulse.samples.ISamplesIterator)&lt;br/&gt;// progress    : Progress control (de.toem.impulse.samples.producer.IScriptProgress)&lt;br/&gt;// console     : Console output (de.toem.impulse.scripting.IScriptConsole)&lt;br/&gt;&lt;br/&gt;out.addMember( "x", null, ISample.FORMAT_DEFAULT);&lt;br/&gt;out.addMember( "y", null, ISample.FORMAT_DEFAULT);  &lt;br/&gt;var DoubleArray = Java.type("double[]");&lt;br/&gt;var array = new DoubleArray(2);&lt;br/&gt;for (t=0; t &lt; 100000; t += 10) {&lt;br/&gt;    array[0] =  Math.sin((t + 100) / 3000.0) * 10.0;&lt;br/&gt;    array[1] =  Math.cos((t + 100) / 3000.0) * 10.0;       &lt;br/&gt;	out.writeDoubleArray(t, false, array);&lt;br/&gt;}</fd>
+                <fd name="color">10331904</fd>
+                <fd name="style">8</fd>
+                <fd name="styleDescriptor">Xy Chart (Nebula)@14882198820828</fd>
+                <fd name="preferedHeight">true</fd>
+                <fd name="preferedHeightValue">35</fd>
+            </cell>
+        </cell>
+        <cell name="Simple iteration on input samples" type="template.configuration.samples">
+            <fd name="useInMenu">true</fd>
+            <fd name="group">Scripting - General</fd>
+            <fd name="version">5</fd>
+            <fd name="description">Script example</fd>
+            <cell name="Iterating" type="configuration.samples">
+                <fd name="production">de.toem.impulse.production.script.js</fd>
+                <fd name="processType">Discrete</fd>
+                <fd name="definition">// in0         : Primary input (de.toem.impulse.samples.ISamplePointer,de.toem.impulse.samples.IReadableSamples)&lt;br/&gt;// in1..       : Additional inputs (de.toem.impulse.samples.ISamplePointer,de.toem.impulse.samples.IReadableSamples)&lt;br/&gt;// input:      : An array of all inputs&lt;br/&gt;// out         : Output signal writer (? extends de.toem.impulse.samples.ISamplesWriter)&lt;br/&gt;// iter        : Sample iterator  (de.toem.impulse.samples.ISamplesIterator)&lt;br/&gt;// progress    : Progress control (de.toem.impulse.samples.producer.IScriptProgress)&lt;br/&gt;// console     : Console output (de.toem.impulse.scripting.IScriptConsole)&lt;br/&gt;&lt;br/&gt;while ( iter.hasNext()) {&lt;br/&gt;    var current = iter.next(out); // current domain value (using out domain base) &lt;br/&gt;    var x = input[0].intValue();   // first available input -- or use in0,in1&lt;br/&gt;    var y = input[1].floatValue();   // second available input -- or use in1, in2&lt;br/&gt;&lt;br/&gt;	&lt;br/&gt;    // out.write(current, false, value);  // write to output&lt;br/&gt;}&lt;br/&gt;progress.cont();  // Indicates that the script can be re-called if the input signals grow // enables this script to be continued when signal is extended (e.g. port) -- otherwise iterator starts from beginning</fd>
+                <fd name="color">7178084</fd>
+                <fd name="preferedHeight">true</fd>
+                <fd name="preferedHeightValue">27</fd>
+            </cell>
+        </cell>
+        <cell name="Copy samples" type="template.configuration.samples">
+            <fd name="useInMenu">true</fd>
+            <fd name="group">Scripting - General</fd>
+            <fd name="version">5</fd>
+            <fd name="description">Script example</fd>
+            <cell name="Copy" type="configuration.samples">
+                <fd name="production">de.toem.impulse.production.script.js</fd>
+                <fd name="processType">Discrete</fd>
+                <fd name="definition">// in0         : Primary input (de.toem.impulse.samples.ISamplePointer,de.toem.impulse.samples.IReadableSamples)&lt;br/&gt;// in1..       : Additional inputs (de.toem.impulse.samples.ISamplePointer,de.toem.impulse.samples.IReadableSamples)&lt;br/&gt;// input:      : An array of all inputs&lt;br/&gt;// out         : Output signal writer (? extends de.toem.impulse.samples.ISamplesWriter)&lt;br/&gt;// iter        : Sample iterator  (de.toem.impulse.samples.ISamplesIterator)&lt;br/&gt;// progress    : Progress control (de.toem.impulse.samples.producer.IScriptProgress)&lt;br/&gt;// console     : Console output (de.toem.impulse.scripting.IScriptConsole)&lt;br/&gt;&lt;br/&gt;&lt;br/&gt;while ( iter.hasNext()) {&lt;br/&gt;    var current = iter.next(out); // current domain value (using out domain base) &lt;br/&gt;    var pack/*:CompoundPack:*/ = input[0].packed(); // a pack contains all information about a samples and its binary form&lt;br/&gt;    pack.setUnits(current); // convert to out domain base&lt;br/&gt;    out.writeSample(pack);  // write to output&lt;br/&gt;}&lt;br/&gt;progress.cont();  // Indicates that the script can be re-called if the input signals grow // enables this script to be continued when signal is extended (e.g. port) -- otherwise iterator starts from beginning</fd>
+                <fd name="color">7178084</fd>
+                <fd name="preferedHeight">true</fd>
+                <fd name="preferedHeightValue">27</fd>
+            </cell>
+        </cell>
+        <cell name="Direct access of samples" type="template.configuration.samples">
+            <fd name="useInMenu">true</fd>
+            <fd name="group">Scripting - General</fd>
+            <fd name="version">5</fd>
+            <fd name="description">Script example</fd>
+            <cell name="Direct" type="configuration.samples">
+                <fd name="production">de.toem.impulse.production.script.js</fd>
+                <fd name="processType">Discrete</fd>
+                <fd name="definition">// in0         : Primary input (de.toem.impulse.samples.ISamplePointer,de.toem.impulse.samples.IReadableSamples)&lt;br/&gt;// in1..       : Additional inputs (de.toem.impulse.samples.ISamplePointer,de.toem.impulse.samples.IReadableSamples)&lt;br/&gt;// input:      : An array of all inputs&lt;br/&gt;// out         : Output signal writer (? extends de.toem.impulse.samples.ISamplesWriter)&lt;br/&gt;// iter        : Sample iterator  (de.toem.impulse.samples.ISamplesIterator)&lt;br/&gt;// progress    : Progress control (de.toem.impulse.samples.producer.IScriptProgress)&lt;br/&gt;// console     : Console output (de.toem.impulse.scripting.IScriptConsole)&lt;br/&gt;&lt;br/&gt;var n;&lt;br/&gt;for(n=10;n&lt;20 &amp;&amp; n&lt;in0.getCount();n++) {&lt;br/&gt;    var x = in0.intValueAt(n);   // ...At() methods access the sample at a given index&lt;br/&gt;&lt;br/&gt;    // out.write(current, false, value);  // write to output&lt;br/&gt;}</fd>
+                <fd name="color">7178084</fd>
+                <fd name="preferedHeight">true</fd>
+                <fd name="preferedHeightValue">27</fd>
+            </cell>
+        </cell>
+        <cell name="I2S Protocol Decoder" type="template.configuration.samples">
+            <fd name="useInMenu">true</fd>
+            <fd name="group">Scripting - Protocol Decoder</fd>
+            <fd name="version">5</fd>
+            <fd name="description">Script example</fd>
+            <cell name="I2S Protocol Decoder" type="configuration.samples">
+                <fd name="production">de.toem.impulse.production.script.js</fd>
+                <fd name="processType">Discrete</fd>
+                <fd name="signalType">Integer</fd>
+                <fd name="definition">// add sources in the order: clock, frame, data&lt;br/&gt;// parameters&lt;br/&gt;var clock /*:ISamplePointer:*/ = input[0]; // clock input (logic type)&lt;br/&gt;var frame /*:ISamplePointer:*/ = input[1]; // frame input (logic type)&lt;br/&gt;var data /*:ISamplePointer:*/ = input[2]; // data input (logic type)&lt;br/&gt;var channel = -1; // left -1; right 1&lt;br/&gt;&lt;br/&gt;// in0         : Primary input (de.toem.impulse.samples.ISamplePointer,de.toem.impulse.samples.IReadableSamples)&lt;br/&gt;// in1..       : Additional inputs (de.toem.impulse.samples.ISamplePointer,de.toem.impulse.samples.IReadableSamples)&lt;br/&gt;// input:      : An array of all inputs&lt;br/&gt;// out         : Output signal writer (? extends de.toem.impulse.samples.ISamplesWriter)&lt;br/&gt;// iter        : Sample iterator  (de.toem.impulse.samples.ISamplesIterator)&lt;br/&gt;// progress    : Progress control (de.toem.impulse.samples.producer.IScriptProgress)&lt;br/&gt;// console     : Console output (de.toem.impulse.scripting.IScriptConsole)&lt;br/&gt;&lt;br/&gt;&lt;br/&gt;if (clock.getSignalType() != SignalType.Logic || frame.getSignalType() != SignalType.Logic || data.getSignalType() != SignalType.Logic)&lt;br/&gt;    throw ("Invalid source type");&lt;br/&gt;&lt;br/&gt;// state&lt;br/&gt;var States;&lt;br/&gt;var state;&lt;br/&gt;var started, value;&lt;br/&gt;&lt;br/&gt;// init&lt;br/&gt;if (state == null) {&lt;br/&gt;&lt;br/&gt;    // States&lt;br/&gt;    States = {&lt;br/&gt;        INIT: 0,&lt;br/&gt;        DELAY: 1,&lt;br/&gt;        STARTED: 2,&lt;br/&gt;        DATA: 3&lt;br/&gt;&lt;br/&gt;    };&lt;br/&gt;    state = States.INIT;&lt;br/&gt;}&lt;br/&gt;var last;&lt;br/&gt;&lt;br/&gt;// iterate&lt;br/&gt;while (iter.hasNext()) {&lt;br/&gt;    var current = iter.next(out);&lt;br/&gt;    //console.println(state);&lt;br/&gt;    if (state == States.INIT) {&lt;br/&gt;        if (frame.isEdge(channel) || iter.nextEdge(frame, channel))&lt;br/&gt;            state = States.DELAY;&lt;br/&gt;    } else if (state == States.DELAY &amp;&amp; clock.isEdge(1)) {&lt;br/&gt;        state = States.STARTED;&lt;br/&gt;        started = current;&lt;br/&gt;        value = 0;&lt;br/&gt;    } else if (state == States.STARTED &amp;&amp; clock.isEdge(1)) {&lt;br/&gt;        value = data.isHigh() ? -1 : 0;&lt;br/&gt;        state = States.DATA;&lt;br/&gt;    } else if (state == States.DATA &amp;&amp; clock.isEdge(1)) {&lt;br/&gt;        value = value &lt;&lt; 1 | (data.isHigh() ? 1 : 0);&lt;br/&gt;        if ((channel == -1 &amp;&amp; frame.isHigh()) || (channel == 1 &amp;&amp; frame.isLow())) {&lt;br/&gt;            out.writeInt(started, false, value);&lt;br/&gt;            state = States.INIT;&lt;br/&gt;        }&lt;br/&gt;    }&lt;br/&gt;}&lt;br/&gt;progress.cont();  // Indicates that the script can be re-called if the input signals grow</fd>
+                <fd name="color">20719</fd>
+                <fd name="style">4</fd>
+                <fd name="preferedHeight">true</fd>
+                <fd name="preferedHeightValue">111</fd>
+            </cell>
+        </cell>
+        <cell name="CAN Bus Protocol Decoder" type="template.configuration.samples">
+            <fd name="useInMenu">true</fd>
+            <fd name="group">Scripting - Protocol Decoder</fd>
+            <fd name="version">5</fd>
+            <fd name="description">Script example</fd>
+            <cell name="CAN Bus Protocol Decoder" type="configuration.samples">
+                <fd name="production">de.toem.impulse.production.script.js</fd>
+                <fd name="processType">Discrete</fd>
+                <fd name="signalType">Struct</fd>
+                <fd name="definition">// parameters&lt;br/&gt;var can /*:ISamplePointer:*/ = input[0]; // can input&lt;br/&gt;var rate = 125000; // 125kBaud&lt;br/&gt;var invert = 0;&lt;br/&gt;&lt;br/&gt;// in0         : Primary input (de.toem.impulse.samples.ISamplePointer,de.toem.impulse.samples.IReadableSamples)&lt;br/&gt;// in1..       : Additional inputs (de.toem.impulse.samples.ISamplePointer,de.toem.impulse.samples.IReadableSamples)&lt;br/&gt;// input:      : An array of all inputs&lt;br/&gt;// out         : Output signal writer (? extends de.toem.impulse.samples.ISamplesWriter)&lt;br/&gt;// iter        : Sample iterator  (de.toem.impulse.samples.ISamplesIterator)&lt;br/&gt;// progress    : Progress control (de.toem.impulse.samples.producer.IScriptProgress)&lt;br/&gt;// console     : Console output (de.toem.impulse.scripting.IScriptConsole)&lt;br/&gt;&lt;br/&gt;// state&lt;br/&gt;var States, Types;&lt;br/&gt;var state, startFrame, totalRead, bitsRead, level, stuff;&lt;br/&gt;var ida, idb, type, dlc, dbyte, data, crc, ack;&lt;br/&gt;rate = out.getDomainBase().parseUnits(1000000000/rate+"ns");&lt;br/&gt;&lt;br/&gt;// init&lt;br/&gt;if (state == null) {&lt;br/&gt;&lt;br/&gt;    // signal&lt;br/&gt;    members = out.createMembers(6);&lt;br/&gt;    out.createMember(members, 0, "Id",&lt;br/&gt;        ISample.STRUCT_TYPE_INTEGER, null, ISample.FORMAT_HEXADECIMAL);&lt;br/&gt;    out.createMember(members, 1, "Type",&lt;br/&gt;        ISample.STRUCT_TYPE_ENUM, null, ISample.FORMAT_TEXT);&lt;br/&gt;    out.createMember(members, 2, "DLC",&lt;br/&gt;        ISample.STRUCT_TYPE_ENUM, null, ISample.FORMAT_DECIMAL);&lt;br/&gt;    out.createMember(members, 3, "Data",&lt;br/&gt;        ISample.STRUCT_TYPE_BINARY, null, -1);&lt;br/&gt;&lt;br/&gt;    // States&lt;br/&gt;    States = {&lt;br/&gt;        INIT: 0,&lt;br/&gt;        SOF: 1,&lt;br/&gt;        IDA: 2,&lt;br/&gt;        TYPE: 3,&lt;br/&gt;        R11: 4,&lt;br/&gt;        IDB: 5,&lt;br/&gt;        R29: 6,&lt;br/&gt;        DLC: 7,&lt;br/&gt;        DATA: 8,&lt;br/&gt;        CRC: 9,&lt;br/&gt;        ACK: 10,&lt;br/&gt;        EOF: 11&lt;br/&gt;    };&lt;br/&gt;    state = States.INIT;&lt;br/&gt;&lt;br/&gt;    // types&lt;br/&gt;    Types = {&lt;br/&gt;        STD: 0, // 11&lt;br/&gt;        EXT: 1, // 29&lt;br/&gt;        RTR: 2, // 11 RTR&lt;br/&gt;        ETR: 3, // 29 RTR&lt;br/&gt;    };&lt;br/&gt;&lt;br/&gt;}&lt;br/&gt;var last;&lt;br/&gt;&lt;br/&gt;// iterate&lt;br/&gt;while (iter.hasNext()) {&lt;br/&gt;    var current = iter.next(out);&lt;br/&gt;&lt;br/&gt;    if (can.isEdge(invert) &amp;&amp; state == States.INIT) {&lt;br/&gt;        console.println("Start at " + current);&lt;br/&gt;        startFrame = current;&lt;br/&gt;        totalRead = bitsRead = stuff = level = ida = idb = type = dlc = dbyte = crc = ack = 0;&lt;br/&gt;        data = '';&lt;br/&gt;        state = States.SOF;&lt;br/&gt;    } else if (can.isEdge(invert == 1 ? level:1 - level) &amp;&amp; state != States.INIT) {&lt;br/&gt;        // no of total bits read&lt;br/&gt;        var pos = Math.floor((current - startFrame + rate / 2) / rate);&lt;br/&gt;        var _read = pos - totalRead;&lt;br/&gt;        totalRead = pos;&lt;br/&gt;&lt;br/&gt;        // stuffing&lt;br/&gt;        var read = (stuff == 1) ? _read - 1 : _read;&lt;br/&gt;        stuff = 0;&lt;br/&gt;        if (_read == 5)&lt;br/&gt;            stuff = 1;      &lt;br/&gt;&lt;br/&gt;        // start of frame&lt;br/&gt;        if (state == States.SOF) {&lt;br/&gt;            if (read &gt; 0) {&lt;br/&gt;                read--;&lt;br/&gt;                state = States.IDA&lt;br/&gt;                bitsread = 0;&lt;br/&gt;            }&lt;br/&gt;        }&lt;br/&gt;        // ID A&lt;br/&gt;        if (state == States.IDA) {&lt;br/&gt;            while (read &gt; 0 &amp;&amp; bitsread &lt; 11) {&lt;br/&gt;                read--;&lt;br/&gt;                bitsread++;&lt;br/&gt;                ida = (ida &lt;&lt; 1) | level;&lt;br/&gt;            }&lt;br/&gt;            if (bitsread == 11) {&lt;br/&gt;                state = States.TYPE&lt;br/&gt;                bitsread = 0;&lt;br/&gt;            }&lt;br/&gt;        }&lt;br/&gt;        // TYPE&lt;br/&gt;        if (state == States.TYPE) {&lt;br/&gt;            while (read &gt; 0 &amp;&amp; bitsread &lt; 2) {&lt;br/&gt;                read--;&lt;br/&gt;                bitsread++;&lt;br/&gt;                type = (type &lt;&lt; 1) | level;&lt;br/&gt;            }&lt;br/&gt;            if (bitsread == 2) {&lt;br/&gt;                if (type == 3)&lt;br/&gt;                    state = States.IDB&lt;br/&gt;                else&lt;br/&gt;                    state = States.R11&lt;br/&gt;                bitsread = 0;&lt;br/&gt;            }&lt;br/&gt;        }&lt;br/&gt;        // 1 BIT RES (Standard only)&lt;br/&gt;        if (state == States.R11) {&lt;br/&gt;            if (read &gt; 0) {&lt;br/&gt;                read--;&lt;br/&gt;                state = States.DLC&lt;br/&gt;                bitsread = 0;&lt;br/&gt;            }&lt;br/&gt;        }&lt;br/&gt;        // ID B (Extended only)&lt;br/&gt;        if (state == States.IDB) {&lt;br/&gt;            while (read &gt; 0 &amp;&amp; bitsread &lt; 18) {&lt;br/&gt;                read--;&lt;br/&gt;                bitsread++;&lt;br/&gt;                idb = (idb &lt;&lt; 1) | level;&lt;br/&gt;            }&lt;br/&gt;            if (bitsread == 18) {&lt;br/&gt;                state = States.TYPE29&lt;br/&gt;                bitsread = 0;&lt;br/&gt;            }&lt;br/&gt;        }&lt;br/&gt;        // TYPE (Extended only)&lt;br/&gt;        if (state == States.TYPE29) {&lt;br/&gt;            if (read &gt; 0) {&lt;br/&gt;                read--;&lt;br/&gt;                type = level ? Types.ETR : Types.EXT;&lt;br/&gt;                state = States.RES29&lt;br/&gt;                bitsread = 0;&lt;br/&gt;            }&lt;br/&gt;        }&lt;br/&gt;        // 2 BIT RES (Extended only)&lt;br/&gt;        if (state == States.RES29) {&lt;br/&gt;            while (read &gt; 0 &amp;&amp; bitsread &lt; 2) {&lt;br/&gt;                read--;&lt;br/&gt;                bitsread++;&lt;br/&gt;            }&lt;br/&gt;            if (bitsread == 2) {&lt;br/&gt;                state = States.DLC&lt;br/&gt;                bitsread = 0;&lt;br/&gt;            }&lt;br/&gt;        }&lt;br/&gt;        // DLC &lt;br/&gt;        if (state == States.DLC) {&lt;br/&gt;            while (read &gt; 0 &amp;&amp; bitsread &lt; 4) {&lt;br/&gt;                read--;&lt;br/&gt;                bitsread++;&lt;br/&gt;                dlc = (dlc &lt;&lt; 1) | level;&lt;br/&gt;            }&lt;br/&gt;            if (bitsread == 4) {&lt;br/&gt;                state = States.DATA&lt;br/&gt;                console.println("dlc" + dlc);&lt;br/&gt;                bitsread = 0;&lt;br/&gt;            }&lt;br/&gt;        }&lt;br/&gt;        // Data &lt;br/&gt;        if (state == States.DATA) {&lt;br/&gt;            var dsize = dlc &lt;= 8 ? dlc * 8 : 64;&lt;br/&gt;            while (read &gt; 0 &amp;&amp; bitsread &lt; dsize) {&lt;br/&gt;                read--;&lt;br/&gt;                bitsread++;&lt;br/&gt;                dbyte = (dbyte &lt;&lt; 1) | level;&lt;br/&gt;                if ((bitsread % 4) == 0) {&lt;br/&gt;                    data += dbyte.toString(16);&lt;br/&gt;                    dbyte = 0;&lt;br/&gt;                }&lt;br/&gt;            }&lt;br/&gt;            if (bitsread == dsize) {&lt;br/&gt;                state = States.CRC&lt;br/&gt;                bitsread = 0;&lt;br/&gt;            }&lt;br/&gt;        }&lt;br/&gt;        // CRC &lt;br/&gt;        if (state == States.CRC) {&lt;br/&gt;            while (read &gt; 0 &amp;&amp; bitsread &lt; 16) {&lt;br/&gt;                read--;&lt;br/&gt;                bitsread++;&lt;br/&gt;                crc = (crc &lt;&lt; 1) | level;&lt;br/&gt;            }&lt;br/&gt;            if (bitsread == 16) {&lt;br/&gt;                state = States.ACK&lt;br/&gt;                bitsread = 0;&lt;br/&gt;            }&lt;br/&gt;        }&lt;br/&gt;        // ACK  &lt;br/&gt;        if (state == States.ACK) {&lt;br/&gt;            while (read &gt; 0 &amp;&amp; bitsread &lt; 2) {&lt;br/&gt;                read--;&lt;br/&gt;                bitsread++;&lt;br/&gt;                ack = (ack &lt;&lt; 1) | level;&lt;br/&gt;            }&lt;br/&gt;            if (bitsread == 2) {&lt;br/&gt;                state = States.EOF&lt;br/&gt;                bitsread = 0;&lt;br/&gt;                members[0].setValue(new java.lang.Integer(ida | (idb &lt;&lt; 11)));&lt;br/&gt;                members[1].setValue(new java.lang.Integer(type));&lt;br/&gt;                members[2].setValue(new java.lang.Integer(dlc));&lt;br/&gt;                members[3].setValue(data != ''?new java.math.BigInteger(data, 16).toByteArray():null);&lt;br/&gt;                out.write(startFrame, false, members);&lt;br/&gt;            }&lt;br/&gt;        }&lt;br/&gt;        // EOF&lt;br/&gt;        if (_read &gt; 5 &amp;&amp; level == 1) {&lt;br/&gt;            state = States.INIT;&lt;br/&gt;        }&lt;br/&gt;        // next level&lt;br/&gt;        level = 1 - level;&lt;br/&gt;    }&lt;br/&gt;&lt;br/&gt;}</fd>
+                <fd name="color">20719</fd>
+                <fd name="style">6</fd>
+                <fd name="preferedHeight">true</fd>
+                <fd name="preferedHeightValue">111</fd>
+            </cell>
+        </cell>
+    </cell>
+</document>

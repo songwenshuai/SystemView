@@ -1,0 +1,814 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?eclipse version="3.4"?>
+<plugin>
+   <extension
+         id="de.toem.impulse.ui.fragment"
+         point="org.eclipse.e4.workbench.model">
+      <fragment
+            apply="always"
+            uri="fragment.e4xmi">
+      </fragment>
+
+   </extension>
+   <extension
+         point="de.toem.toolkits.pattern.cell">
+      <cell
+            class="de.toem.impulse.cell.parts.SamplesViewPreferences"
+            icon="ri-table-2"
+            id="impulse.subview.samples"
+            label="%cell.label.subview.samples">
+      </cell>
+      <cell
+            class="de.toem.impulse.cell.parts.SamplesViewMemberPreferences"
+            icon="ri-layout-column-fill"
+            id="impulse.subview.samples.member"
+            label="%cell.label.subview.samples.member">
+      </cell>
+      <cell
+            class="de.toem.impulse.cell.parts.SampleViewPreferences"
+            icon="ri-instagram-line"
+            id="impulse.subview.sample"
+            label="%cell.label.subview.sample">
+      </cell>
+      <cell
+            class="de.toem.impulse.cell.parts.SampleViewTypePreferences"
+            icon="ri-bubble-chart-line"
+            id="impulse.subview.sample.type"
+            label="%cell.label.subview.sample.type">
+      </cell>
+      <cell
+            class="de.toem.impulse.cell.parts.SampleViewMemberPreferences"
+            icon="ri-layout-column-fill"
+            id="impulse.subview.sample.member"
+            label="%cell.label.subview.sample.member">
+      </cell>  
+<!---          
+      <cell
+            class="de.toem.impulse.cell.parts.PortsViewPreferences"
+            id="impulse.subview.ports"
+            label="%cell.label.subview.ports">
+      </cell>
+-->
+      <cell
+            class="de.toem.impulse.cell.parts.SubViewPersitence"
+            id="persitence.impulse.subview"
+            label="%cell.label.persitence.subview">
+      </cell>    
+      <cell
+            class="de.toem.impulse.parts.viewer.ViewerPersitence"
+            id="persitence.impulse.viewer"
+            label="%cell.label.persitence.viewer">
+      </cell>       
+   </extension>
+   <extension
+         point="de.toem.toolkits.ui.dialog">
+      <dialog
+            label="%dialog.label.recordMessage"
+            cellTypes="serializer.message"
+            class="de.toem.impulse.dialog.record.MessageDialog"
+            id="de.toem.impulse.dialog.record.message">
+      </dialog>
+      <dialog
+            label="%dialog.label.view"
+            cellTypes="configuration.record"
+            class="de.toem.impulse.dialog.view.ViewDialog"
+            id="de.toem.impulse.dialog.view">
+      </dialog>
+            <dialog
+            label="%dialog.label.viewSelect"
+            class="de.toem.impulse.dialog.view.ViewSelectDialog"
+            id="de.toem.impulse.dialog.viewSelect">
+      </dialog>
+      <dialog
+            label="%dialog.label.cursor"
+            cellTypes="configuration.cursor"
+            class="de.toem.impulse.dialog.view.CursorDialog"
+            id="de.toem.impulse.dialog.configuration.cursor">
+      </dialog>
+      <dialog
+            label="%dialog.label.plot"
+            cellTypes="configuration.samples"
+            class="de.toem.impulse.dialog.view.PlotDialog"
+            id="de.toem.impulse.dialog.configuration.samples">
+      </dialog>
+      <dialog
+            label="%dialog.label.reference"
+            cellTypes="configuration.reference"
+            class="de.toem.impulse.dialog.view.SourceReferenceDialog"
+            id="de.toem.impulse.dialog.configuration.reference">
+      </dialog>
+      <dialog
+            label="%dialog.label.reference"
+            cellTypes="configuration.confref"
+            class="de.toem.impulse.dialog.view.SourceReferenceDialog"
+            id="de.toem.impulse.dialog.configuration.confref">
+      </dialog>
+      <dialog
+            label="%dialog.label.reference"
+            cellTypes="configuration.srcref"
+            class="de.toem.impulse.dialog.view.SourceReferenceDialog"
+            id="de.toem.impulse.dialog.configuration.srcref">
+      </dialog>
+      <dialog
+            label="%dialog.label.folder"
+            cellTypes="configuration.folder"
+            class="de.toem.impulse.dialog.view.FolderDialog"
+            id="de.toem.impulse.dialog.configuration.folder">
+      </dialog>
+      <dialog
+            label="%dialog.label.search"
+            cellTypes="configuration.search"
+            class="de.toem.impulse.dialog.sample.SearchConfigurationDialog"
+            id="de.toem.impulse.dialog.configuration.search">
+      </dialog>
+      <dialog
+            label="%dialog.label.port"
+            cellTypes="port.records"
+            class="de.toem.impulse.dialog.ports.MultiAdapterPortDialog"
+            id="de.toem.impulse.dialog.port.records">
+      </dialog>
+      <dialog
+            label="%dialog.label.port"
+            cellTypes="port.multi.pipe"
+            class="de.toem.impulse.dialog.ports.MultiPipePortDialog"
+            id="de.toem.impulse.dialog.port.multi.pipe">
+      </dialog>
+      <dialog
+            label="%dialog.label.pipe"
+            cellTypes="port.record.pipe"
+            class="de.toem.impulse.dialog.ports.PipeAdapterDialog"
+            id="de.toem.impulse.dialog.port.record.pipe">
+      </dialog>
+      <dialog
+            label="%dialog.label.socket"
+            cellTypes="port.record.socket"
+            class="de.toem.impulse.dialog.ports.TcpAdapterDialog"
+            id="de.toem.impulse.dialog.port.record.socket">
+      </dialog>
+      <dialog
+            label="%dialog.label.udp"
+            cellTypes="port.record.udp"
+            class="de.toem.impulse.dialog.ports.UdpAdapterDialog"
+            id="de.toem.impulse.dialog.port.record.udp">
+      </dialog>
+      <dialog
+            label="%dialog.label.process"
+            cellTypes="port.record.process"
+            class="de.toem.impulse.dialog.ports.ProcessAdapterDialog"
+            id="de.toem.impulse.dialog.port.record.process">
+      </dialog>
+      <dialog
+            label="%dialog.label.serializer"
+            cellTypes="impulse.serializer"
+            class="de.toem.impulse.dialog.serializer.SerializerDialog"
+            id="de.toem.impulse.dialog.serializer">
+      </dialog>
+      <dialog
+            label="%dialog.label.schriptChart"
+            cellTypes="chart.script"
+            class="de.toem.impulse.dialog.view.ScriptChartDialog"
+            id="de.toem.impulse.dialog.chart.script">
+      </dialog>
+      <dialog
+            label="%dialog.label.defaultSerial"
+            cellTypes="impulse.serializer.configuration.default"
+            class="de.toem.impulse.dialog.serializer.ReaderConfigurationDialog"
+            id="de.toem.impulse.dialog.serializer.configuration.default">
+      </dialog>
+      <dialog
+            label="%dialog.label.scriptedReader"
+            cellTypes="impulse.serializer.configuration.scripted"
+            class="de.toem.impulse.dialog.serializer.ScriptedReaderConfigurationDialog"
+            id="de.toem.impulse.dialog.serializer.configuration.scripted">
+      </dialog>
+      <dialog
+            label="%dialog.label.fluxReader"
+            cellTypes="impulse.serializer.configuration.flux"
+            class="de.toem.impulse.dialog.flux.FluxReaderConfigurationDialog"
+            id="de.toem.impulse.dialog.serializer.configuration.flux">
+      </dialog>
+      <dialog
+            label="%dialog.label.samples"
+            cellTypes="template.configuration.samples"
+            class="de.toem.impulse.dialog.view.PlotTemplateDialog"
+            id="de.toem.impulse.dialog.template.configuration.samples">
+      </dialog>
+      <dialog
+            label="%dialog.label.record"
+            cellTypes="record"
+            class="de.toem.impulse.dialog.record.RecordDialog"
+            id="de.toem.impulse.dialog.record">
+      </dialog>
+      <dialog
+            label="%dialog.label.portScope"
+            cellTypes="record.scope,record.portScope"
+            class="de.toem.impulse.dialog.record.ScopeDialog"
+            id="de.toem.impulse.dialog.record.scope">
+      </dialog>
+      <dialog
+            label="%dialog.label.signal"
+            cellTypes="record.signal"
+            class="de.toem.impulse.dialog.record.SignalDialog"
+            id="de.toem.impulse.dialog.record.signal">
+      </dialog>
+      <dialog
+            label="%dialog.label.signalProxy"
+            cellTypes="record.signalProxy"
+            class="de.toem.impulse.dialog.record.SignalProxyDialog"
+            id="de.toem.impulse.dialog.record.signalProxy">
+      </dialog>
+      
+      <dialog
+            cellTypes="persitence.impulse.subview"
+            class="de.toem.impulse.dialog.parts.SubViewPersitenceDialog"
+            id="de.toem.impulse.dialog.subview.persitence"
+            label="%dialog.label.subview.persitence">
+      </dialog>
+      <dialog
+            cellTypes="impulse.subview.samples"
+            class="de.toem.impulse.dialog.parts.SamplesViewPreferenceDialog"
+            id="de.toem.impulse.dialog.subview.samples"
+            label="%dialog.label.subview.samples">
+      </dialog>
+      <dialog
+            cellTypes="impulse.subview.samples.member"
+            class="de.toem.impulse.dialog.parts.SamplesViewMemberPreferenceDialog"
+            id="de.toem.impulse.dialog.subview.samples.member"
+            label="%dialog.label.subview.samples">
+      </dialog>      
+      <dialog
+            cellTypes="impulse.subview.sample"
+            class="de.toem.impulse.dialog.parts.SampleViewPreferenceDialog"
+            id="de.toem.impulse.dialog.subview.sample"
+            label="%dialog.label.subview.sample">
+      </dialog>
+      <dialog
+            cellTypes="impulse.subview.sample.member"
+            class="de.toem.impulse.dialog.parts.SampleViewMemberPreferenceDialog"
+            id="de.toem.impulse.dialog.subview.sample.member"
+            label="%dialog.label.subview.sample">
+      </dialog> 
+      <dialog
+            cellTypes="impulse.subview.sample.type"
+            class="de.toem.impulse.dialog.parts.SampleViewTypePreferenceDialog"
+            id="de.toem.impulse.dialog.subview.sample.type"
+            label="%dialog.label.subview.sample">
+      </dialog>
+      <dialog
+            cellTypes="wallet.resource.folder"
+            class="de.toem.impulse.dialog.wallet.ResourceFolderDialog"
+            id="de.toem.impulse.dialog.wallet.resource.folder"
+            label="%dialog.label.wallet.resource.folder">
+      </dialog>
+      <dialog
+            cellTypes="wallet.resource.tool"
+            class="de.toem.impulse.dialog.wallet.ResourceToolLauncherDialog"
+            id="de.toem.impulse.dialog.wallet.resource.tool"
+            label="%dialog.label.wallet.resource.tool">
+      </dialog>           
+<!--         
+      <dialog
+            cellTypes="impulse.subview.ports"
+            class="de.toem.impulse.dialog.parts.PortsViewPreferenceDialog"
+            id="de.toem.impulse.dialog.subview.ports"
+            label="%dialog.label.subview.ports">
+      </dialog>
+-->
+   </extension>
+
+   <extension
+         point="org.eclipse.core.expressions.definitions">
+      <definition
+            id="de.toem.impulse.definition.isRecord">
+         <with
+               variable="selection">
+            <test
+                  args="record"
+                  property="de.toem.toolkits.eclipse.properties.selection.onlyDCs">
+            </test>
+         </with>
+      </definition>
+   </extension>
+   <extension
+         point="de.toem.toolkits.ui.filter">
+      <filter
+            guide="Enter name filter using [*,?] charcters e.g. A* to match all documents starting with A."
+            label="%filter.label.signalType"
+            settings="A*"
+            description="%filter.description.signalType"
+            class="de.toem.impulse.filter.SignalTypeFilter"
+            id="de.toem.impulse.filter.signalType">
+      </filter>
+   </extension>
+  <extension
+         point="org.eclipse.ui.intro.configExtension">
+      <configExtension
+            content="intro/intro.xml"
+            configId="org.eclipse.ui.intro.universalConfig">
+      </configExtension>
+   </extension>
+     <extension
+         point="org.eclipse.help.contexts">
+      <contexts
+            file="help/help.xml"
+            plugin="de.toem.impulse.ui">
+      </contexts>
+   </extension>
+     <extension
+           point="de.toem.toolkits.pattern.instancer">
+        <instancer
+              class="de.toem.impulse.cell.parts.SamplesViewPreferencesInstancer"
+              description="%instancer.description.subview.samples"
+              id="de.toem.impulse.instancer.subview.samples"
+              label="%instancer.label.subview.samples">
+        </instancer>
+        <instancer
+              class="de.toem.impulse.cell.parts.SampleViewPreferencesInstancer"
+              description="%instancer.description.subview.sample"
+              id="de.toem.impulse.instancer.subview.sample"
+              label="%instancer.label.subview.sample">
+        </instancer>
+        <instancer
+              class="de.toem.impulse.cell.parts.PortsViewPreferencesInstancer"
+              description="%instancer.description.subview.ports"
+              id="de.toem.impulse.instancer.subview.ports"
+              label="%instancer.label.subview.ports">
+        </instancer>
+     </extension>
+     <extension
+           point="de.toem.toolkits.pattern.images">
+        <images
+              id="de.toem.impulse.images.part.script"
+              image="ri-file-edit-line">
+        </images>
+        <images
+              id="de.toem.impulse.images.part.terminal"
+              image="ri-terminal-box-line">
+        </images>
+        <images
+              id="de.toem.impulse.images.about"
+              image="icons/impulse.png">
+        </images>
+        <images
+              id="de.toem.impulse.images.wizard.wallet"
+              image="icons/wizards/de.toem.impulse.images.wizard.wallet.header.png">
+        </images>
+        <images
+              id="de.toem.impulse.images.wizard.examples"
+              image="icons/wizards/de.toem.impulse.images.wizard.examples.header.png">
+        </images>
+        <images
+              id="de.toem.impulse.images.wizard.flux"
+              image="icons/wizards/de.toem.impulse.images.wizard.flux.header.png">
+        </images>
+     </extension>
+     <extension
+           point="de.toem.toolkits.pattern.images">
+        <images
+              id="de.toem.impulse.images.widget.tab.controls"
+              image="icons/widgets/de.toem.impulse.images.widget.tab.controls.png">
+        </images>
+        <images
+              id="de.toem.impulse.images.widget.tab.table"
+              image="icons/widgets/de.toem.impulse.images.widget.tab.table.png">
+        </images>
+        
+     </extension>
+     <extension
+           point="de.toem.toolkits.pattern.images">
+        <images
+              id="de.toem.impulse.images.info.assoc"
+              image="icons/info/de.toem.impulse.images.info.assoc.png">
+        </images>
+        <images
+              id="de.toem.impulse.images.info.revassoc"
+              image="icons/info/de.toem.impulse.images.info.revassoc.png">
+        </images>
+        <images
+              id="de.toem.impulse.images.info.label"
+              image="icons/info/de.toem.impulse.images.info.label.png">
+        </images>
+        <images
+              id="de.toem.impulse.images.info.member"
+              image="icons/info/de.toem.impulse.images.info.member.png">
+        </images>
+        <images
+              id="de.toem.impulse.images.info.sample"
+              image="icons/info/de.toem.impulse.images.info.sample.png">
+        </images>
+        <images
+              id="de.toem.impulse.images.info.info"
+              image="icons/info/de.toem.impulse.images.info.info.png">
+        </images>
+        <images
+              id="de.toem.impulse.images.info.format"
+              image="icons/info/de.toem.impulse.images.info.format.png">
+        </images>
+     </extension>
+   <extension
+         point="de.toem.toolkits.pattern.images">
+      <images
+            id="de.toem.impulse.images.tab.installation"
+            image="ri-install-line">
+      </images>
+      <images
+            id="de.toem.impulse.images.tab.description"
+            image="ri-article-line">
+      </images>
+      <images
+            id="de.toem.impulse.images.tab.formats"
+            image="icons/tabs/de.toem.impulse.images.header.formats.png">
+      </images>
+      <images
+            id="de.toem.impulse.images.tab.general"
+            image="icons/tabs/de.toem.impulse.images.header.general.png">
+      </images>
+      <images
+            id="de.toem.impulse.images.tab.theme"
+            image="icons/tabs/de.toem.impulse.images.header.theme.png">
+      </images>
+
+      <images
+            id="de.toem.impulse.images.tab.launcher"
+            image="icons/tabs/de.toem.impulse.images.header.launcher.png">
+      </images>
+      
+   </extension>
+    <extension
+           point="de.toem.toolkits.pattern.images">
+        <images
+              id="de.toem.impulse.images.option.view.flat"
+              image="icons/options/de.toem.impulse.images.header.view.flat.png">
+        </images>
+        <images
+              id="de.toem.impulse.images.option.view.tree"
+              image="icons/options/de.toem.impulse.images.header.view.tree.png">
+        </images>
+        <images
+              id="de.toem.impulse.images.option.view.empty"
+              image="icons/options/de.toem.impulse.images.header.view.empty.png">
+        </images>
+        <images
+              id="de.toem.impulse.images.option.view.1"
+              image="icons/options/de.toem.impulse.images.header.view.1.png">
+        </images>
+        <images
+              id="de.toem.impulse.images.option.view.2"
+              image="icons/options/de.toem.impulse.images.header.view.2.png">
+        </images>
+        <images
+              id="de.toem.impulse.images.option.view.3"
+              image="icons/options/de.toem.impulse.images.header.view.3.png">
+        </images>
+        <images
+              id="de.toem.impulse.images.option.view.4"
+              image="icons/options/de.toem.impulse.images.header.view.4.png">
+        </images>
+        <images
+              id="de.toem.impulse.images.option.view.5"
+              image="icons/options/de.toem.impulse.images.header.view.5.png">
+        </images>
+        <images
+              id="de.toem.impulse.images.option.view.6"
+              image="icons/options/de.toem.impulse.images.header.view.6.png">
+        </images>
+        <images
+              id="de.toem.impulse.images.option.view.7"
+              image="icons/options/de.toem.impulse.images.header.view.7.png">
+        </images>
+        <images
+              id="de.toem.impulse.images.option.view.8"
+              image="icons/options/de.toem.impulse.images.header.view.8.png">
+        </images>
+        <images
+              id="de.toem.impulse.images.option.view.9"
+              image="icons/options/de.toem.impulse.images.header.view.9.png">
+        </images>
+        <images
+              id="de.toem.impulse.images.option.view.10"
+              image="icons/options/de.toem.impulse.images.header.view.10.png">
+        </images>
+        <images
+              id="de.toem.impulse.images.option.view.11"
+              image="icons/options/de.toem.impulse.images.header.view.11.png">
+        </images>
+        <images
+              id="de.toem.impulse.images.option.view.12"
+              image="icons/options/de.toem.impulse.images.header.view.12.png">
+        </images>
+        <images
+              id="de.toem.impulse.images.option.view.13"
+              image="icons/options/de.toem.impulse.images.header.view.13.png">
+        </images>
+        <images
+              id="de.toem.impulse.images.option.view.14"
+              image="icons/options/de.toem.impulse.images.header.view.14.png">
+        </images>
+        <images
+              id="de.toem.impulse.images.option.view.15"
+              image="icons/options/de.toem.impulse.images.header.view.15.png">
+        </images>
+        <images
+              id="de.toem.impulse.images.option.view.16"
+              image="icons/options/de.toem.impulse.images.header.view.16.png">
+        </images>
+        <images
+              id="de.toem.impulse.images.option.view.17"
+              image="icons/options/de.toem.impulse.images.header.view.17.png">
+        </images>
+        <images
+              id="de.toem.impulse.images.option.view.18"
+              image="icons/options/de.toem.impulse.images.header.view.18.png">
+        </images>
+
+    </extension>
+
+     <extension
+           point="de.toem.toolkits.pattern.images">
+        <images
+              id="de.toem.impulse.images.commands.help"
+              image="icons/commands/de.toem.impulse.commands.help.png">
+        </images>
+
+     </extension>   
+     <extension
+           point="de.toem.toolkits.pattern.images">     
+           <images
+            id="de.toem.impulse.images.theme.dark"
+            image="icons/themes/theme_dark.png">
+      </images>
+      <images
+            id="de.toem.impulse.images.theme.light"
+            image="icons/themes/theme_light.png">
+      </images>
+     </extension>   
+     
+     
+   <extension
+         point="de.toem.toolkits.pattern.colors">
+      <color
+            label="%colorDefinition.label.d0"
+
+            value="157,167,0"
+            id="de.toem.impulse.color.sample.0">
+      </color>
+      <color
+            label="%colorDefinition.label.d1"
+
+            value="154,192,204"
+            id="de.toem.impulse.color.sample.1">
+      </color>
+      <color
+            label="%colorDefinition.label.d2"
+
+            value="27, 161, 226"
+            id="de.toem.impulse.color.sample.2">
+      </color>
+      <color
+            label="%colorDefinition.label.d3"
+
+            value="0, 80, 239"
+            id="de.toem.impulse.color.sample.3">
+      </color>
+      <color
+            label="%colorDefinition.label.d4"
+
+            value="250, 104, 0"
+            id="de.toem.impulse.color.sample.4">
+      </color>
+      <color
+            label="%colorDefinition.label.d5"
+
+            value="216, 0, 115"
+            id="de.toem.impulse.color.sample.5">
+      </color>
+      <color
+            label="%colorDefinition.label.d6"
+
+            value="244, 114, 208"
+            id="de.toem.impulse.color.sample.6">
+      </color>
+      <color
+            label="%colorDefinition.label.d7"
+
+            value="240, 163, 10"
+            id="de.toem.impulse.color.sample.7">
+      </color>
+      <color
+            label="%colorDefinition.label.d8"
+
+            value="109, 135, 100"
+            id="de.toem.impulse.color.sample.8">
+      </color>
+      <color
+            label="%colorDefinition.label.d9"
+
+            value="100, 118, 135"
+            id="de.toem.impulse.color.sample.9">
+      </color>
+      <color
+            label="%colorDefinition.label.logic"
+
+            value="0,0,255"
+            id="de.toem.impulse.color.sample.U">
+      </color>
+      <color
+            label="%colorDefinition.label.conflict"
+
+            value="255,64,64"
+            id="de.toem.impulse.color.sample.X">
+      </color>
+      <color
+            label="%colorDefinition.label.tag1"
+
+            value="255,165,0"
+            id="de.toem.impulse.color.sample.tag1">
+      </color>   
+      <color
+            label="%colorDefinition.label.tag2"
+
+            value="250,34,0"
+            id="de.toem.impulse.color.sample.tag2">
+      </color>   
+      <color
+            label="%colorDefinition.label.tag3"
+
+            value="250,255,0"
+            id="de.toem.impulse.color.sample.tag3">
+      </color>   
+      <color
+            label="%colorDefinition.label.tag4"
+
+            value="22,254,0"
+            id="de.toem.impulse.color.sample.tag4">
+      </color>    
+      <color
+            label="%colorDefinition.label.tag5"
+
+            value="74,35,255"
+            id="de.toem.impulse.color.sample.tag5">
+      </color>   
+      <color
+            label="%colorDefinition.label.tag6"
+
+            value="60,250,255"
+            id="de.toem.impulse.color.sample.tag6">
+      </color>   
+      <color
+            label="%colorDefinition.label.tag7"
+
+            value="120,120,120"
+            id="de.toem.impulse.color.sample.tag7">
+      </color>   
+      <color
+            label="%colorDefinition.label.tag8"
+
+            value="130,130,130"
+            id="de.toem.impulse.color.sample.tag8">
+      </color>  
+                           
+      <color
+            label="%colorDefinition.label.value"
+
+            value="77,77,77"
+            id="de.toem.impulse.color.sample.text">
+      </color>
+      <color
+            label="%colorDefinition.label.background"
+
+            value="255,255,255"
+            id="de.toem.impulse.background.sample">
+      </color>
+      <color
+            label="%colorDefinition.label.foreground"
+
+            value="77,77,77"
+            id="de.toem.impulse.foreground.sample">
+      </color>
+      <color
+            label="%colorDefinition.label.scaleMajor"
+
+            value="255,255,255"
+            id="de.toem.impulse.color.scale.major">
+      </color>
+      <color
+            label="%colorDefinition.label.scaleMinor"
+
+            value="191,191,191"
+            id="de.toem.impulse.color.scale.minor">
+      </color>
+      <color
+            label="%colorDefinition.label.text"
+
+            value="255,255,255"
+            id="de.toem.impulse.color.scale.text">
+      </color>
+      <color
+            label="%colorDefinition.label.scaleBackground"
+
+            value="77,77,77"
+            id="de.toem.impulse.background.scale">
+      </color>
+      <color
+            label="%colorDefinition.label.cd0"
+
+            value="0, 0, 180"
+            id="de.toem.impulse.color.cursor.0">
+      </color>
+      <color
+            label="%colorDefinition.label.cd1"
+
+            value="0, 171, 169"
+            id="de.toem.impulse.color.cursor.1">
+      </color>
+      <color
+            label="%colorDefinition.label.cd2"
+
+            value="106, 0, 255"
+            id="de.toem.impulse.color.cursor.2">
+      </color>
+      <color
+            label="%colorDefinition.label.cd3"
+
+            value="0, 138, 0"
+            id="de.toem.impulse.color.cursor.3">
+      </color>
+      <color
+            label="%colorDefinition.label.cd4"
+
+            value="162, 0, 37"
+            id="de.toem.impulse.color.cursor.4">
+      </color>
+      <color
+            label="%colorDefinition.label.cd5"
+
+            value="229, 20, 0"
+            id="de.toem.impulse.color.cursor.5">
+      </color>
+      <color
+            label="%colorDefinition.label.cd6"
+
+            value="250, 104, 0"
+            id="de.toem.impulse.color.cursor.6">
+      </color>
+      <color
+            label="%colorDefinition.label.cd7"
+
+            value="227, 200, 0"
+            id="de.toem.impulse.color.cursor.7">
+      </color>
+      <color
+            label="%colorDefinition.label.cd8"
+
+            value="130, 90, 44"
+            id="de.toem.impulse.color.cursor.8">
+      </color>
+      <color
+            label="%colorDefinition.label.cd9"
+
+            value="118, 96, 138"
+            id="de.toem.impulse.color.cursor.9">
+      </color>
+      <color
+            label="%colorDefinition.label.color.label.text"
+
+            value="0,255,0"
+            id="de.toem.impulse.color.label.text">
+      </color>
+      <color
+            label="%colorDefinition.label.color.relation.info"
+
+            value="128,128,255"
+            id="de.toem.impulse.color.relation.info">
+      </color>
+      <color
+            label="%colorDefinition.label.foreground.relation"
+
+            value="128,128,255"
+            id="de.toem.impulse.foreground.relation">
+      </color>
+   </extension>
+
+   <extension
+         point="de.toem.toolkits.pattern.colors">
+      <font
+            label="%fontDefinition.label.value"
+
+            defaultsTo="org.eclipse.jface.dialogfont"
+            id="de.toem.impulse.font">
+      </font>
+      <font
+            label="%fontDefinition.label.valueFixed"
+
+            value="Courier-regular-11"
+            id="de.toem.impulse.font.fixed">
+      </font>
+      <font
+            label="%fontDefinition.label.marker"
+
+            value="Arial-regular-9"
+            id="de.toem.impulse.font.marker">
+      </font>
+   
+   </extension>           
+</plugin>

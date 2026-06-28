@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<contexts>
+  <context id="swv_dialog">
+    <description>The Serial Wire Viewer from ARM (Cortex-M microcontroller) provides non-intrusive real-time tracing. Usually this mechanism ist used for printfs only. The impulse SWV Tracer enhances SWV use-cases as it allows to log and trace different kind of data (real, integer, strings, logic) to be stored, visualized and analysed with impulse.  </description>
+    <topic href="https://toem.de/index.php/resources/all-documents/115-swv-reader" label="RE02 SWV Reader" /> 
+    <topic href="https://toem.de/index.php/products/impulse-embedded" label="impulse EMBEDDED" />
+    <topic href="https://www.toem.de/index.php/resources/documentation#impulseManual" label="MANUAL" />
+    <topic href="https://www.toem.de/index.php/resources/all-documents/87-02-signal-basics" label="02 Signal Basics" /> 
+    <topic href="https://toem.de/index.php/resources/all-documents/43-06-ports" label="06 Signal Ports " />
+    <topic href="https://www.toem.de/index.php/resources/all-documents/88-9-preferences" label="09 Preferences" />  
+  </context>    
+  <context id="serial_dialog">
+    <description>The serial adapter allows to read signal data from serial line devices. </description>
+    <topic href="https://toem.de/index.php/resources/all-documents/137-serial-line-adapter" label="RE04 Serial Line Adapter" /> 
+    <topic href="https://toem.de/index.php/products/impulse-embedded" label="impulse EMBEDDED" />
+    <topic href="https://www.toem.de/index.php/resources/documentation#impulseManual" label="MANUAL" />
+    <topic href="https://www.toem.de/index.php/resources/all-documents/87-02-signal-basics" label="02 Signal Basics" /> 
+    <topic href="https://toem.de/index.php/resources/all-documents/43-06-ports" label="06 Signal Ports " />
+    <topic href="https://www.toem.de/index.php/resources/all-documents/88-9-preferences" label="09 Preferences" />    
+  </context>
+  <context id="svdat_dialog">
+    <description>SEGGER's SystemView environment is a real-time recording and visualization tool that visualizes the runtime behavior of embedded applications.</description>
+    <topic href="https://toem.de/index.php/resources/all-documents/85-systemview-reader" label="RE03 SystemView Reader" /> 
+    <topic href="https://toem.de/index.php/products/impulse-embedded" label="impulse EMBEDDED" />
+    <topic href="https://www.toem.de/index.php/resources/documentation#impulseManual" label="MANUAL" />
+    <topic href="https://www.toem.de/index.php/resources/all-documents/87-02-signal-basics" label="02 Signal Basics" /> 
+    <topic href="https://toem.de/index.php/resources/all-documents/43-06-ports" label="06 Signal Ports " />
+    <topic href="https://www.toem.de/index.php/resources/all-documents/88-9-preferences" label="09 Preferences" />    
+  </context>
+</contexts> 

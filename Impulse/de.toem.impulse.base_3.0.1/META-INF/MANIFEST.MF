@@ -1,0 +1,29 @@
+Manifest-Version: 1.0
+Bundle-ManifestVersion: 2
+Bundle-Name: impulse Base
+Bundle-SymbolicName: de.toem.impulse.base;singleton:=true
+Bundle-Version: 3.0.1
+Bundle-Activator: de.toem.impulse.ImpulseBase
+Bundle-Vendor: toem.de
+Bundle-Localization: i18n/i18n
+Export-Package: de.toem.impulse,de.toem.impulse.axis,de.toem.impulse.c
+ ells.charts,de.toem.impulse.cells.ports,de.toem.impulse.cells.prefere
+ nces,de.toem.impulse.cells.record,de.toem.impulse.cells.serializer,de
+ .toem.impulse.cells.view,de.toem.impulse.cells.wallet,de.toem.impulse
+ .disclosures,de.toem.impulse.domain,de.toem.impulse.flux,de.toem.impu
+ lse.i18n,de.toem.impulse.paint,de.toem.impulse.paint.control,de.toem.
+ impulse.paint.plan,de.toem.impulse.provider,de.toem.impulse.samples,d
+ e.toem.impulse.samples.base,de.toem.impulse.samples.convert,de.toem.i
+ mpulse.samples.iterator,de.toem.impulse.samples.producer,de.toem.impu
+ lse.samples.reader,de.toem.impulse.samples.utils,de.toem.impulse.scri
+ pting,de.toem.impulse.serializer,de.toem.impulse.serializer.base,de.t
+ oem.impulse.serializer.vcd,de.toem.impulse.values
+Require-Bundle: org.eclipse.osgi,de.toem.toolkits.general;bundle-versi
+ on="[3.0.1,3.0.1]",de.toem.toolkits.general.3rdparty;bundle-version="
+ [3.0.1,3.0.1]",de.toem.toolkits.pattern;bundle-version="[3.0.1,3.0.1]
+ ",de.toem.toolkits.ui;bundle-version="[3.0.1,3.0.1]"
+Bundle-RequiredExecutionEnvironment: JavaSE-1.8
+Bundle-ActivationPolicy: lazy
+Bundle-ClassPath: .
+Import-Package: org.eclipse.swt.graphics
+

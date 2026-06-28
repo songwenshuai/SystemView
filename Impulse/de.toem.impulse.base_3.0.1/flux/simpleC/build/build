@@ -1,0 +1,11 @@
+#! /bin/bash
+
+# doc
+doxygen build/conf.doxy
+
+# zip
+zip -r flux_simpleC.zip *.c *.h examples doc -x "*.recTr" 
+
+# to github
+rm -rf ~/Repositories/github/flux/simpleC/*
+unzip flux_simpleC.zip -d ~/Repositories/github/flux/simpleC/

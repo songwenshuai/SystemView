@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<introContent>
+	<extensionContent id="de.toem.impulse"
+		style="css/intro.css" name="impulse" path="overview/@">
+
+		<group style-id="content-group" id="impulse_overview">
+			<link label="impulse" url="https://toem.de/index.php/products/impulse" id="impulseLink"
+				style-id="content-link">
+				<text>impulse is a powerful visualization and analysis workbench
+					which helps engineers to comfortably understand and debug complex
+					semiconductor and multi-core software systems.
+				</text>
+			</link>
+		</group>
+
+	</extensionContent>
+	
+	<extensionContent id="de.toem.impulse.samples"
+		style="css/intro.css" name="impulse" path="samples/@">
+
+		<group style-id="content-group" id="impulse_samples" label="impulse">
+			<link label="Import example record files for impulse"
+				url="http://org.eclipse.ui.intro/runAction?class=de.toem.impulse.wizards.ExamplesWizardAction&amp;pluginId=de.toem.impulse.ui"
+				id="import" style-id="content-link">
+				<text>Import sample files to get started!</text>
+			</link>
+		</group>
+
+	</extensionContent>
+	
+	<extensionContent id="de.toem.impulse.tutorials"
+		style="css/intro.css" name="impulse" path="tutorials/@">
+
+		<group style-id="content-group" id="impulse_tutorials" label="impulse">
+			<link label="impulse Tutorials"
+				url="https://toem.de/index.php/resources/tutorials"
+				id="tutorialLink" style-id="content-link">
+				<text>Learn to use impulse in your environment!</text>
+			</link>
+		</group>
+
+	</extensionContent>
+	
+	<!-- -
+	<extensionContent id="yakindu-tutorialsExtension"
+		style="css/style.css" alt-style="css/style.properties" name="YAKINDU Tutorials Extension" path="tutorials/@">
+		<group style-id="content-group" id="yakindu-introLink-group"
+			label="YAKINDU Statechart Tools">
+			<link label="Tutorials" url="http://statecharts.org/documentation/tutorials/"
+				id="yakindu-tutorials-link" style-id="content-link">
+				<text>Read the tutorials …</text>
+			</link>
+			<link label="User Group" url="https://groups.google.com/forum/embed/?place=forum/yakindu-user#!forum/yakindu-user"
+				id="yakindu-user-forum-link" style-id="content-link">
+				<text>Visit the SCT user group …</text>
+			</link>
+		</group>
+	</extensionContent>
+	 -->
+</introContent>
