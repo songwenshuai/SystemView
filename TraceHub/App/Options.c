@@ -575,6 +575,11 @@ int TraceHubOptions_Parse(int argc, char *argv[], TraceHubOptions_t *options) {
         }
     }
 
+    if (optind < argc) {
+        printf("Error: unexpected positional argument: %s\n", argv[optind]);
+        return -1;
+    }
+
     return 0;
 }
 

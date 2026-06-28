@@ -331,7 +331,7 @@ target_compile_definitions(${TRACEHUB_TARGET}
 # ==============================================================================
 
 install(TARGETS ${TRACEHUB_TARGET}
-    RUNTIME DESTINATION ${CMAKE_INSTALL_PREFIX}/usershell/TraceHub/bin
+    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
     COMPONENT Runtime
 )
 

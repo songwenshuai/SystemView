@@ -14,13 +14,18 @@
 # Options:
 #   --phys-addr ADDR     SharedMem physical address (hex, default: 0x10040000)
 #   --mem-size SIZE      SharedMem size (hex, default: 0x20000)
+#   --device PATH        SharedMem device path (default: /dev/shared_mem0)
 #   -p, --port PORT      SystemView TCP port (default: 19111)
 #   -c, --channel CH     SystemView RTT channel (default: 2)
 #   --rtt-timeout-ms MS  RTTCB discovery timeout in milliseconds (default: 0)
 #   --log-dir DIR        Directory for generated log and record files
 #   -k, --ko PATH        Path to SharedMem.ko (default: auto-detect)
 #   --force-reload       Unload an existing SharedMem module before loading
+#   --use-loaded-module  Use an already loaded SharedMem module
 #   -h, --help           Show this help message
+#
+# Environment:
+#   TRACEHUB_BIN         Explicit tracehub executable path
 #
 # Examples:
 #   sudo Scripts/run-sysview.sh
@@ -38,22 +43,25 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 
+. "$SCRIPT_DIR/tracehub-runner-common.sh"
+
 # ==============================================================================
 # Default Configuration
 # ==============================================================================
 
 RTT_REGION_ADDR="0x10040000"
 MEM_SIZE="0x20000"
+DEVICE_PATH="/dev/shared_mem0"
 SYSVIEW_PORT="19111"
 SYSVIEW_CHANNEL="2"
 RTT_TIMEOUT_MS="0"
 LOG_DIR=""
 KO_PATH=""
 FORCE_RELOAD=0
+USE_LOADED_MODULE=0
 MODULE_LOADED_BY_SCRIPT=0
-TRACEHUB_BIN=""
+TRACEHUB_BIN="${TRACEHUB_BIN:-}"
 TRACEHUB_PID=""
-ORIGINAL_ARGS=("$@")
 
 # ==============================================================================
 # Color Output
@@ -86,13 +94,20 @@ Connect with SEGGER SystemView application to port $SYSVIEW_PORT.
 Options:
   --phys-addr ADDR     SharedMem physical address (hex, default: $RTT_REGION_ADDR)
   --mem-size SIZE      SharedMem size (hex, default: $MEM_SIZE)
+  --device PATH        SharedMem device path (default: $DEVICE_PATH)
   -p, --port PORT      SystemView TCP port (default: $SYSVIEW_PORT)
   -c, --channel CH     SystemView RTT channel (default: $SYSVIEW_CHANNEL)
   --rtt-timeout-ms MS  RTTCB discovery timeout in milliseconds (default: $RTT_TIMEOUT_MS, 0 waits until interrupted)
   --log-dir DIR        Directory for generated log and record files
   -k, --ko PATH        Path to SharedMem.ko (default: auto-detect)
   --force-reload       Unload an existing SharedMem module before loading
+  --use-loaded-module  Use an already loaded SharedMem module
   -h, --help           Show this help message
+
+Environment:
+  TRACEHUB_BIN         Explicit tracehub executable path. If unset, this script
+                       checks $ROOT_DIR/tracehub and
+                       $ROOT_DIR/install/usershell/TraceHub/bin/tracehub.
 
 Examples:
   sudo $0
@@ -100,14 +115,6 @@ Examples:
   sudo $0 --phys-addr 0x80000000 --mem-size 0x10000
 
 EOF
-}
-
-check_root() {
-    if [ "$(id -u)" -ne 0 ]; then
-        print_error "This script requires root privileges"
-        echo "Please run with: sudo $0 $*"
-        exit 1
-    fi
 }
 
 check_linux() {
@@ -129,54 +136,9 @@ require_option_argument() {
 }
 
 load_kernel_module() {
-    local ko_path="${KO_PATH:-/lib/modules/$(uname -r)/SharedMem.ko}"
-
-    # Convert hex to decimal for module parameters
-    local module_rtt_region_addr_dec=$((RTT_REGION_ADDR))
-    local mem_size_dec=$((MEM_SIZE))
-
-    # Check if module is already loaded
-    if lsmod | grep -q "^SharedMem"; then
-        if [ "$FORCE_RELOAD" -eq 0 ]; then
-            print_error "SharedMem module is already loaded"
-            print_info "Stop the existing user or rerun with --force-reload to replace it"
-            exit 1
-        fi
-        print_info "Unloading existing SharedMem module..."
-        if ! rmmod SharedMem; then
-            print_error "Failed to unload existing SharedMem module"
-            exit 1
-        fi
-        sleep 1
-    fi
-
-    # Check if ko file exists
-    if [ ! -f "$ko_path" ]; then
-        print_error "Kernel module not found: $ko_path"
-        print_info "Please install the kernel module or specify the path with -k/--ko option"
+    if ! tracehub_runner_load_kernel_module; then
         exit 1
     fi
-
-    print_info "Loading SharedMem module (rtt_region_addr=$RTT_REGION_ADDR, rtt_region_size=$MEM_SIZE)..."
-    print_info "Kernel module: $ko_path"
-    if ! insmod "$ko_path" phys_addrs="$module_rtt_region_addr_dec" mem_sizes="$mem_size_dec"; then
-        print_error "Failed to load kernel module"
-        exit 1
-    fi
-    MODULE_LOADED_BY_SCRIPT=1
-
-    # Wait for device node
-    sleep 1
-    if [ ! -e /dev/shared_mem0 ]; then
-        print_error "Device node /dev/shared_mem0 not created"
-        if [ "$MODULE_LOADED_BY_SCRIPT" -eq 1 ]; then
-            rmmod SharedMem 2>/dev/null || true
-            MODULE_LOADED_BY_SCRIPT=0
-        fi
-        exit 1
-    fi
-
-    print_success "Kernel module loaded successfully"
 }
 
 cleanup() {
@@ -232,14 +194,9 @@ run_tracehub() {
 }
 
 resolve_tracehub() {
-    if [ -x "$ROOT_DIR/tracehub" ]; then
-        TRACEHUB_BIN="$ROOT_DIR/tracehub"
-        return
+    if ! TRACEHUB_BIN="$(tracehub_runner_resolve_executable "$ROOT_DIR")"; then
+        exit 1
     fi
-
-    print_error "tracehub executable not found"
-    print_info "Expected: $ROOT_DIR/tracehub"
-    exit 1
 }
 
 # ==============================================================================
@@ -256,6 +213,11 @@ while [[ $# -gt 0 ]]; do
         --mem-size)
             require_option_argument "$1" "${2-}"
             MEM_SIZE="$2"
+            shift 2
+            ;;
+        --device)
+            require_option_argument "$1" "${2-}"
+            DEVICE_PATH="$2"
             shift 2
             ;;
         -p|--port)
@@ -287,6 +249,10 @@ while [[ $# -gt 0 ]]; do
             FORCE_RELOAD=1
             shift
             ;;
+        --use-loaded-module)
+            USE_LOADED_MODULE=1
+            shift
+            ;;
         -h|--help)
             show_usage
             exit 0
@@ -304,7 +270,6 @@ done
 # ==============================================================================
 
 check_linux
-check_root "${ORIGINAL_ARGS[@]}"
 
 # Resolve executable before loading the kernel module
 resolve_tracehub
@@ -319,7 +284,7 @@ load_kernel_module
 TRACEHUB_ARGS=(
     "--addr" "$RTT_REGION_ADDR"
     "--size" "$MEM_SIZE"
-    "--shm" "/dev/shared_mem0"
+    "--shm" "$DEVICE_PATH"
     "--rtt-timeout-ms" "$RTT_TIMEOUT_MS"
     "--systemview-port" "$SYSVIEW_PORT"
     "--systemview-channel" "$SYSVIEW_CHANNEL"
