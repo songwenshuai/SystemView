@@ -46,11 +46,15 @@ visible unless their stack matches one of those host graphics frames.
 SEGGER support layout:
 ======================
 Shared SEGGER RTT and SystemView core source files are stored in ../../SEGGER.
-Simulation-specific SEGGER configuration headers, platform configuration
-sources and the embOS SystemView interface are stored in the local SEGGER
-directory so each board support package can own its target configuration.
+Simulation-specific SEGGER configuration headers, the generic embOS
+SystemView configuration source, platform configuration sources and the embOS
+SystemView interface are stored in the local SEGGER directory so each board
+support package can own its target configuration.
 The Simulation CMake project includes the local SEGGER directory before the
-shared SEGGER directory.
+shared SEGGER directory. The 32-bit simulation target links the host-specific
+SystemView configuration source for the selected host platform, so
+SEGGER_SYSVIEW_Config_embOS.c remains a local board-support configuration file
+and is not linked beside the Win32 or POSIX configuration source.
 
 Legacy Eclipse MinGW notes:
 ===========================

@@ -86,11 +86,18 @@ get_filename_component(EMBOS_ROOT
     "${CMAKE_CURRENT_SOURCE_DIR}/../.."
     ABSOLUTE
 )
-set(EMBOS_CONFIG_DIR "${EMBOS_ROOT}/Config")
-set(EMBOS_INC_DIR    "${EMBOS_ROOT}/Inc")
-set(EMBOS_APPLICATION_DIR "${EMBOS_ROOT}/Application")
-set(EMBOS_SEGGER_DIR      "${EMBOS_ROOT}/SEGGER")
-set(EMBOS_SIM_SEGGER_DIR  "${CMAKE_CURRENT_SOURCE_DIR}/SEGGER")
+set(EMBOS_CONFIG_DIR                       "${EMBOS_ROOT}/Config")
+set(EMBOS_INC_DIR                          "${EMBOS_ROOT}/Inc")
+set(EMBOS_APPLICATION_DIR                  "${EMBOS_ROOT}/Application")
+set(EMBOS_SEGGER_DIR                       "${EMBOS_ROOT}/SEGGER")
+set(EMBOS_SIM_SEGGER_DIR                   "${CMAKE_CURRENT_SOURCE_DIR}/SEGGER")
+set(EMBOS_SEGGER_RTT_SOURCE                "${EMBOS_SEGGER_DIR}/SEGGER_RTT.c")
+set(EMBOS_SEGGER_RTT_PRINTF_SOURCE         "${EMBOS_SEGGER_DIR}/SEGGER_RTT_printf.c")
+set(EMBOS_SEGGER_SYSVIEW_SOURCE            "${EMBOS_SEGGER_DIR}/SEGGER_SYSVIEW.c")
+set(EMBOS_SIM_SYSVIEW_EMBOS_SOURCE         "${EMBOS_SIM_SEGGER_DIR}/SEGGER_SYSVIEW_embOS.c")
+set(EMBOS_SIM_SYSVIEW_CONFIG_SOURCE        "${EMBOS_SIM_SEGGER_DIR}/SEGGER_SYSVIEW_Config_embOS.c")
+set(EMBOS_SIM_SYSVIEW_WIN32_CONFIG_SOURCE  "${EMBOS_SIM_SEGGER_DIR}/SEGGER_SYSVIEW_Config_embOS_Win32.c")
+set(EMBOS_SIM_SYSVIEW_POSIX_CONFIG_SOURCE  "${EMBOS_SIM_SEGGER_DIR}/SEGGER_SYSVIEW_Config_embOS_Posix.c")
 
 set(EMBOS_SIM_LIBRARY_MODE "" CACHE STRING
     "embOS library mode suffix: xr, r, s, sp, d, dp or dt")
@@ -132,6 +139,22 @@ foreach(_dir IN ITEMS
         "${EMBOS_SIM_SEGGER_DIR}")
     if(NOT IS_DIRECTORY "${_dir}")
         message(FATAL_ERROR "Required embOS directory not found: ${_dir}")
+    endif()
+endforeach()
+
+foreach(_file IN ITEMS
+        "${EMBOS_SEGGER_RTT_SOURCE}"
+        "${EMBOS_SEGGER_RTT_PRINTF_SOURCE}"
+        "${EMBOS_SEGGER_SYSVIEW_SOURCE}"
+        "${EMBOS_SIM_SEGGER_DIR}/SEGGER_RTT_Conf.h"
+        "${EMBOS_SIM_SEGGER_DIR}/SEGGER_SYSVIEW_Conf.h"
+        "${EMBOS_SIM_SYSVIEW_EMBOS_SOURCE}"
+        "${EMBOS_SIM_SEGGER_DIR}/SEGGER_SYSVIEW_embOS.h"
+        "${EMBOS_SIM_SYSVIEW_CONFIG_SOURCE}"
+        "${EMBOS_SIM_SYSVIEW_WIN32_CONFIG_SOURCE}"
+        "${EMBOS_SIM_SYSVIEW_POSIX_CONFIG_SOURCE}")
+    if(NOT EXISTS "${_file}")
+        message(FATAL_ERROR "Required SEGGER file not found: ${_file}")
     endif()
 endforeach()
 
@@ -593,18 +616,18 @@ endif()
 
 if(NOT EMBOS_SIM_IS_64_BIT)
     list(APPEND EMBOS_SIM_SEGGER_SOURCES
-        "${EMBOS_SEGGER_DIR}/SEGGER_RTT.c"
-        "${EMBOS_SEGGER_DIR}/SEGGER_RTT_printf.c"
-        "${EMBOS_SEGGER_DIR}/SEGGER_SYSVIEW.c"
-        "${EMBOS_SIM_SEGGER_DIR}/SEGGER_SYSVIEW_embOS.c"
+        "${EMBOS_SEGGER_RTT_SOURCE}"
+        "${EMBOS_SEGGER_RTT_PRINTF_SOURCE}"
+        "${EMBOS_SEGGER_SYSVIEW_SOURCE}"
+        "${EMBOS_SIM_SYSVIEW_EMBOS_SOURCE}"
     )
     if(EMBOS_SIM_HOST_WINDOWS)
         list(APPEND EMBOS_SIM_SEGGER_SOURCES
-            "${EMBOS_SIM_SEGGER_DIR}/SEGGER_SYSVIEW_Config_embOS_Win32.c"
+            "${EMBOS_SIM_SYSVIEW_WIN32_CONFIG_SOURCE}"
         )
     elseif(EMBOS_SIM_HOST_LINUX)
         list(APPEND EMBOS_SIM_SEGGER_SOURCES
-            "${EMBOS_SIM_SEGGER_DIR}/SEGGER_SYSVIEW_Config_embOS_Posix.c"
+            "${EMBOS_SIM_SYSVIEW_POSIX_CONFIG_SOURCE}"
         )
     endif()
 endif()
