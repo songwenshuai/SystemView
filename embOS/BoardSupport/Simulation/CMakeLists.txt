@@ -90,7 +90,7 @@ set(EMBOS_CONFIG_DIR "${EMBOS_ROOT}/Config")
 set(EMBOS_INC_DIR    "${EMBOS_ROOT}/Inc")
 set(EMBOS_APPLICATION_DIR "${EMBOS_ROOT}/Application")
 set(EMBOS_SEGGER_DIR      "${EMBOS_ROOT}/SEGGER")
-set(EMBOS_SIM_SEGGER_CONFIG_DIR "${CMAKE_CURRENT_SOURCE_DIR}/SEGGER")
+set(EMBOS_SIM_SEGGER_DIR  "${CMAKE_CURRENT_SOURCE_DIR}/SEGGER")
 
 set(EMBOS_SIM_LIBRARY_MODE "" CACHE STRING
     "embOS library mode suffix: xr, r, s, sp, d, dp or dt")
@@ -129,7 +129,7 @@ foreach(_dir IN ITEMS
         "${EMBOS_INC_DIR}"
         "${EMBOS_APPLICATION_DIR}"
         "${EMBOS_SEGGER_DIR}"
-        "${EMBOS_SIM_SEGGER_CONFIG_DIR}")
+        "${EMBOS_SIM_SEGGER_DIR}")
     if(NOT IS_DIRECTORY "${_dir}")
         message(FATAL_ERROR "Required embOS directory not found: ${_dir}")
     endif()
@@ -596,15 +596,15 @@ if(NOT EMBOS_SIM_IS_64_BIT)
         "${EMBOS_SEGGER_DIR}/SEGGER_RTT.c"
         "${EMBOS_SEGGER_DIR}/SEGGER_RTT_printf.c"
         "${EMBOS_SEGGER_DIR}/SEGGER_SYSVIEW.c"
-        "${EMBOS_SEGGER_DIR}/SEGGER_SYSVIEW_embOS.c"
+        "${EMBOS_SIM_SEGGER_DIR}/SEGGER_SYSVIEW_embOS.c"
     )
     if(EMBOS_SIM_HOST_WINDOWS)
         list(APPEND EMBOS_SIM_SEGGER_SOURCES
-            "${EMBOS_SEGGER_DIR}/SEGGER_SYSVIEW_Config_embOS_Win32.c"
+            "${EMBOS_SIM_SEGGER_DIR}/SEGGER_SYSVIEW_Config_embOS_Win32.c"
         )
     elseif(EMBOS_SIM_HOST_LINUX)
         list(APPEND EMBOS_SIM_SEGGER_SOURCES
-            "${EMBOS_SEGGER_DIR}/SEGGER_SYSVIEW_Config_embOS_Posix.c"
+            "${EMBOS_SIM_SEGGER_DIR}/SEGGER_SYSVIEW_Config_embOS_Posix.c"
         )
     endif()
 endif()
@@ -729,7 +729,7 @@ target_include_directories(Start PRIVATE
     "${EMBOS_INC_DIR}"
     "${EMBOS_APPLICATION_DIR}"
     "${CMAKE_CURRENT_SOURCE_DIR}/Setup"
-    "${EMBOS_SIM_SEGGER_CONFIG_DIR}"
+    "${EMBOS_SIM_SEGGER_DIR}"
     "${EMBOS_SEGGER_DIR}"
     ${EMBOS_SIM_PLATFORM_INCLUDE_DIRS}
 )

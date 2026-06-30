@@ -45,8 +45,9 @@ visible unless their stack matches one of those host graphics frames.
 
 SEGGER support layout:
 ======================
-Shared SEGGER RTT and SystemView source files are stored in ../../SEGGER.
-Simulation-specific SEGGER configuration headers remain in the local SEGGER
+Shared SEGGER RTT and SystemView core source files are stored in ../../SEGGER.
+Simulation-specific SEGGER configuration headers, platform configuration
+sources and the embOS SystemView interface are stored in the local SEGGER
 directory so each board support package can own its target configuration.
 The Simulation CMake project includes the local SEGGER directory before the
 shared SEGGER directory.
