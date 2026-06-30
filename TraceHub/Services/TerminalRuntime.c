@@ -90,6 +90,7 @@ void _Terminal_CloseClient(Terminal_State_t *pState) {
     SYS_MutexUnlock(&pState->Lock);
 
     if (hClient != SYS_SOCKET_INVALID_HANDLE) {
+        SYS_SOCKET_Shutdown(hClient, SYS_SOCKET_SHUT_RDWR);
         SYS_SOCKET_Close(hClient);
     }
 }
@@ -198,6 +199,7 @@ void _Terminal_ServiceThread(void *pArg) {
             Result = SYS_SOCKET_IsReady(hClient);
             if (Result != 1) {
                 Log_Warn("Terminal: failed to connect\n");
+                SYS_SOCKET_Shutdown(hClient, SYS_SOCKET_SHUT_RDWR);
                 SYS_SOCKET_Close(hClient);
                 SYS_Sleep(1000);
                 continue;
@@ -210,6 +212,7 @@ void _Terminal_ServiceThread(void *pArg) {
             //
             Result = TelnetCodec_SendNegotiation(hClient);
             if (Result != 0) {
+                SYS_SOCKET_Shutdown(hClient, SYS_SOCKET_SHUT_RDWR);
                 SYS_SOCKET_Close(hClient);
                 continue;
             }

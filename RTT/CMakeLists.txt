@@ -32,13 +32,24 @@ project(SystemViewRTTTests
 
 option(RTT_ENABLE_COVERAGE     "Build RTT unit tests with compiler coverage instrumentation." OFF)
 option(RTT_WARNINGS_AS_ERRORS  "Treat RTT unit-test warnings as errors." OFF)
-option(RTT_BUILD_EXAMPLES      "Build RTT example applications." ON)
+
+if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
+  set(RTT_STANDALONE ON)
+else()
+  set(RTT_STANDALONE OFF)
+endif()
+
+option(RTT_BUILD_LIBRARY       "Build the reusable SEGGER RTT library target." ON)
+option(RTT_BUILD_TESTS         "Build RTT unit tests." ${RTT_STANDALONE})
+option(RTT_BUILD_EXAMPLES      "Build RTT example applications." ${RTT_STANDALONE})
 
 set(RTT_TEST_BUFFER_SIZE_UP        "16"  CACHE STRING "Unit-test up-buffer size in bytes.")
 set(RTT_TEST_BUFFER_SIZE_DOWN      "16"  CACHE STRING "Unit-test down-buffer size in bytes.")
 set(RTT_TEST_MAX_NUM_UP_BUFFERS    "3"   CACHE STRING "Unit-test maximum number of up-buffers.")
 set(RTT_TEST_MAX_NUM_DOWN_BUFFERS  "3"   CACHE STRING "Unit-test maximum number of down-buffers.")
 set(RTT_TEST_PRINTF_BUFFER_SIZE    "128" CACHE STRING "Unit-test SEGGER_RTT_printf staging buffer size.")
+set(RTT_CONFIG_DIR                 "${CMAKE_CURRENT_SOURCE_DIR}/Config" CACHE PATH
+    "Directory containing SEGGER_RTT_Conf.h for the reusable RTT library target.")
 
 ######################################################################
 #
@@ -48,17 +59,43 @@ set(RTT_TEST_PRINTF_BUFFER_SIZE    "128" CACHE STRING "Unit-test SEGGER_RTT_prin
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
+if(RTT_STANDALONE AND NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
   message(STATUS "No build type specified -- defaulting to Debug")
   set(CMAKE_BUILD_TYPE "Debug" CACHE STRING "Build type" FORCE)
   set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "Debug" "Release" "MinSizeRel" "RelWithDebInfo")
 endif()
 
-set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+if(RTT_STANDALONE)
+  set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
+  set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
+  set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+endif()
 
-enable_testing()
+if(RTT_BUILD_TESTS)
+  enable_testing()
+endif()
+
+######################################################################
+#
+#       Reusable RTT library target
+#
+######################################################################
+
+if(RTT_BUILD_LIBRARY AND NOT TARGET SEGGER_RTT)
+  add_library(SEGGER_RTT STATIC
+    RTT/SEGGER_RTT.c
+    RTT/SEGGER_RTT_printf.c
+  )
+
+  target_include_directories(SEGGER_RTT
+    PUBLIC
+      "${RTT_CONFIG_DIR}"
+      "${CMAKE_CURRENT_SOURCE_DIR}/RTT"
+  )
+
+  target_compile_features(SEGGER_RTT PUBLIC c_std_99)
+  add_library(SEGGER::RTT ALIAS SEGGER_RTT)
+endif()
 
 ######################################################################
 #
@@ -66,36 +103,38 @@ enable_testing()
 #
 ######################################################################
 
-add_library(rtt_test_options INTERFACE)
-add_library(rtt_test_instrumentation INTERFACE)
+if(RTT_BUILD_TESTS OR RTT_BUILD_EXAMPLES)
+  add_library(rtt_test_options INTERFACE)
+  add_library(rtt_test_instrumentation INTERFACE)
 
-target_link_libraries(rtt_test_options INTERFACE rtt_test_instrumentation)
+  target_link_libraries(rtt_test_options INTERFACE rtt_test_instrumentation)
 
-if(MSVC)
-  target_compile_options(rtt_test_options INTERFACE
-    /W4
-    $<$<BOOL:${RTT_WARNINGS_AS_ERRORS}>:/WX>
-    "/DSEGGER_RTT_LOCK()="
-    "/DSEGGER_RTT_UNLOCK()="
-  )
-else()
-  target_compile_options(rtt_test_options INTERFACE
-    -Wall
-    -Wextra
-    -Wpedantic
-    $<$<BOOL:${RTT_WARNINGS_AS_ERRORS}>:-Werror>
-    "-DSEGGER_RTT_LOCK()="
-    "-DSEGGER_RTT_UNLOCK()="
-  )
-endif()
-
-if(RTT_ENABLE_COVERAGE)
-  if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang|AppleClang")
-    target_compile_options(rtt_test_instrumentation INTERFACE -O0 -g --coverage)
-    target_link_options(rtt_test_instrumentation INTERFACE --coverage)
-    message(STATUS "Coverage: ENABLED")
+  if(MSVC)
+    target_compile_options(rtt_test_options INTERFACE
+      /W4
+      $<$<BOOL:${RTT_WARNINGS_AS_ERRORS}>:/WX>
+      "/DSEGGER_RTT_LOCK()="
+      "/DSEGGER_RTT_UNLOCK()="
+    )
   else()
-    message(WARNING "RTT_ENABLE_COVERAGE is only configured for GCC/Clang-compatible compilers.")
+    target_compile_options(rtt_test_options INTERFACE
+      -Wall
+      -Wextra
+      -Wpedantic
+      $<$<BOOL:${RTT_WARNINGS_AS_ERRORS}>:-Werror>
+      "-DSEGGER_RTT_LOCK()="
+      "-DSEGGER_RTT_UNLOCK()="
+    )
+  endif()
+
+  if(RTT_ENABLE_COVERAGE)
+    if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang|AppleClang")
+      target_compile_options(rtt_test_instrumentation INTERFACE -O0 -g --coverage)
+      target_link_options(rtt_test_instrumentation INTERFACE --coverage)
+      message(STATUS "Coverage: ENABLED")
+    else()
+      message(WARNING "RTT_ENABLE_COVERAGE is only configured for GCC/Clang-compatible compilers.")
+    endif()
   endif()
 endif()
 
@@ -105,14 +144,16 @@ endif()
 #
 ######################################################################
 
-add_library(rtt_example_options INTERFACE)
+if(RTT_BUILD_EXAMPLES)
+  add_library(rtt_example_options INTERFACE)
 
-target_link_libraries(rtt_example_options INTERFACE rtt_test_options)
+  target_link_libraries(rtt_example_options INTERFACE rtt_test_options)
 
-if(MSVC)
-  target_compile_options(rtt_example_options INTERFACE /wd4326)
-else()
-  target_compile_options(rtt_example_options INTERFACE -Wno-main -Wno-main-return-type)
+  if(MSVC)
+    target_compile_options(rtt_example_options INTERFACE /wd4326)
+  else()
+    target_compile_options(rtt_example_options INTERFACE -Wno-main -Wno-main-return-type)
+  endif()
 endif()
 
 ######################################################################
@@ -169,19 +210,21 @@ endfunction()
 #
 ######################################################################
 
-_AddRTTPublicAPITest(SEGGER_RTT_PublicAPI_Test ${RTT_TEST_PRINTF_BUFFER_SIZE})
-_AddRTTPublicAPITest(SEGGER_RTT_PublicAPI_ByteLoop_Test ${RTT_TEST_PRINTF_BUFFER_SIZE})
-_AddRTTPublicAPITest(SEGGER_RTT_PublicAPI_PrintfSmallBuffer_Test 4)
+if(RTT_BUILD_TESTS)
+  _AddRTTPublicAPITest(SEGGER_RTT_PublicAPI_Test ${RTT_TEST_PRINTF_BUFFER_SIZE})
+  _AddRTTPublicAPITest(SEGGER_RTT_PublicAPI_ByteLoop_Test ${RTT_TEST_PRINTF_BUFFER_SIZE})
+  _AddRTTPublicAPITest(SEGGER_RTT_PublicAPI_PrintfSmallBuffer_Test 4)
 
-target_compile_definitions(SEGGER_RTT_PublicAPI_ByteLoop_Test
-  PRIVATE
-    SEGGER_RTT_MEMCPY_USE_BYTELOOP=1
-)
+  target_compile_definitions(SEGGER_RTT_PublicAPI_ByteLoop_Test
+    PRIVATE
+      SEGGER_RTT_MEMCPY_USE_BYTELOOP=1
+  )
 
-target_compile_definitions(SEGGER_RTT_PublicAPI_PrintfSmallBuffer_Test
-  PRIVATE
-    TEST_RTT_PRINTF_SMALL_BUFFER=1
-)
+  target_compile_definitions(SEGGER_RTT_PublicAPI_PrintfSmallBuffer_Test
+    PRIVATE
+      TEST_RTT_PRINTF_SMALL_BUFFER=1
+  )
+endif()
 
 ######################################################################
 #
@@ -233,17 +276,21 @@ endif()
 #
 ######################################################################
 
-message(STATUS "")
-message(STATUS "=== SEGGER RTT Unit Test Configuration ===")
-message(STATUS "Version:              ${PROJECT_VERSION}")
-message(STATUS "Build type:           ${CMAKE_BUILD_TYPE}")
-message(STATUS "Coverage:             ${RTT_ENABLE_COVERAGE}")
-message(STATUS "Warnings as errors:   ${RTT_WARNINGS_AS_ERRORS}")
-message(STATUS "Build examples:       ${RTT_BUILD_EXAMPLES}")
-message(STATUS "Up buffer size:       ${RTT_TEST_BUFFER_SIZE_UP}")
-message(STATUS "Down buffer size:     ${RTT_TEST_BUFFER_SIZE_DOWN}")
-message(STATUS "Up buffers:           ${RTT_TEST_MAX_NUM_UP_BUFFERS}")
-message(STATUS "Down buffers:         ${RTT_TEST_MAX_NUM_DOWN_BUFFERS}")
-message(STATUS "Printf buffer size:   ${RTT_TEST_PRINTF_BUFFER_SIZE}")
-message(STATUS "==========================================")
-message(STATUS "")
+if(RTT_STANDALONE)
+  message(STATUS "")
+  message(STATUS "=== SEGGER RTT Unit Test Configuration ===")
+  message(STATUS "Version:              ${PROJECT_VERSION}")
+  message(STATUS "Build type:           ${CMAKE_BUILD_TYPE}")
+  message(STATUS "Coverage:             ${RTT_ENABLE_COVERAGE}")
+  message(STATUS "Warnings as errors:   ${RTT_WARNINGS_AS_ERRORS}")
+  message(STATUS "Build tests:          ${RTT_BUILD_TESTS}")
+  message(STATUS "Build examples:       ${RTT_BUILD_EXAMPLES}")
+  message(STATUS "Config directory:     ${RTT_CONFIG_DIR}")
+  message(STATUS "Up buffer size:       ${RTT_TEST_BUFFER_SIZE_UP}")
+  message(STATUS "Down buffer size:     ${RTT_TEST_BUFFER_SIZE_DOWN}")
+  message(STATUS "Up buffers:           ${RTT_TEST_MAX_NUM_UP_BUFFERS}")
+  message(STATUS "Down buffers:         ${RTT_TEST_MAX_NUM_DOWN_BUFFERS}")
+  message(STATUS "Printf buffer size:   ${RTT_TEST_PRINTF_BUFFER_SIZE}")
+  message(STATUS "==========================================")
+  message(STATUS "")
+endif()

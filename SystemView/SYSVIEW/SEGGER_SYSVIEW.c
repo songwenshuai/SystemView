@@ -103,7 +103,6 @@ Additional information:
 #define SEGGER_SYSVIEW_C  // For EXTERN statements in SEGGER_SYSVIEW.h
 
 #include <string.h>
-#include <stdlib.h>
 #include <stdarg.h>
 #include "SEGGER_SYSVIEW_Int.h"
 #include "SEGGER_RTT.h"
@@ -246,6 +245,19 @@ static U8                     _NumModules;
                                    *pSysviewPointer++ = (U8)SysViewData;            \
                                    pDest = pSysviewPointer;                         \
                                  };
+
+#define ENCODE_ADDR(pDest, Value) {                                                  \
+                                    U8* pSysviewPointer;                             \
+                                    uintptr_t SysViewData;                           \
+                                    pSysviewPointer = pDest;                         \
+                                    SysViewData = (uintptr_t)Value;                  \
+                                    while(SysViewData > 0x7Fu) {                     \
+                                      *pSysviewPointer++ = (U8)(SysViewData | 0x80u);\
+                                      SysViewData >>= 7;                             \
+                                    };                                               \
+                                    *pSysviewPointer++ = (U8)SysViewData;            \
+                                    pDest = pSysviewPointer;                         \
+                                  };
 
 #if (SEGGER_SYSVIEW_USE_STATIC_BUFFER == 1)
 static U8 _aPacket[SEGGER_SYSVIEW_MAX_PACKET_SIZE];
@@ -596,12 +608,12 @@ static void _SendSyncInfo(void) {
   {
     U8* pPayload;
     U8* pPayloadStart;
-    RECORD_START(SEGGER_SYSVIEW_INFO_SIZE + 4 * SEGGER_SYSVIEW_QUANTA_U32);
+    RECORD_START(SEGGER_SYSVIEW_INFO_SIZE + 3 * SEGGER_SYSVIEW_QUANTA_U32 + SEGGER_SYSVIEW_QUANTA_ADDR);
     //
     pPayload = pPayloadStart;
     ENCODE_U32(pPayload, _SYSVIEW_Globals.MainContext.SysFreq);
     ENCODE_U32(pPayload, _SYSVIEW_Globals.MainContext.CPUFreq);
-    ENCODE_U32(pPayload, _SYSVIEW_Globals.MainContext.RAMBaseAddress);
+    ENCODE_ADDR(pPayload, _SYSVIEW_Globals.MainContext.RAMBaseAddress);
     ENCODE_U32(pPayload, SEGGER_SYSVIEW_ID_SHIFT);
     _SendPacket(pPayloadStart, pPayload, SYSVIEW_EVTID_INIT);
     RECORD_END();
@@ -1354,7 +1366,7 @@ void _SendStartEvent(SEGGER_SYSVIEW_CORE_CONTEXT* pContext) {
 void _SendInitEvent(SEGGER_SYSVIEW_CORE_CONTEXT* pContext) {
   U8* pPayload;
   U8* pPayloadStart;
-  U8 aPacket[SEGGER_SYSVIEW_INFO_SIZE + 4 * SEGGER_SYSVIEW_QUANTA_U32];
+  U8 aPacket[SEGGER_SYSVIEW_INFO_SIZE + 3 * SEGGER_SYSVIEW_QUANTA_U32 + SEGGER_SYSVIEW_QUANTA_ADDR];
   unsigned int NumBytes;
   //
   SEGGER_SYSVIEW_LOCK();
@@ -1362,7 +1374,7 @@ void _SendInitEvent(SEGGER_SYSVIEW_CORE_CONTEXT* pContext) {
   pPayload = pPayloadStart;
   ENCODE_U32(pPayload, pContext->SysFreq);
   ENCODE_U32(pPayload, pContext->CPUFreq);
-  ENCODE_U32(pPayload, pContext->RAMBaseAddress);
+  ENCODE_ADDR(pPayload, pContext->RAMBaseAddress);
   ENCODE_U32(pPayload, SEGGER_SYSVIEW_ID_SHIFT);
   //
   // Prepend num bytes.
@@ -1567,7 +1579,7 @@ void SEGGER_SYSVIEW_InitAdditionalBuffer(SEGGER_SYSVIEW_CORE_CONTEXT* pContext, 
 *  Parameters
 *    RAMBaseAddress - Lowest RAM Address. (i.e. 0x20000000 on most Cortex-M)
 */
-void SEGGER_SYSVIEW_SetRAMBase(U32 RAMBaseAddress) {
+void SEGGER_SYSVIEW_SetRAMBase(uintptr_t RAMBaseAddress) {
   _SYSVIEW_Globals.MainContext.RAMBaseAddress = RAMBaseAddress;
 }
 
@@ -2084,12 +2096,12 @@ int SEGGER_SYSVIEW_GetChannelID(void) {
 void SEGGER_SYSVIEW_GetSysDesc(void) {
   U8* pPayload;
   U8* pPayloadStart;
-  RECORD_START(SEGGER_SYSVIEW_INFO_SIZE + 4 * SEGGER_SYSVIEW_QUANTA_U32);
+  RECORD_START(SEGGER_SYSVIEW_INFO_SIZE + 3 * SEGGER_SYSVIEW_QUANTA_U32 + SEGGER_SYSVIEW_QUANTA_ADDR);
   //
   pPayload = pPayloadStart;
   ENCODE_U32(pPayload, _SYSVIEW_Globals.MainContext.SysFreq);
   ENCODE_U32(pPayload, _SYSVIEW_Globals.MainContext.CPUFreq);
-  ENCODE_U32(pPayload, _SYSVIEW_Globals.MainContext.RAMBaseAddress);
+  ENCODE_ADDR(pPayload, _SYSVIEW_Globals.MainContext.RAMBaseAddress);
   ENCODE_U32(pPayload, SEGGER_SYSVIEW_ID_SHIFT);
   _SendPacket(pPayloadStart, pPayload, SYSVIEW_EVTID_INIT);
   RECORD_END();
@@ -2112,17 +2124,17 @@ void SEGGER_SYSVIEW_GetSysDesc(void) {
 void SEGGER_SYSVIEW_SendTaskInfo(const SEGGER_SYSVIEW_TASKINFO *pInfo) {
   U8* pPayload;
   U8* pPayloadStart;
-  RECORD_START(SEGGER_SYSVIEW_INFO_SIZE + SEGGER_SYSVIEW_QUANTA_U32 + 1 + 32);
+  RECORD_START(SEGGER_SYSVIEW_INFO_SIZE + 2 * SEGGER_SYSVIEW_QUANTA_ADDR + 2 * SEGGER_SYSVIEW_QUANTA_U32 + 1 + 32);
   //
   pPayload = pPayloadStart;
-  ENCODE_U32(pPayload, SHRINK_ID(pInfo->TaskID));
+  ENCODE_ADDR(pPayload, SHRINK_ID(pInfo->TaskID));
   ENCODE_U32(pPayload, pInfo->Prio);
   pPayload = _EncodeStr(pPayload, pInfo->sName, 32);
   _SendPacket(pPayloadStart, pPayload, SYSVIEW_EVTID_TASK_INFO);
   //
   pPayload = pPayloadStart;
-  ENCODE_U32(pPayload, SHRINK_ID(pInfo->TaskID));
-  ENCODE_U32(pPayload, pInfo->StackBase);
+  ENCODE_ADDR(pPayload, SHRINK_ID(pInfo->TaskID));
+  ENCODE_ADDR(pPayload, pInfo->StackBase);
   ENCODE_U32(pPayload, pInfo->StackSize);
   ENCODE_U32(pPayload, pInfo->StackUsage);
   _SendPacket(pPayloadStart, pPayload, SYSVIEW_EVTID_STACK_INFO);
@@ -2144,11 +2156,11 @@ void SEGGER_SYSVIEW_SendTaskInfo(const SEGGER_SYSVIEW_TASKINFO *pInfo) {
 void SEGGER_SYSVIEW_SendStackInfo(const SEGGER_SYSVIEW_STACKINFO *pInfo) {
   U8* pPayload;
   U8* pPayloadStart;
-  RECORD_START(SEGGER_SYSVIEW_INFO_SIZE + 4 * SEGGER_SYSVIEW_QUANTA_U32);
+  RECORD_START(SEGGER_SYSVIEW_INFO_SIZE + 2 * SEGGER_SYSVIEW_QUANTA_ADDR + 2 * SEGGER_SYSVIEW_QUANTA_U32);
   //
   pPayload = pPayloadStart;
-  ENCODE_U32(pPayload, SHRINK_ID(pInfo->TaskID));
-  ENCODE_U32(pPayload, pInfo->StackBase);
+  ENCODE_ADDR(pPayload, SHRINK_ID(pInfo->TaskID));
+  ENCODE_ADDR(pPayload, pInfo->StackBase);
   ENCODE_U32(pPayload, pInfo->StackSize);
   ENCODE_U32(pPayload, pInfo->StackUsage);
   _SendPacket(pPayloadStart, pPayload, SYSVIEW_EVTID_STACK_INFO);
@@ -2337,13 +2349,13 @@ void SEGGER_SYSVIEW_RecordExitISRToScheduler(void) {
 *  Parameters
 *    TimerId - Id of the timer which starts.
 */
-void SEGGER_SYSVIEW_RecordEnterTimer(U32 TimerId) {
+void SEGGER_SYSVIEW_RecordEnterTimer(uintptr_t TimerId) {
   U8* pPayload;
   U8* pPayloadStart;
-  RECORD_START(SEGGER_SYSVIEW_INFO_SIZE + SEGGER_SYSVIEW_QUANTA_U32);
+  RECORD_START(SEGGER_SYSVIEW_INFO_SIZE + SEGGER_SYSVIEW_QUANTA_ADDR);
   //
   pPayload = pPayloadStart;
-  ENCODE_U32(pPayload, SHRINK_ID(TimerId));
+  ENCODE_ADDR(pPayload, SHRINK_ID(TimerId));
   _SendPacket(pPayloadStart, pPayload, SYSVIEW_EVTID_TIMER_ENTER);
   RECORD_END();
 }
@@ -2433,14 +2445,14 @@ void SEGGER_SYSVIEW_OnIdle(void) {
 *  Parameters
 *    TaskId        - Task ID of created task.
 */
-void SEGGER_SYSVIEW_OnTaskCreate(U32 TaskId) {
+void SEGGER_SYSVIEW_OnTaskCreate(uintptr_t TaskId) {
   U8* pPayload;
   U8* pPayloadStart;
-  RECORD_START(SEGGER_SYSVIEW_INFO_SIZE + SEGGER_SYSVIEW_QUANTA_U32);
+  RECORD_START(SEGGER_SYSVIEW_INFO_SIZE + SEGGER_SYSVIEW_QUANTA_ADDR);
   //
   pPayload = pPayloadStart;
   TaskId = SHRINK_ID(TaskId);
-  ENCODE_U32(pPayload, TaskId);
+  ENCODE_ADDR(pPayload, TaskId);
   _SendPacket(pPayloadStart, pPayload, SYSVIEW_EVTID_TASK_CREATE);
   RECORD_END();
 }
@@ -2458,14 +2470,14 @@ void SEGGER_SYSVIEW_OnTaskCreate(U32 TaskId) {
 *  Parameters
 *    TaskId        - Task ID of terminated task.
 */
-void SEGGER_SYSVIEW_OnTaskTerminate(U32 TaskId) {
+void SEGGER_SYSVIEW_OnTaskTerminate(uintptr_t TaskId) {
   U8* pPayload;
   U8* pPayloadStart;
-  RECORD_START(SEGGER_SYSVIEW_INFO_SIZE + SEGGER_SYSVIEW_QUANTA_U32);
+  RECORD_START(SEGGER_SYSVIEW_INFO_SIZE + SEGGER_SYSVIEW_QUANTA_ADDR);
   //
   pPayload = pPayloadStart;
   TaskId = SHRINK_ID(TaskId);
-  ENCODE_U32(pPayload, TaskId);
+  ENCODE_ADDR(pPayload, TaskId);
   _SendPacket(pPayloadStart, pPayload, SYSVIEW_EVTID_TASK_TERMINATE);
   RECORD_END();
 }
@@ -2482,14 +2494,14 @@ void SEGGER_SYSVIEW_OnTaskTerminate(U32 TaskId) {
 *  Parameters
 *    TaskId - Task ID of task that started to execute.
 */
-void SEGGER_SYSVIEW_OnTaskStartExec(U32 TaskId) {
+void SEGGER_SYSVIEW_OnTaskStartExec(uintptr_t TaskId) {
   U8* pPayload;
   U8* pPayloadStart;
-  RECORD_START(SEGGER_SYSVIEW_INFO_SIZE + SEGGER_SYSVIEW_QUANTA_U32);
+  RECORD_START(SEGGER_SYSVIEW_INFO_SIZE + SEGGER_SYSVIEW_QUANTA_ADDR);
   //
   pPayload = pPayloadStart;
   TaskId = SHRINK_ID(TaskId);
-  ENCODE_U32(pPayload, TaskId);
+  ENCODE_ADDR(pPayload, TaskId);
   _SendPacket(pPayloadStart, pPayload, SYSVIEW_EVTID_TASK_START_EXEC);
   RECORD_END();
 }
@@ -2520,14 +2532,14 @@ void SEGGER_SYSVIEW_OnTaskStopExec(void) {
 *  Parameters
 *    TaskId - Task ID of task that started to execute.
 */
-void SEGGER_SYSVIEW_OnTaskStartReady(U32 TaskId) {
+void SEGGER_SYSVIEW_OnTaskStartReady(uintptr_t TaskId) {
   U8* pPayload;
   U8* pPayloadStart;
-  RECORD_START(SEGGER_SYSVIEW_INFO_SIZE + SEGGER_SYSVIEW_QUANTA_U32);
+  RECORD_START(SEGGER_SYSVIEW_INFO_SIZE + SEGGER_SYSVIEW_QUANTA_ADDR);
   //
   pPayload = pPayloadStart;
   TaskId = SHRINK_ID(TaskId);
-  ENCODE_U32(pPayload, TaskId);
+  ENCODE_ADDR(pPayload, TaskId);
   _SendPacket(pPayloadStart, pPayload, SYSVIEW_EVTID_TASK_START_READY);
   RECORD_END();
 }
@@ -2543,14 +2555,14 @@ void SEGGER_SYSVIEW_OnTaskStartReady(U32 TaskId) {
 *    TaskId - Task ID of task that completed execution.
 *    Cause  - Reason for task to stop (i.e. Idle/Sleep)
 */
-void SEGGER_SYSVIEW_OnTaskStopReady(U32 TaskId, unsigned int Cause) {
+void SEGGER_SYSVIEW_OnTaskStopReady(uintptr_t TaskId, unsigned int Cause) {
   U8* pPayload;
   U8* pPayloadStart;
-  RECORD_START(SEGGER_SYSVIEW_INFO_SIZE + 2 * SEGGER_SYSVIEW_QUANTA_U32);
+  RECORD_START(SEGGER_SYSVIEW_INFO_SIZE + SEGGER_SYSVIEW_QUANTA_ADDR + SEGGER_SYSVIEW_QUANTA_U32);
   //
   pPayload = pPayloadStart;
   TaskId = SHRINK_ID(TaskId);
-  ENCODE_U32(pPayload, TaskId);
+  ENCODE_ADDR(pPayload, TaskId);
   ENCODE_U32(pPayload, Cause);
   _SendPacket(pPayloadStart, pPayload, SYSVIEW_EVTID_TASK_STOP_READY);
   RECORD_END();
@@ -2663,13 +2675,13 @@ void SEGGER_SYSVIEW_NameMarker(unsigned int MarkerId, const char* sName) {
 *    ResourceId - Id of the resource to be named. i.e. its address.
 *    sName      - Pointer to the resource name. (Max. SEGGER_SYSVIEW_MAX_STRING_LEN Bytes)
 */
-void SEGGER_SYSVIEW_NameResource(U32 ResourceId, const char* sName) {
+void SEGGER_SYSVIEW_NameResource(uintptr_t ResourceId, const char* sName) {
   U8* pPayload;
   U8* pPayloadStart;
-  RECORD_START(SEGGER_SYSVIEW_INFO_SIZE + SEGGER_SYSVIEW_QUANTA_U32 + 1 + SEGGER_SYSVIEW_MAX_STRING_LEN);
+  RECORD_START(SEGGER_SYSVIEW_INFO_SIZE + SEGGER_SYSVIEW_QUANTA_ADDR + 1 + SEGGER_SYSVIEW_MAX_STRING_LEN);
   //
   pPayload = pPayloadStart;
-  ENCODE_U32(pPayload, SHRINK_ID(ResourceId));
+  ENCODE_ADDR(pPayload, SHRINK_ID(ResourceId));
   pPayload = _EncodeStr(pPayload, sName, SEGGER_SYSVIEW_MAX_STRING_LEN);
   _SendPacket(pPayloadStart, pPayload, SYSVIEW_EVTID_NAME_RESOURCE);
   RECORD_END();
@@ -2764,12 +2776,12 @@ void SEGGER_SYSVIEW_RegisterData(SEGGER_SYSVIEW_DATA_REGISTER* pInfo) {
 void SEGGER_SYSVIEW_HeapDefine(void* pHeap, void *pBase, unsigned int HeapSize, unsigned int MetadataSize) {
   U8* pPayload;
   U8* pPayloadStart;
-  RECORD_START(SEGGER_SYSVIEW_INFO_SIZE + 4 * SEGGER_SYSVIEW_QUANTA_U32);
+  RECORD_START(SEGGER_SYSVIEW_INFO_SIZE + 2 * SEGGER_SYSVIEW_QUANTA_ADDR + 3 * SEGGER_SYSVIEW_QUANTA_U32);
   //
   pPayload = pPayloadStart;
   ENCODE_U32(pPayload, SYSVIEW_EVTID_EX_HEAP_DEFINE);
-  ENCODE_U32(pPayload, SHRINK_ID((U32)pHeap));
-  ENCODE_U32(pPayload, SHRINK_ID((U32)pBase));
+  ENCODE_ADDR(pPayload, SHRINK_ID((uintptr_t)pHeap));
+  ENCODE_ADDR(pPayload, SHRINK_ID((uintptr_t)pBase));
   ENCODE_U32(pPayload, HeapSize >> SEGGER_SYSVIEW_ID_SHIFT);
   ENCODE_U32(pPayload, MetadataSize);
   _SendPacket(pPayloadStart, pPayload, SYSVIEW_EVTID_EX);
@@ -2813,12 +2825,12 @@ void SEGGER_SYSVIEW_HeapDefine(void* pHeap, void *pBase, unsigned int HeapSize, 
 void SEGGER_SYSVIEW_HeapAlloc(void *pHeap, void* pUserData, unsigned int UserDataLen) {
   U8* pPayload;
   U8* pPayloadStart;
-  RECORD_START(SEGGER_SYSVIEW_INFO_SIZE + 3 * SEGGER_SYSVIEW_QUANTA_U32);
+  RECORD_START(SEGGER_SYSVIEW_INFO_SIZE + 2 * SEGGER_SYSVIEW_QUANTA_ADDR + 2 * SEGGER_SYSVIEW_QUANTA_U32);
   //
   pPayload = pPayloadStart;
   ENCODE_U32(pPayload, SYSVIEW_EVTID_EX_HEAP_ALLOC);
-  ENCODE_U32(pPayload, SHRINK_ID((U32)pHeap));
-  ENCODE_U32(pPayload, SHRINK_ID((U32)pUserData));
+  ENCODE_ADDR(pPayload, SHRINK_ID((uintptr_t)pHeap));
+  ENCODE_ADDR(pPayload, SHRINK_ID((uintptr_t)pUserData));
   ENCODE_U32(pPayload, UserDataLen >> SEGGER_SYSVIEW_ID_SHIFT);
   _SendPacket(pPayloadStart, pPayload, SYSVIEW_EVTID_EX);
   RECORD_END();
@@ -2865,12 +2877,12 @@ void SEGGER_SYSVIEW_HeapAlloc(void *pHeap, void* pUserData, unsigned int UserDat
 void SEGGER_SYSVIEW_HeapAllocEx(void *pHeap, void* pUserData, unsigned int UserDataLen, unsigned int Tag) {
   U8* pPayload;
   U8* pPayloadStart;
-  RECORD_START(SEGGER_SYSVIEW_INFO_SIZE + 5 * SEGGER_SYSVIEW_QUANTA_U32);
+  RECORD_START(SEGGER_SYSVIEW_INFO_SIZE + 2 * SEGGER_SYSVIEW_QUANTA_ADDR + 3 * SEGGER_SYSVIEW_QUANTA_U32);
   //
   pPayload = pPayloadStart;
   ENCODE_U32(pPayload, SYSVIEW_EVTID_EX_HEAP_ALLOC_EX);
-  ENCODE_U32(pPayload, SHRINK_ID((U32)pHeap));
-  ENCODE_U32(pPayload, SHRINK_ID((U32)pUserData));
+  ENCODE_ADDR(pPayload, SHRINK_ID((uintptr_t)pHeap));
+  ENCODE_ADDR(pPayload, SHRINK_ID((uintptr_t)pUserData));
   ENCODE_U32(pPayload, UserDataLen >> SEGGER_SYSVIEW_ID_SHIFT);
   ENCODE_U32(pPayload, Tag);
   _SendPacket(pPayloadStart, pPayload, SYSVIEW_EVTID_EX);
@@ -2895,12 +2907,12 @@ void SEGGER_SYSVIEW_HeapAllocEx(void *pHeap, void* pUserData, unsigned int UserD
 void SEGGER_SYSVIEW_HeapFree(void* pHeap, void* pUserData) {
   U8* pPayload;
   U8* pPayloadStart;
-  RECORD_START(SEGGER_SYSVIEW_INFO_SIZE + 2 * SEGGER_SYSVIEW_QUANTA_U32);
+  RECORD_START(SEGGER_SYSVIEW_INFO_SIZE + 2 * SEGGER_SYSVIEW_QUANTA_ADDR + SEGGER_SYSVIEW_QUANTA_U32);
   //
   pPayload = pPayloadStart;
   ENCODE_U32(pPayload, SYSVIEW_EVTID_EX_HEAP_FREE);
-  ENCODE_U32(pPayload, SHRINK_ID((U32)pHeap));
-  ENCODE_U32(pPayload, SHRINK_ID((U32)pUserData));
+  ENCODE_ADDR(pPayload, SHRINK_ID((uintptr_t)pHeap));
+  ENCODE_ADDR(pPayload, SHRINK_ID((uintptr_t)pUserData));
   _SendPacket(pPayloadStart, pPayload, SYSVIEW_EVTID_EX);
   RECORD_END();
 }
@@ -3045,11 +3057,11 @@ U8* SEGGER_SYSVIEW_EncodeData(U8 *pPayload, const char* pSrc, unsigned int NumBy
 *       SEGGER_SYSVIEW_EncodeId()
 *
 *  Function description
-*    Encode a 32-bit Id in shrunken variable-length format.
+*    Encode an address-sized Id in shrunken variable-length format.
 *
 *  Parameters
 *    pPayload - Pointer to where the Id will be encoded.
-*    Id       - The 32-bit value to be encoded.
+*    Id       - The address-sized value to be encoded.
 *
 *  Return value
 *    Pointer to the byte following the value, i.e. the first free
@@ -3064,9 +3076,9 @@ U8* SEGGER_SYSVIEW_EncodeData(U8 *pPayload, const char* pSrc, unsigned int NumBy
 *     SEGGER_SYSVIEW_ID_SHIFT: Number of bits to shift the Id to
 *       save bandwidth. (i.e. 2 when Ids are 4 byte aligned)
 */
-U8* SEGGER_SYSVIEW_EncodeId(U8* pPayload, U32 Id) {
+U8* SEGGER_SYSVIEW_EncodeId(U8* pPayload, uintptr_t Id) {
   Id = SHRINK_ID(Id);
-  ENCODE_U32(pPayload, Id);
+  ENCODE_ADDR(pPayload, Id);
   return pPayload;
 }
 
@@ -3079,7 +3091,7 @@ U8* SEGGER_SYSVIEW_EncodeId(U8* pPayload, U32 Id) {
 *    SEGGER_SYSVIEW_NameResource().
 *
 *  Parameters
-*    Id       - The 32-bit value to be shrunken.
+*    Id       - The address-sized value to be shrunken.
 *
 *  Return value
 *    Shrunken Id.
@@ -3092,7 +3104,7 @@ U8* SEGGER_SYSVIEW_EncodeId(U8* pPayload, U32 Id) {
 *     SEGGER_SYSVIEW_ID_SHIFT: Number of bits to shift the Id to
 *       save bandwidth. (i.e. 2 when Ids are 4 byte aligned)
 */
-U32 SEGGER_SYSVIEW_ShrinkId(U32 Id) {
+uintptr_t SEGGER_SYSVIEW_ShrinkId(uintptr_t Id) {
   return SHRINK_ID(Id);
 }
 
@@ -3691,14 +3703,14 @@ void SEGGER_SYSVIEW_VErrorfTarget(const char* s, va_list* pParamList) {
 *    ID         - Address of the string.
 *    Options    - Options for the string. i.e. Log level.
 */
-void SEGGER_SYSVIEW__PrintElf(unsigned int ID, U32 Options) {
+void SEGGER_SYSVIEW__PrintElf(uintptr_t ID, U32 Options) {
   U8* pPayload;
   U8* pPayloadStart;
   //
-  RECORD_START(SEGGER_SYSVIEW_INFO_SIZE + 3 * SEGGER_SYSVIEW_QUANTA_U32);
+  RECORD_START(SEGGER_SYSVIEW_INFO_SIZE + SEGGER_SYSVIEW_QUANTA_ADDR + 2 * SEGGER_SYSVIEW_QUANTA_U32);
   pPayload = pPayloadStart;
   ENCODE_U32(pPayload, SYSVIEW_EVTID_EX_PRINT_ELF);
-  ENCODE_U32(pPayload, ID);
+  ENCODE_ADDR(pPayload, ID);
   ENCODE_U32(pPayload, Options);
   _SendPacket(pPayloadStart, pPayload, SYSVIEW_EVTID_EX);
   RECORD_END();
@@ -3717,14 +3729,14 @@ void SEGGER_SYSVIEW__PrintElf(unsigned int ID, U32 Options) {
 *    Options    - Options for the string. i.e. Log level.
 *    Para0      - 32-bit integer argument.
 */
-void SEGGER_SYSVIEW__PrintElf_U32(unsigned int ID, U32 Options, U32 Para0) {
+void SEGGER_SYSVIEW__PrintElf_U32(uintptr_t ID, U32 Options, U32 Para0) {
   U8* pPayload;
   U8* pPayloadStart;
-  RECORD_START(SEGGER_SYSVIEW_INFO_SIZE + 4 * SEGGER_SYSVIEW_QUANTA_U32);
+  RECORD_START(SEGGER_SYSVIEW_INFO_SIZE + SEGGER_SYSVIEW_QUANTA_ADDR + 3 * SEGGER_SYSVIEW_QUANTA_U32);
   //
   pPayload = pPayloadStart;
   ENCODE_U32(pPayload, SYSVIEW_EVTID_EX_PRINT_ELF);
-  ENCODE_U32(pPayload, ID);
+  ENCODE_ADDR(pPayload, ID);
   ENCODE_U32(pPayload, Options);
   ENCODE_U32(pPayload, Para0);
   _SendPacket(pPayloadStart, pPayload, SYSVIEW_EVTID_EX);
@@ -3745,14 +3757,14 @@ void SEGGER_SYSVIEW__PrintElf_U32(unsigned int ID, U32 Options, U32 Para0) {
 *    Para0      - 32-bit integer argument.
 *    Para1      - 32-bit integer argument.
 */
-void SEGGER_SYSVIEW__PrintElf_U32x2(unsigned int ID, U32 Options, U32 Para0, U32 Para1) {
+void SEGGER_SYSVIEW__PrintElf_U32x2(uintptr_t ID, U32 Options, U32 Para0, U32 Para1) {
   U8* pPayload;
   U8* pPayloadStart;
   //
-  RECORD_START(SEGGER_SYSVIEW_INFO_SIZE + 5 * SEGGER_SYSVIEW_QUANTA_U32);
+  RECORD_START(SEGGER_SYSVIEW_INFO_SIZE + SEGGER_SYSVIEW_QUANTA_ADDR + 4 * SEGGER_SYSVIEW_QUANTA_U32);
   pPayload = pPayloadStart;
   ENCODE_U32(pPayload, SYSVIEW_EVTID_EX_PRINT_ELF);
-  ENCODE_U32(pPayload, ID);
+  ENCODE_ADDR(pPayload, ID);
   ENCODE_U32(pPayload, Options);
   ENCODE_U32(pPayload, Para0);
   ENCODE_U32(pPayload, Para1);
@@ -3775,14 +3787,14 @@ void SEGGER_SYSVIEW__PrintElf_U32x2(unsigned int ID, U32 Options, U32 Para0, U32
 *    Para1      - 32-bit integer argument.
 *    Para2      - 32-bit integer argument.
 */
-void SEGGER_SYSVIEW__PrintElf_U32x3(unsigned int ID, U32 Options, U32 Para0, U32 Para1, U32 Para2) {
+void SEGGER_SYSVIEW__PrintElf_U32x3(uintptr_t ID, U32 Options, U32 Para0, U32 Para1, U32 Para2) {
   U8* pPayload;
   U8* pPayloadStart;
   //
-  RECORD_START(SEGGER_SYSVIEW_INFO_SIZE + 6 * SEGGER_SYSVIEW_QUANTA_U32);
+  RECORD_START(SEGGER_SYSVIEW_INFO_SIZE + SEGGER_SYSVIEW_QUANTA_ADDR + 5 * SEGGER_SYSVIEW_QUANTA_U32);
   pPayload = pPayloadStart;
   ENCODE_U32(pPayload, SYSVIEW_EVTID_EX_PRINT_ELF);
-  ENCODE_U32(pPayload, ID);
+  ENCODE_ADDR(pPayload, ID);
   ENCODE_U32(pPayload, Options);
   ENCODE_U32(pPayload, Para0);
   ENCODE_U32(pPayload, Para1);
@@ -3807,14 +3819,14 @@ void SEGGER_SYSVIEW__PrintElf_U32x3(unsigned int ID, U32 Options, U32 Para0, U32
 *    Para2      - 32-bit integer argument.
 *    Para3      - 32-bit integer argument.
 */
-void SEGGER_SYSVIEW__PrintElf_U32x4(unsigned int ID, U32 Options, U32 Para0, U32 Para1, U32 Para2, U32 Para3) {
+void SEGGER_SYSVIEW__PrintElf_U32x4(uintptr_t ID, U32 Options, U32 Para0, U32 Para1, U32 Para2, U32 Para3) {
   U8* pPayload;
   U8* pPayloadStart;
   //
-  RECORD_START(SEGGER_SYSVIEW_INFO_SIZE + 7 * SEGGER_SYSVIEW_QUANTA_U32);
+  RECORD_START(SEGGER_SYSVIEW_INFO_SIZE + SEGGER_SYSVIEW_QUANTA_ADDR + 6 * SEGGER_SYSVIEW_QUANTA_U32);
   pPayload = pPayloadStart;
   ENCODE_U32(pPayload, SYSVIEW_EVTID_EX_PRINT_ELF);
-  ENCODE_U32(pPayload, ID);
+  ENCODE_ADDR(pPayload, ID);
   ENCODE_U32(pPayload, Options);
   ENCODE_U32(pPayload, Para0);
   ENCODE_U32(pPayload, Para1);
@@ -3841,14 +3853,14 @@ void SEGGER_SYSVIEW__PrintElf_U32x4(unsigned int ID, U32 Options, U32 Para0, U32
 *    Para3      - 32-bit integer argument.
 *    Para4      - 32-bit integer argument.
 */
-void SEGGER_SYSVIEW__PrintElf_U32x5(unsigned int ID, U32 Options, U32 Para0, U32 Para1, U32 Para2, U32 Para3, U32 Para4) {
+void SEGGER_SYSVIEW__PrintElf_U32x5(uintptr_t ID, U32 Options, U32 Para0, U32 Para1, U32 Para2, U32 Para3, U32 Para4) {
   U8* pPayload;
   U8* pPayloadStart;
   //
-  RECORD_START(SEGGER_SYSVIEW_INFO_SIZE + 8 * SEGGER_SYSVIEW_QUANTA_U32);
+  RECORD_START(SEGGER_SYSVIEW_INFO_SIZE + SEGGER_SYSVIEW_QUANTA_ADDR + 7 * SEGGER_SYSVIEW_QUANTA_U32);
   pPayload = pPayloadStart;
   ENCODE_U32(pPayload, SYSVIEW_EVTID_EX_PRINT_ELF);
-  ENCODE_U32(pPayload, ID);
+  ENCODE_ADDR(pPayload, ID);
   ENCODE_U32(pPayload, Options);
   ENCODE_U32(pPayload, Para0);
   ENCODE_U32(pPayload, Para1);
@@ -3877,14 +3889,14 @@ void SEGGER_SYSVIEW__PrintElf_U32x5(unsigned int ID, U32 Options, U32 Para0, U32
 *    Para4      - 32-bit integer argument.
 *    Para5      - 32-bit integer argument.
 */
-void SEGGER_SYSVIEW__PrintElf_U32x6(unsigned int ID, U32 Options, U32 Para0, U32 Para1, U32 Para2, U32 Para3, U32 Para4, U32 Para5) {
+void SEGGER_SYSVIEW__PrintElf_U32x6(uintptr_t ID, U32 Options, U32 Para0, U32 Para1, U32 Para2, U32 Para3, U32 Para4, U32 Para5) {
   U8* pPayload;
   U8* pPayloadStart;
   //
-  RECORD_START(SEGGER_SYSVIEW_INFO_SIZE + 9 * SEGGER_SYSVIEW_QUANTA_U32);
+  RECORD_START(SEGGER_SYSVIEW_INFO_SIZE + SEGGER_SYSVIEW_QUANTA_ADDR + 8 * SEGGER_SYSVIEW_QUANTA_U32);
   pPayload = pPayloadStart;
   ENCODE_U32(pPayload, SYSVIEW_EVTID_EX_PRINT_ELF);
-  ENCODE_U32(pPayload, ID);
+  ENCODE_ADDR(pPayload, ID);
   ENCODE_U32(pPayload, Options);
   ENCODE_U32(pPayload, Para0);
   ENCODE_U32(pPayload, Para1);
@@ -3915,14 +3927,14 @@ void SEGGER_SYSVIEW__PrintElf_U32x6(unsigned int ID, U32 Options, U32 Para0, U32
 *    Para5      - 32-bit integer argument.
 *    Para6      - 32-bit integer argument.
 */
-void SEGGER_SYSVIEW__PrintElf_U32x7(unsigned int ID, U32 Options, U32 Para0, U32 Para1, U32 Para2, U32 Para3, U32 Para4, U32 Para5, U32 Para6) {
+void SEGGER_SYSVIEW__PrintElf_U32x7(uintptr_t ID, U32 Options, U32 Para0, U32 Para1, U32 Para2, U32 Para3, U32 Para4, U32 Para5, U32 Para6) {
   U8* pPayload;
   U8* pPayloadStart;
   //
-  RECORD_START(SEGGER_SYSVIEW_INFO_SIZE + 10 * SEGGER_SYSVIEW_QUANTA_U32);
+  RECORD_START(SEGGER_SYSVIEW_INFO_SIZE + SEGGER_SYSVIEW_QUANTA_ADDR + 9 * SEGGER_SYSVIEW_QUANTA_U32);
   pPayload = pPayloadStart;
   ENCODE_U32(pPayload, SYSVIEW_EVTID_EX_PRINT_ELF);
-  ENCODE_U32(pPayload, ID);
+  ENCODE_ADDR(pPayload, ID);
   ENCODE_U32(pPayload, Options);
   ENCODE_U32(pPayload, Para0);
   ENCODE_U32(pPayload, Para1);
@@ -3955,14 +3967,14 @@ void SEGGER_SYSVIEW__PrintElf_U32x7(unsigned int ID, U32 Options, U32 Para0, U32
 *    Para6      - 32-bit integer argument.
 *    Para7      - 32-bit integer argument.
 */
-void SEGGER_SYSVIEW__PrintElf_U32x8(unsigned int ID, U32 Options, U32 Para0, U32 Para1, U32 Para2, U32 Para3, U32 Para4, U32 Para5, U32 Para6, U32 Para7) {
+void SEGGER_SYSVIEW__PrintElf_U32x8(uintptr_t ID, U32 Options, U32 Para0, U32 Para1, U32 Para2, U32 Para3, U32 Para4, U32 Para5, U32 Para6, U32 Para7) {
   U8* pPayload;
   U8* pPayloadStart;
   //
-  RECORD_START(SEGGER_SYSVIEW_INFO_SIZE + 11 * SEGGER_SYSVIEW_QUANTA_U32);
+  RECORD_START(SEGGER_SYSVIEW_INFO_SIZE + SEGGER_SYSVIEW_QUANTA_ADDR + 10 * SEGGER_SYSVIEW_QUANTA_U32);
   pPayload = pPayloadStart;
   ENCODE_U32(pPayload, SYSVIEW_EVTID_EX_PRINT_ELF);
-  ENCODE_U32(pPayload, ID);
+  ENCODE_ADDR(pPayload, ID);
   ENCODE_U32(pPayload, Options);
   ENCODE_U32(pPayload, Para0);
   ENCODE_U32(pPayload, Para1);
@@ -3997,14 +4009,14 @@ void SEGGER_SYSVIEW__PrintElf_U32x8(unsigned int ID, U32 Options, U32 Para0, U32
 *    Para7      - 32-bit integer argument.
 *    Para8      - 32-bit integer argument.
 */
-void SEGGER_SYSVIEW__PrintElf_U32x9(unsigned int ID, U32 Options, U32 Para0, U32 Para1, U32 Para2, U32 Para3, U32 Para4, U32 Para5, U32 Para6, U32 Para7, U32 Para8) {
+void SEGGER_SYSVIEW__PrintElf_U32x9(uintptr_t ID, U32 Options, U32 Para0, U32 Para1, U32 Para2, U32 Para3, U32 Para4, U32 Para5, U32 Para6, U32 Para7, U32 Para8) {
   U8* pPayload;
   U8* pPayloadStart;
   //
-  RECORD_START(SEGGER_SYSVIEW_INFO_SIZE + 12 * SEGGER_SYSVIEW_QUANTA_U32);
+  RECORD_START(SEGGER_SYSVIEW_INFO_SIZE + SEGGER_SYSVIEW_QUANTA_ADDR + 11 * SEGGER_SYSVIEW_QUANTA_U32);
   pPayload = pPayloadStart;
   ENCODE_U32(pPayload, SYSVIEW_EVTID_EX_PRINT_ELF);
-  ENCODE_U32(pPayload, ID);
+  ENCODE_ADDR(pPayload, ID);
   ENCODE_U32(pPayload, Options);
   ENCODE_U32(pPayload, Para0);
   ENCODE_U32(pPayload, Para1);
@@ -4041,14 +4053,14 @@ void SEGGER_SYSVIEW__PrintElf_U32x9(unsigned int ID, U32 Options, U32 Para0, U32
 *    Para8      - 32-bit integer argument.
 *    Para9      - 32-bit integer argument.
 */
-void SEGGER_SYSVIEW__PrintElf_U32x10(unsigned int ID, U32 Options, U32 Para0, U32 Para1, U32 Para2, U32 Para3, U32 Para4, U32 Para5, U32 Para6, U32 Para7, U32 Para8, U32 Para9) {
+void SEGGER_SYSVIEW__PrintElf_U32x10(uintptr_t ID, U32 Options, U32 Para0, U32 Para1, U32 Para2, U32 Para3, U32 Para4, U32 Para5, U32 Para6, U32 Para7, U32 Para8, U32 Para9) {
   U8* pPayload;
   U8* pPayloadStart;
   //
-  RECORD_START(SEGGER_SYSVIEW_INFO_SIZE + 13 * SEGGER_SYSVIEW_QUANTA_U32);
+  RECORD_START(SEGGER_SYSVIEW_INFO_SIZE + SEGGER_SYSVIEW_QUANTA_ADDR + 12 * SEGGER_SYSVIEW_QUANTA_U32);
   pPayload = pPayloadStart;
   ENCODE_U32(pPayload, SYSVIEW_EVTID_EX_PRINT_ELF);
-  ENCODE_U32(pPayload, ID);
+  ENCODE_ADDR(pPayload, ID);
   ENCODE_U32(pPayload, Options);
   ENCODE_U32(pPayload, Para0);
   ENCODE_U32(pPayload, Para1);
@@ -4080,15 +4092,15 @@ void SEGGER_SYSVIEW__PrintElf_U32x10(unsigned int ID, U32 Options, U32 Para0, U3
 *    NumStrArgs - Number of string arguments.
 *    psStrArgs  - Pointer to string arguments.
 */
-void SEGGER_SYSVIEW__PrintElf_Fmt(unsigned int ID, U32 Options, unsigned int NumIntArgs, U32* pIntArgs, unsigned int NumStrArgs, const char** psStrArgs) {
+void SEGGER_SYSVIEW__PrintElf_Fmt(uintptr_t ID, U32 Options, unsigned int NumIntArgs, U32* pIntArgs, unsigned int NumStrArgs, const char** psStrArgs) {
   U8* pPayload;
   U8* pPayloadStart;
   unsigned int i;
   //
-  RECORD_START(SEGGER_SYSVIEW_INFO_SIZE + (3 + NumIntArgs) * SEGGER_SYSVIEW_QUANTA_U32 + NumStrArgs * SEGGER_SYSVIEW_MAX_STRING_LEN);
+  RECORD_START(SEGGER_SYSVIEW_INFO_SIZE + SEGGER_SYSVIEW_QUANTA_ADDR + (2 + NumIntArgs) * SEGGER_SYSVIEW_QUANTA_U32 + NumStrArgs * SEGGER_SYSVIEW_MAX_STRING_LEN);
   pPayload = pPayloadStart;
   ENCODE_U32(pPayload, SYSVIEW_EVTID_EX_PRINT_ELF);
-  ENCODE_U32(pPayload, ID);
+  ENCODE_ADDR(pPayload, ID);
   ENCODE_U32(pPayload, Options);
   for (i = 0; i < NumIntArgs; i++) {
     ENCODE_U32(pPayload, pIntArgs[i]);

@@ -479,6 +479,7 @@ void _SystemView_CloseClient(SystemView_State_t *pState) {
     SYS_MutexUnlock(&pState->Lock);
 
     if (hClient != SYS_SOCKET_INVALID_HANDLE) {
+        SYS_SOCKET_Shutdown(hClient, SYS_SOCKET_SHUT_RDWR);
         SYS_SOCKET_Close(hClient);
     }
 }

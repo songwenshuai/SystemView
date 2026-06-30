@@ -86,14 +86,20 @@ get_filename_component(EMBOS_ROOT
     "${CMAKE_CURRENT_SOURCE_DIR}/../.."
     ABSOLUTE
 )
+get_filename_component(HETEROTRACE_ROOT
+    "${EMBOS_ROOT}/.."
+    ABSOLUTE
+)
 set(EMBOS_CONFIG_DIR                       "${EMBOS_ROOT}/Config")
 set(EMBOS_INC_DIR                          "${EMBOS_ROOT}/Inc")
 set(EMBOS_APPLICATION_DIR                  "${EMBOS_ROOT}/Application")
-set(EMBOS_SEGGER_DIR                       "${EMBOS_ROOT}/SEGGER")
 set(EMBOS_SIM_SEGGER_DIR                   "${CMAKE_CURRENT_SOURCE_DIR}/SEGGER")
-set(EMBOS_SEGGER_RTT_SOURCE                "${EMBOS_SEGGER_DIR}/SEGGER_RTT.c")
-set(EMBOS_SEGGER_RTT_PRINTF_SOURCE         "${EMBOS_SEGGER_DIR}/SEGGER_RTT_printf.c")
-set(EMBOS_SEGGER_SYSVIEW_SOURCE            "${EMBOS_SEGGER_DIR}/SEGGER_SYSVIEW.c")
+set(EMBOS_RTT_ROOT                         "${HETEROTRACE_ROOT}/RTT")
+set(EMBOS_SYSVIEW_ROOT                     "${HETEROTRACE_ROOT}/SystemView")
+set(EMBOS_SIM_RTT_MEMORY_HEADER            "${EMBOS_SIM_SEGGER_DIR}/SEGGER_RTT_Memory.h")
+set(EMBOS_SIM_RTT_MEMORY_INT_HEADER        "${EMBOS_SIM_SEGGER_DIR}/SEGGER_RTT_Memory_Int.h")
+set(EMBOS_SIM_RTT_MEMORY_WIN32_SOURCE      "${EMBOS_SIM_SEGGER_DIR}/SEGGER_RTT_Memory_Win32.c")
+set(EMBOS_SIM_RTT_MEMORY_POSIX_SOURCE      "${EMBOS_SIM_SEGGER_DIR}/SEGGER_RTT_Memory_Posix.c")
 set(EMBOS_SIM_SYSVIEW_EMBOS_SOURCE         "${EMBOS_SIM_SEGGER_DIR}/SEGGER_SYSVIEW_embOS.c")
 set(EMBOS_SIM_SYSVIEW_CONFIG_SOURCE        "${EMBOS_SIM_SEGGER_DIR}/SEGGER_SYSVIEW_Config_embOS.c")
 set(EMBOS_SIM_SYSVIEW_WIN32_CONFIG_SOURCE  "${EMBOS_SIM_SEGGER_DIR}/SEGGER_SYSVIEW_Config_embOS_Win32.c")
@@ -135,7 +141,8 @@ foreach(_dir IN ITEMS
         "${EMBOS_CONFIG_DIR}"
         "${EMBOS_INC_DIR}"
         "${EMBOS_APPLICATION_DIR}"
-        "${EMBOS_SEGGER_DIR}"
+        "${EMBOS_RTT_ROOT}"
+        "${EMBOS_SYSVIEW_ROOT}"
         "${EMBOS_SIM_SEGGER_DIR}")
     if(NOT IS_DIRECTORY "${_dir}")
         message(FATAL_ERROR "Required embOS directory not found: ${_dir}")
@@ -143,10 +150,13 @@ foreach(_dir IN ITEMS
 endforeach()
 
 foreach(_file IN ITEMS
-        "${EMBOS_SEGGER_RTT_SOURCE}"
-        "${EMBOS_SEGGER_RTT_PRINTF_SOURCE}"
-        "${EMBOS_SEGGER_SYSVIEW_SOURCE}"
+        "${EMBOS_RTT_ROOT}/CMakeLists.txt"
+        "${EMBOS_SYSVIEW_ROOT}/CMakeLists.txt"
         "${EMBOS_SIM_SEGGER_DIR}/SEGGER_RTT_Conf.h"
+        "${EMBOS_SIM_RTT_MEMORY_HEADER}"
+        "${EMBOS_SIM_RTT_MEMORY_INT_HEADER}"
+        "${EMBOS_SIM_RTT_MEMORY_WIN32_SOURCE}"
+        "${EMBOS_SIM_RTT_MEMORY_POSIX_SOURCE}"
         "${EMBOS_SIM_SEGGER_DIR}/SEGGER_SYSVIEW_Conf.h"
         "${EMBOS_SIM_SYSVIEW_EMBOS_SOURCE}"
         "${EMBOS_SIM_SEGGER_DIR}/SEGGER_SYSVIEW_embOS.h"
@@ -213,6 +223,19 @@ endif()
 
 if(APPLE AND EMBOS_SIM_TARGET_BITS EQUAL 32)
     message(FATAL_ERROR "macOS embOS simulation supports 64-bit builds only")
+endif()
+
+if(NOT EMBOS_SIM_IS_64_BIT)
+    set(RTT_BUILD_LIBRARY        ON  CACHE BOOL "Build RTT library for embOS simulation" FORCE)
+    set(RTT_BUILD_TESTS          OFF CACHE BOOL "Do not build RTT tests from embOS simulation" FORCE)
+    set(RTT_BUILD_EXAMPLES       OFF CACHE BOOL "Do not build RTT examples from embOS simulation" FORCE)
+    set(RTT_CONFIG_DIR           "${EMBOS_SIM_SEGGER_DIR}" CACHE PATH "embOS simulation RTT configuration directory" FORCE)
+    set(SYSTEMVIEW_BUILD_LIBRARY ON  CACHE BOOL "Build SystemView library for embOS simulation" FORCE)
+    set(SYSTEMVIEW_BUILD_TESTS   OFF CACHE BOOL "Do not build SystemView tests from embOS simulation" FORCE)
+    set(SYSTEMVIEW_CONFIG_DIR    "${EMBOS_SIM_SEGGER_DIR}" CACHE PATH "embOS simulation SystemView configuration directory" FORCE)
+
+    add_subdirectory("${EMBOS_RTT_ROOT}" "${CMAKE_CURRENT_BINARY_DIR}/RTT")
+    add_subdirectory("${EMBOS_SYSVIEW_ROOT}" "${CMAKE_CURRENT_BINARY_DIR}/SystemView")
 endif()
 
 if(MSVC AND NOT EMBOS_SIM_ARCH STREQUAL "native")
@@ -544,6 +567,13 @@ elseif(MSVC)
     )
 endif()
 
+if(TARGET SEGGER_RTT)
+    target_link_libraries(SEGGER_RTT PUBLIC embos_sim_options)
+endif()
+if(TARGET SEGGER_SYSVIEW)
+    target_link_libraries(SEGGER_SYSVIEW PUBLIC embos_sim_options)
+endif()
+
 # ==============================================================================
 # embOS Source Lists
 # ==============================================================================
@@ -616,17 +646,16 @@ endif()
 
 if(NOT EMBOS_SIM_IS_64_BIT)
     list(APPEND EMBOS_SIM_SEGGER_SOURCES
-        "${EMBOS_SEGGER_RTT_SOURCE}"
-        "${EMBOS_SEGGER_RTT_PRINTF_SOURCE}"
-        "${EMBOS_SEGGER_SYSVIEW_SOURCE}"
         "${EMBOS_SIM_SYSVIEW_EMBOS_SOURCE}"
     )
     if(EMBOS_SIM_HOST_WINDOWS)
         list(APPEND EMBOS_SIM_SEGGER_SOURCES
+            "${EMBOS_SIM_RTT_MEMORY_WIN32_SOURCE}"
             "${EMBOS_SIM_SYSVIEW_WIN32_CONFIG_SOURCE}"
         )
-    elseif(EMBOS_SIM_HOST_LINUX)
+    elseif(EMBOS_SIM_HOST_POSIX)
         list(APPEND EMBOS_SIM_SEGGER_SOURCES
+            "${EMBOS_SIM_RTT_MEMORY_POSIX_SOURCE}"
             "${EMBOS_SIM_SYSVIEW_POSIX_CONFIG_SOURCE}"
         )
     endif()
@@ -753,7 +782,6 @@ target_include_directories(Start PRIVATE
     "${EMBOS_APPLICATION_DIR}"
     "${CMAKE_CURRENT_SOURCE_DIR}/Setup"
     "${EMBOS_SIM_SEGGER_DIR}"
-    "${EMBOS_SEGGER_DIR}"
     ${EMBOS_SIM_PLATFORM_INCLUDE_DIRS}
 )
 
@@ -761,6 +789,9 @@ target_link_libraries(Start PRIVATE
     embos_kernel
     embos_sim_start_options
 )
+if(NOT EMBOS_SIM_IS_64_BIT)
+    target_link_libraries(Start PRIVATE SEGGER_SYSVIEW)
+endif()
 
 if(EMBOS_SIM_ALLOCATOR_INTERPOSITION_LINK_OPTIONS)
     target_link_options(Start PRIVATE

@@ -45,16 +45,27 @@ visible unless their stack matches one of those host graphics frames.
 
 SEGGER support layout:
 ======================
-Shared SEGGER RTT and SystemView core source files are stored in ../../SEGGER.
-Simulation-specific SEGGER configuration headers, the generic embOS
-SystemView configuration source, platform configuration sources and the embOS
-SystemView interface are stored in the local SEGGER directory so each board
-support package can own its target configuration.
-The Simulation CMake project includes the local SEGGER directory before the
-shared SEGGER directory. The 32-bit simulation target links the host-specific
-SystemView configuration source for the selected host platform, so
-SEGGER_SYSVIEW_Config_embOS.c remains a local board-support configuration file
-and is not linked beside the Win32 or POSIX configuration source.
+The Simulation CMake project consumes the shared address-based RTT and
+SystemView implementations through ../../../RTT and ../../../SystemView CMake
+targets. It does not compile private SEGGER source copies from the embOS tree.
+
+Simulation-specific SEGGER configuration headers, the MEMSHM RTT memory owner
+API, the Win32/POSIX MEMSHM owner implementations, the generic embOS SystemView
+configuration source, platform configuration sources and the embOS SystemView
+interface are stored in the local SEGGER directory so this board support package
+owns its target configuration.
+
+The 32-bit simulation target maps host shared memory object /rtt_sim and uses
+the local SEGGER_RTT_Conf.h and SEGGER_SYSVIEW_Conf.h for both shared targets.
+The host-specific SystemView configuration source for the selected platform is
+linked by the Start target, so SEGGER_SYSVIEW_Config_embOS.c remains a local
+board-support configuration file and is not linked beside the Win32 or POSIX
+configuration source.
+
+Simulation RTT does not start a TCP/IP forwarding thread. The simulation process
+owns and updates the /rtt_sim MEMSHM object, while TraceHub attaches to the same
+shared memory object and performs host-side forwarding, recording and terminal
+I/O.
 
 Legacy Eclipse MinGW notes:
 ===========================
@@ -67,9 +78,8 @@ Historical configurations:
 --------------------------
 - Debug:
   An embOS debug and profiling library is used.
-  To use SEGGER SystemView with this configuration, configure
-  SystemView to use the IP Recorder and select the IP of the
-  target with the default port 19111.
+  To use SystemView data from this configuration, start TraceHub with the
+  MEMSHM backend and attach it to /rtt_sim.
 
 - Release:
   This configuration is prepared to build a "release"

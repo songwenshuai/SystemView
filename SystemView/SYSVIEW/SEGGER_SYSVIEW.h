@@ -52,6 +52,7 @@ extern "C" {
 
 #define SEGGER_SYSVIEW_INFO_SIZE      9   // Minimum size, which has to be reserved for a packet. 1-2 byte of message type, 0-2  byte of payload length, 1-5 bytes of timestamp.
 #define SEGGER_SYSVIEW_QUANTA_U32     5   // Maximum number of bytes to encode a U32, should be reserved for each 32-bit value in a packet.
+#define SEGGER_SYSVIEW_QUANTA_ADDR    (((sizeof(uintptr_t) * 8u) + 6u) / 7u)
 
 #define SEGGER_SYSVIEW_LOG            (0u)
 #define SEGGER_SYSVIEW_WARNING        (1u)
@@ -161,17 +162,17 @@ extern "C" {
 */
 
 typedef struct {
-  U32          TaskID;
+  uintptr_t    TaskID;
   const char*  sName;
   U32          Prio;
-  U32          StackBase;
+  uintptr_t    StackBase;
   U32          StackSize;
   U32          StackUsage;
 } SEGGER_SYSVIEW_TASKINFO;
 
 typedef struct {
-  U32          TaskID;
-  U32          StackBase;
+  uintptr_t    TaskID;
+  uintptr_t    StackBase;
   U32          StackSize;
   U32          StackUsage;
 } SEGGER_SYSVIEW_STACKINFO;
@@ -209,7 +210,7 @@ typedef struct {
   U32                     SysFreq;
   U32                     CPUFreq;
   U32                     LastTxTimeStamp;
-  U32                     RAMBaseAddress;
+  uintptr_t               RAMBaseAddress;
 #if (SEGGER_SYSVIEW_POST_MORTEM_MODE == 1)
   U32                     PacketCount;
 #else
@@ -274,7 +275,7 @@ typedef struct {
 void SEGGER_SYSVIEW_Init                          (U32 SysFreq, U32 CPUFreq, const SEGGER_SYSVIEW_OS_API *pOSAPI, SEGGER_SYSVIEW_SEND_SYS_DESC_FUNC pfSendSysDesc);
 void SEGGER_SYSVIEW_Init_Ex                       (U32 SysFreq, U32 CPUFreq, const SEGGER_SYSVIEW_OS_API *pOSAPI, SEGGER_SYSVIEW_SEND_SYS_DESC_FUNC pfSendSysDesc, SEGGER_SYSVIEW_START_CALLBACK pfStartCallback, SEGGER_SYSVIEW_STOP_CALLBACK pfEndCallback);
 void SEGGER_SYSVIEW_InitAdditionalBuffer          (SEGGER_SYSVIEW_CORE_CONTEXT* pContext, uintptr_t UpBufferAddress, unsigned UpBufferSize, uintptr_t DownBufferAddress, unsigned DownBufferSize);
-void SEGGER_SYSVIEW_SetRAMBase                    (U32 RAMBaseAddress);
+void SEGGER_SYSVIEW_SetRAMBase                    (uintptr_t RAMBaseAddress);
 void SEGGER_SYSVIEW_Start                         (void);
 void SEGGER_SYSVIEW_Start_Ex                      (SEGGER_SYSVIEW_CORE_CONTEXT* pContext, unsigned Timestamp);
 void SEGGER_SYSVIEW_Stop                          (void);
@@ -311,18 +312,18 @@ void SEGGER_SYSVIEW_RecordSystime                 (void);
 void SEGGER_SYSVIEW_RecordEnterISR                (void);
 void SEGGER_SYSVIEW_RecordExitISR                 (void);
 void SEGGER_SYSVIEW_RecordExitISRToScheduler      (void);
-void SEGGER_SYSVIEW_RecordEnterTimer              (U32 TimerId);
+void SEGGER_SYSVIEW_RecordEnterTimer              (uintptr_t TimerId);
 void SEGGER_SYSVIEW_RecordExitTimer               (void);
 void SEGGER_SYSVIEW_RecordEndCall                 (unsigned int EventID);
 void SEGGER_SYSVIEW_RecordEndCallU32              (unsigned int EventID, U32 Para0);
 
 void SEGGER_SYSVIEW_OnIdle                        (void);
-void SEGGER_SYSVIEW_OnTaskCreate                  (U32 TaskId);
-void SEGGER_SYSVIEW_OnTaskTerminate               (U32 TaskId);
-void SEGGER_SYSVIEW_OnTaskStartExec               (U32 TaskId);
+void SEGGER_SYSVIEW_OnTaskCreate                  (uintptr_t TaskId);
+void SEGGER_SYSVIEW_OnTaskTerminate               (uintptr_t TaskId);
+void SEGGER_SYSVIEW_OnTaskStartExec               (uintptr_t TaskId);
 void SEGGER_SYSVIEW_OnTaskStopExec                (void);
-void SEGGER_SYSVIEW_OnTaskStartReady              (U32 TaskId);
-void SEGGER_SYSVIEW_OnTaskStopReady               (U32 TaskId, unsigned int Cause);
+void SEGGER_SYSVIEW_OnTaskStartReady              (uintptr_t TaskId);
+void SEGGER_SYSVIEW_OnTaskStopReady               (uintptr_t TaskId, unsigned int Cause);
 void SEGGER_SYSVIEW_MarkStart                     (unsigned int MarkerId);
 void SEGGER_SYSVIEW_MarkStop                      (unsigned int MarkerId);
 void SEGGER_SYSVIEW_Mark                          (unsigned int MarkerId);
@@ -333,7 +334,7 @@ void SEGGER_SYSVIEW_HeapAlloc                     (void* pHeap, void* pUserData,
 void SEGGER_SYSVIEW_HeapAllocEx                   (void* pHeap, void* pUserData, unsigned int UserDataLen, unsigned int Tag);
 void SEGGER_SYSVIEW_HeapFree                      (void* pHeap, void* pUserData);
 
-void SEGGER_SYSVIEW_NameResource                  (U32 ResourceId, const char* sName);
+void SEGGER_SYSVIEW_NameResource                  (uintptr_t ResourceId, const char* sName);
 void SEGGER_SYSVIEW_RegisterData                  ( SEGGER_SYSVIEW_DATA_REGISTER* pInfo);
 
 int  SEGGER_SYSVIEW_SendPacket                    (U8* pPacket, U8* pPayloadEnd, unsigned int EventId);
@@ -346,8 +347,8 @@ int  SEGGER_SYSVIEW_SendPacket_Ex                 (SEGGER_SYSVIEW_CORE_CONTEXT* 
 U8*  SEGGER_SYSVIEW_EncodeU32                     (U8* pPayload, U32 Value);
 U8*  SEGGER_SYSVIEW_EncodeData                    (U8* pPayload, const char* pSrc, unsigned int Len);
 U8*  SEGGER_SYSVIEW_EncodeString                  (U8* pPayload, const char* s, unsigned int MaxLen);
-U8*  SEGGER_SYSVIEW_EncodeId                      (U8* pPayload, U32 Id);
-U32  SEGGER_SYSVIEW_ShrinkId                      (U32 Id);
+U8*  SEGGER_SYSVIEW_EncodeId                      (U8* pPayload, uintptr_t Id);
+uintptr_t SEGGER_SYSVIEW_ShrinkId                 (uintptr_t Id);
 
 
 /*********************************************************************
@@ -392,77 +393,77 @@ void SEGGER_SYSVIEW_VErrorfTarget                 (const char* s, va_list* pPara
 
 #define SEGGER_SYSVIEW_PRINT_ELF(Options, sMsg) do {                                                                          \
     static const char SEGGER_SYSVIEW_STATIC_ADDRESS_DATA ac[] = sMsg;                                                         \
-    SEGGER_SYSVIEW__PrintElf((unsigned int)ac, Options);                                                                      \
+    SEGGER_SYSVIEW__PrintElf((uintptr_t)ac, Options);                                                                         \
 } while (0)                                                                                             
 #define SEGGER_SYSVIEW_PRINT_ELF_U32(Options, sMsg, Para0) do {                                                               \
     static const char SEGGER_SYSVIEW_STATIC_ADDRESS_DATA ac[] = sMsg;                                                         \
-    SEGGER_SYSVIEW__PrintElf_U32((unsigned int)ac, Options, (U32)Para0);                                                      \
+    SEGGER_SYSVIEW__PrintElf_U32((uintptr_t)ac, Options, (U32)Para0);                                                         \
 } while (0)                                                                                             
 #define SEGGER_SYSVIEW_PRINT_ELF_U32_X2(Options, sMsg, Para0, Para1) do {                                                     \
     static const char SEGGER_SYSVIEW_STATIC_ADDRESS_DATA ac[] = sMsg;                                                         \
-    SEGGER_SYSVIEW__PrintElf_U32x2((unsigned int)ac, Options, (U32)Para0, (U32)Para1);                                        \
+    SEGGER_SYSVIEW__PrintElf_U32x2((uintptr_t)ac, Options, (U32)Para0, (U32)Para1);                                           \
 } while (0)                                                                                             
 #define SEGGER_SYSVIEW_PRINT_ELF_U32_X3(Options, sMsg,Para0, Para1, Para2) do {                                               \
     static const char SEGGER_SYSVIEW_STATIC_ADDRESS_DATA ac[] = sMsg;                                                         \
-    SEGGER_SYSVIEW__PrintElf_U32x3((unsigned int)ac, Options, (U32)Para0, (U32)Para1, (U32)Para2);                            \
+    SEGGER_SYSVIEW__PrintElf_U32x3((uintptr_t)ac, Options, (U32)Para0, (U32)Para1, (U32)Para2);                               \
 } while (0)                                                                                             
 #define SEGGER_SYSVIEW_PRINT_ELF_U32_X4(Options, sMsg, Para0, Para1, Para2, Para3) do {                                       \
     static const char SEGGER_SYSVIEW_STATIC_ADDRESS_DATA ac[] = sMsg;                                                         \
-    SEGGER_SYSVIEW__PrintElf_U32x4((unsigned int)ac, Options, (U32)Para0, (U32)Para1, (U32)Para2, (U32)Para3);                \
+    SEGGER_SYSVIEW__PrintElf_U32x4((uintptr_t)ac, Options, (U32)Para0, (U32)Para1, (U32)Para2, (U32)Para3);                   \
 } while (0)
 #define SEGGER_SYSVIEW_PRINT_ELF_U32_X5(Options, sMsg, Para0, Para1, Para2, Para3, Para4) do {                                \
     static const char SEGGER_SYSVIEW_STATIC_ADDRESS_DATA ac[] = sMsg;                                                         \
-    SEGGER_SYSVIEW__PrintElf_U32x5((unsigned int)ac, Options, (U32)Para0, (U32)Para1, (U32)Para2, (U32)Para3, (U32)Para4);    \
+    SEGGER_SYSVIEW__PrintElf_U32x5((uintptr_t)ac, Options, (U32)Para0, (U32)Para1, (U32)Para2, (U32)Para3, (U32)Para4);       \
 } while (0)
 #define SEGGER_SYSVIEW_PRINT_ELF_U32_X6(Options, sMsg, Para0, Para1, Para2, Para3, Para4, Para5) do {                                                           \
     static const char SEGGER_SYSVIEW_STATIC_ADDRESS_DATA ac[] = sMsg;                                                                                           \
-    SEGGER_SYSVIEW__PrintElf_U32x6((unsigned int)ac, Options, (U32)Para0, (U32)Para1, (U32)Para2, (U32)Para3, (U32)Para4, (U32)Para5);                          \
+    SEGGER_SYSVIEW__PrintElf_U32x6((uintptr_t)ac, Options, (U32)Para0, (U32)Para1, (U32)Para2, (U32)Para3, (U32)Para4, (U32)Para5);                             \
 } while (0)
 #define SEGGER_SYSVIEW_PRINT_ELF_U32_X7(Options, sMsg, Para0, Para1, Para2, Para3, Para4, Para5, Para6) do {                                                    \
     static const char SEGGER_SYSVIEW_STATIC_ADDRESS_DATA ac[] = sMsg;                                                                                           \
-    SEGGER_SYSVIEW__PrintElf_U32x7((unsigned int)ac, Options, (U32)Para0, (U32)Para1, (U32)Para2, (U32)Para3, (U32)Para4, (U32)Para5, (U32)Para6,);             \
+    SEGGER_SYSVIEW__PrintElf_U32x7((uintptr_t)ac, Options, (U32)Para0, (U32)Para1, (U32)Para2, (U32)Para3, (U32)Para4, (U32)Para5, (U32)Para6);                 \
 } while (0)
 #define SEGGER_SYSVIEW_PRINT_ELF_U32_X8(Options, sMsg, Para0, Para1, Para2, Para3, Para4, Para5, Para6, Para7) do {                                             \
     static const char SEGGER_SYSVIEW_STATIC_ADDRESS_DATA ac[] = sMsg;                                                                                           \
-    SEGGER_SYSVIEW__PrintElf_U32x8((unsigned int)ac, Options, (U32)Para0, (U32)Para1, (U32)Para2, (U32)Para3, (U32)Para4, (U32)Para5, (U32)Para6, (U32)Para7);  \
+    SEGGER_SYSVIEW__PrintElf_U32x8((uintptr_t)ac, Options, (U32)Para0, (U32)Para1, (U32)Para2, (U32)Para3, (U32)Para4, (U32)Para5, (U32)Para6, (U32)Para7);     \
 } while (0)
 #define SEGGER_SYSVIEW_PRINT_ELF_U32_X9(Options, sMsg, Para0, Para1, Para2, Para3, Para4, Para5, Para6, Para7, Para8) do {                                                              \
     static const char SEGGER_SYSVIEW_STATIC_ADDRESS_DATA ac[] = sMsg;                                                                                                                   \
-    SEGGER_SYSVIEW__PrintElf_U32x9((unsigned int)ac, Options, (U32)Para0, (U32)Para1, (U32)Para2, (U32)Para3, (U32)Para4, (U32)Para5, (U32)Para6, (U32)Para7, (U32)Para8):              \
+    SEGGER_SYSVIEW__PrintElf_U32x9((uintptr_t)ac, Options, (U32)Para0, (U32)Para1, (U32)Para2, (U32)Para3, (U32)Para4, (U32)Para5, (U32)Para6, (U32)Para7, (U32)Para8);                \
 } while (0)
 #define SEGGER_SYSVIEW_PRINT_ELF_U32_X10(Options, sMsg, Para0, Para1, Para2, Para3, Para4, Para5, Para6, Para7, Para8, Para9) do {                                                      \
     static const char SEGGER_SYSVIEW_STATIC_ADDRESS_DATA ac[] = sMsg;                                                                                                                   \
-    SEGGER_SYSVIEW__PrintElf_U32x10((unsigned int)ac, Options, (U32)Para0, (U32)Para1, (U32)Para2, (U32)Para3, (U32)Para4, (U32)Para5, (U32)Para6, (U32)Para7, (U32)Para8, (U32)Para9); \
+    SEGGER_SYSVIEW__PrintElf_U32x10((uintptr_t)ac, Options, (U32)Para0, (U32)Para1, (U32)Para2, (U32)Para3, (U32)Para4, (U32)Para5, (U32)Para6, (U32)Para7, (U32)Para8, (U32)Para9);    \
 } while (0)
 #define   SEGGER_SYSVIEW_PRINT_ELF_U32_VAR(Options, sMsg, ...) do {                                                           \
     static const char SEGGER_SYSVIEW_STATIC_ADDRESS_DATA ac[] = sMsg;                                                         \
     U32 aIntArg[] = {__VA_ARGS__};                                                                                            \
-    SEGGER_SYSVIEW_PrintElf_Fmt((unsigned int)ac, Options, SEGGER_COUNTOF(aIntArg), aIntArg, 0, NULL);                        \
+    SEGGER_SYSVIEW__PrintElf_Fmt((uintptr_t)ac, Options, SEGGER_COUNTOF(aIntArg), aIntArg, 0, NULL);                          \
 } while (0)
 #define  SEGGER_SYSVIEW_PRINT_ELF_STR_VAR(Options, sMsg, ...) do {                                                            \
     static const char SEGGER_SYSVIEW_STATIC_ADDRESS_DATA ac[] = sMsg;                                                         \
     const char* aStrArg[] = {__VA_ARGS__};                                                                                    \
-    SEGGER_SYSVIEW_PrintElf_Fmt((unsigned int)ac, Options, 0, NULL, SEGGER_COUNTOF(aStrArg), aStrArg);                        \
+    SEGGER_SYSVIEW__PrintElf_Fmt((uintptr_t)ac, Options, 0, NULL, SEGGER_COUNTOF(aStrArg), aStrArg);                          \
 } while (0)
 #define SEGGER_SYSVIEW_PRINT_ELF_FMT(Options, sMsg, aIntArgPara, aStrArgPara) do {                                            \
   static const char SEGGER_SYSVIEW_STATIC_ADDRESS_DATA ac[] = sMsg;                                                           \
   U32 aIntArg[] = aIntArgPara;                                                                                                \
   const char* aStrArg[] = aStrArgPara;                                                                                        \
-  SEGGER_SYSVIEW__PrintElf_Fmt((unsigned int)ac, Options, SEGGER_COUNTOF(aIntArg), aIntArg, SEGGER_COUNTOF(aStrArg), aStrArg); \
+  SEGGER_SYSVIEW__PrintElf_Fmt((uintptr_t)ac, Options, SEGGER_COUNTOF(aIntArg), aIntArg, SEGGER_COUNTOF(aStrArg), aStrArg);   \
 } while (0)
 
-void SEGGER_SYSVIEW__PrintElf                     (unsigned int ID, U32 Options);
-void SEGGER_SYSVIEW__PrintElf_U32                 (unsigned int ID, U32 Options, U32 Para0);
-void SEGGER_SYSVIEW__PrintElf_U32x2               (unsigned int ID, U32 Options, U32 Para0, U32 Para1);
-void SEGGER_SYSVIEW__PrintElf_U32x3               (unsigned int ID, U32 Options, U32 Para0, U32 Para1, U32 Para2);
-void SEGGER_SYSVIEW__PrintElf_U32x4               (unsigned int ID, U32 Options, U32 Para0, U32 Para1, U32 Para2, U32 Para3);
-void SEGGER_SYSVIEW__PrintElf_U32x5               (unsigned int ID, U32 Options, U32 Para0, U32 Para1, U32 Para2, U32 Para3, U32 Para4);
-void SEGGER_SYSVIEW__PrintElf_U32x6               (unsigned int ID, U32 Options, U32 Para0, U32 Para1, U32 Para2, U32 Para3, U32 Para4, U32 Para5);
-void SEGGER_SYSVIEW__PrintElf_U32x7               (unsigned int ID, U32 Options, U32 Para0, U32 Para1, U32 Para2, U32 Para3, U32 Para4, U32 Para5, U32 Para6);
-void SEGGER_SYSVIEW__PrintElf_U32x8               (unsigned int ID, U32 Options, U32 Para0, U32 Para1, U32 Para2, U32 Para3, U32 Para4, U32 Para5, U32 Para6, U32 Para7);
-void SEGGER_SYSVIEW__PrintElf_U32x9               (unsigned int ID, U32 Options, U32 Para0, U32 Para1, U32 Para2, U32 Para3, U32 Para4, U32 Para5, U32 Para6, U32 Para7, U32 Para8);
-void SEGGER_SYSVIEW__PrintElf_U32x10              (unsigned int ID, U32 Options, U32 Para0, U32 Para1, U32 Para2, U32 Para3, U32 Para4, U32 Para5, U32 Para6, U32 Para7, U32 Para8, U32 Para9);
-void SEGGER_SYSVIEW__PrintElf_Fmt                 (unsigned int ID, U32 Options, unsigned int NumIntArgs, U32* pIntArgs, unsigned int NumStrArgs, const char** psStrArgs);
+void SEGGER_SYSVIEW__PrintElf                     (uintptr_t ID, U32 Options);
+void SEGGER_SYSVIEW__PrintElf_U32                 (uintptr_t ID, U32 Options, U32 Para0);
+void SEGGER_SYSVIEW__PrintElf_U32x2               (uintptr_t ID, U32 Options, U32 Para0, U32 Para1);
+void SEGGER_SYSVIEW__PrintElf_U32x3               (uintptr_t ID, U32 Options, U32 Para0, U32 Para1, U32 Para2);
+void SEGGER_SYSVIEW__PrintElf_U32x4               (uintptr_t ID, U32 Options, U32 Para0, U32 Para1, U32 Para2, U32 Para3);
+void SEGGER_SYSVIEW__PrintElf_U32x5               (uintptr_t ID, U32 Options, U32 Para0, U32 Para1, U32 Para2, U32 Para3, U32 Para4);
+void SEGGER_SYSVIEW__PrintElf_U32x6               (uintptr_t ID, U32 Options, U32 Para0, U32 Para1, U32 Para2, U32 Para3, U32 Para4, U32 Para5);
+void SEGGER_SYSVIEW__PrintElf_U32x7               (uintptr_t ID, U32 Options, U32 Para0, U32 Para1, U32 Para2, U32 Para3, U32 Para4, U32 Para5, U32 Para6);
+void SEGGER_SYSVIEW__PrintElf_U32x8               (uintptr_t ID, U32 Options, U32 Para0, U32 Para1, U32 Para2, U32 Para3, U32 Para4, U32 Para5, U32 Para6, U32 Para7);
+void SEGGER_SYSVIEW__PrintElf_U32x9               (uintptr_t ID, U32 Options, U32 Para0, U32 Para1, U32 Para2, U32 Para3, U32 Para4, U32 Para5, U32 Para6, U32 Para7, U32 Para8);
+void SEGGER_SYSVIEW__PrintElf_U32x10              (uintptr_t ID, U32 Options, U32 Para0, U32 Para1, U32 Para2, U32 Para3, U32 Para4, U32 Para5, U32 Para6, U32 Para7, U32 Para8, U32 Para9);
+void SEGGER_SYSVIEW__PrintElf_Fmt                 (uintptr_t ID, U32 Options, unsigned int NumIntArgs, U32* pIntArgs, unsigned int NumStrArgs, const char** psStrArgs);
 
 void SEGGER_SYSVIEW_Print                         (const char* s);
 void SEGGER_SYSVIEW_Warn                          (const char* s);

@@ -94,6 +94,7 @@ void _SystemView_ServiceThread(void *pArg) {
             Result = SYS_SOCKET_IsReady(hClient);
             if (Result != 1) {
                 Log_Warn("SystemView: failed to connect\n");
+                SYS_SOCKET_Shutdown(hClient, SYS_SOCKET_SHUT_RDWR);
                 SYS_SOCKET_Close(hClient);
                 SYS_Sleep(1000);
                 continue;
@@ -105,6 +106,7 @@ void _SystemView_ServiceThread(void *pArg) {
             //
             if (!_SystemView_PerformHandshake(pState, hClient)) {
                 Log_Warn("SystemView: handshake failed, closing connection\n");
+                SYS_SOCKET_Shutdown(hClient, SYS_SOCKET_SHUT_RDWR);
                 SYS_SOCKET_Close(hClient);
                 continue;
             }

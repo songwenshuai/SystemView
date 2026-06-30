@@ -86,6 +86,8 @@ Purpose : TCP socket abstraction layer for host platforms
 
 #if !defined(_WIN32)
 typedef int SOCKET;
+#elif !defined(SO_EXCLUSIVEADDRUSE)
+#define SO_EXCLUSIVEADDRUSE ((int)(~4))
 #endif
 
 /*********************************************************************
@@ -278,11 +280,15 @@ int SYS_SOCKET_ListenAtTCPAddr(SYS_SOCKET_HANDLE hSocket, unsigned IPAddr, unsig
     return -1;
   }
   //
-  // Set SO_REUSEADDR to allow quick restart without "address already in use" error
+  // Set the platform listener binding policy before bind().
   //
   {
     const int optval = SOCKOPT_ENABLE_VALUE;
+#if defined(_WIN32)
+    r = setsockopt((SOCKET)hSocket, SOL_SOCKET, SO_EXCLUSIVEADDRUSE, (char*)&optval, sizeof(int));
+#else
     r = setsockopt((SOCKET)hSocket, SOL_SOCKET, SO_REUSEADDR, (char*)&optval, sizeof(int));
+#endif
   }
   if (r != 0) {
     return -1;
@@ -360,6 +366,15 @@ void SYS_SOCKET_Close(SYS_SOCKET_HANDLE hSocket) {
   // Close socket
   //
 #if defined(_WIN32)
+  {
+    int optval = SOCKOPT_DISABLE_VALUE;
+    int optlen = (int)sizeof(optval);
+
+    if ((getsockopt((SOCKET)hSocket, SOL_SOCKET, SO_EXCLUSIVEADDRUSE, (char *)&optval, &optlen) == 0) &&
+        (optval != 0)) {
+      shutdown((SOCKET)hSocket, SD_BOTH);
+    }
+  }
   closesocket((SOCKET)hSocket);
 #else
   close(hSocket);
@@ -385,6 +400,7 @@ int SYS_SOCKET_IsReadable(SYS_SOCKET_HANDLE hSocket, int TimeoutMs) {
   SOCKET Sock;
   struct timeval tv;
   fd_set rfds;
+  fd_set efds;
   int v;
 
   if (!SYS_SOCKET_IsValidHandle(hSocket) || (TimeoutMs < 0)) {
@@ -393,14 +409,16 @@ int SYS_SOCKET_IsReadable(SYS_SOCKET_HANDLE hSocket, int TimeoutMs) {
   Sock = (SOCKET)hSocket;
   FD_ZERO(&rfds);       // Zero init file descriptor list
   FD_SET(Sock, &rfds);  // Add socket to file descriptor list to be monitored by select()
+  FD_ZERO(&efds);
+  FD_SET(Sock, &efds);
   tv.tv_sec = (long)(TimeoutMs / 1000);
   tv.tv_usec = (TimeoutMs % 1000) * 1000;
 #if defined(_WIN32)
-  v = select(0, &rfds, NULL, NULL, &tv);
+  v = select(0, &rfds, NULL, &efds, &tv);
 #else
-  v = select((int)(hSocket + 1), &rfds, NULL, NULL, &tv);   // > 0: in case of success, == 0: Timeout, < 0: Error
+  v = select((int)(hSocket + 1), &rfds, NULL, &efds, &tv);   // > 0: in case of success, == 0: Timeout, < 0: Error
 #endif
-  return v;
+  return (v > 0) ? 1 : v;
 }
 
 /*********************************************************************
@@ -421,6 +439,7 @@ int SYS_SOCKET_IsWriteable(SYS_SOCKET_HANDLE hSocket, int TimeoutMs) {
   SOCKET Sock;
   struct timeval tv;
   fd_set wfds;
+  fd_set efds;
   int v;
 
   if (!SYS_SOCKET_IsValidHandle(hSocket) || (TimeoutMs < 0)) {
@@ -429,14 +448,16 @@ int SYS_SOCKET_IsWriteable(SYS_SOCKET_HANDLE hSocket, int TimeoutMs) {
   Sock = (SOCKET)hSocket;
   FD_ZERO(&wfds);       // Zero init file descriptor list
   FD_SET(Sock, &wfds);  // Add socket to file descriptor list to be monitored by select()
+  FD_ZERO(&efds);
+  FD_SET(Sock, &efds);
   tv.tv_sec = (long)(TimeoutMs / 1000);
   tv.tv_usec = (TimeoutMs % 1000) * 1000;
 #if defined(_WIN32)
-  v = select(0, NULL, &wfds, NULL, &tv);
+  v = select(0, NULL, &wfds, &efds, &tv);
 #else
-  v = select((int)(hSocket + 1), NULL, &wfds, NULL, &tv);   // > 0: in case of success, == 0: Timeout, < 0: Error
+  v = select((int)(hSocket + 1), NULL, &wfds, &efds, &tv);   // > 0: in case of success, == 0: Timeout, < 0: Error
 #endif
-  return v;
+  return (v > 0) ? 1 : v;
 }
 
 /*********************************************************************

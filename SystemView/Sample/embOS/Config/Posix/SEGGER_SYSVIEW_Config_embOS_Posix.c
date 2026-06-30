@@ -1,65 +1,56 @@
 /*********************************************************************
-*                    SEGGER Microcontroller GmbH                     *
+*                     SEGGER Microcontroller GmbH                    *
 *                        The Embedded Experts                        *
 **********************************************************************
 *                                                                    *
-*            (c) 1995 - 2024 SEGGER Microcontroller GmbH             *
+*       (c) 1995 - 2026 SEGGER Microcontroller GmbH                  *
 *                                                                    *
-*       www.segger.com     Support: support@segger.com               *
-*                                                                    *
-**********************************************************************
-*                                                                    *
-*       SEGGER SystemView * Real-time application analysis           *
+*       Internet: segger.com  Support: support_embos@segger.com      *
 *                                                                    *
 **********************************************************************
 *                                                                    *
-* All rights reserved.                                               *
+*       embOS-Classic * Real time operating system                   *
 *                                                                    *
-* SEGGER strongly recommends to not make any changes                 *
-* to or modify the source code of this software in order to stay     *
-* compatible with the SystemView and RTT protocol, and J-Link.       *
+*       Please note:                                                 *
 *                                                                    *
-* Redistribution and use in source and binary forms, with or         *
-* without modification, are permitted provided that the following    *
-* condition is met:                                                  *
+*       Knowledge of this file may under no circumstances            *
+*       be used to write a similar product or a real-time            *
+*       operating system for in-house use.                           *
 *                                                                    *
-* o Redistributions of source code must retain the above copyright   *
-*   notice, this condition and the following disclaimer.             *
-*                                                                    *
-* THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND             *
-* CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES,        *
-* INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF           *
-* MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE           *
-* DISCLAIMED. IN NO EVENT SHALL SEGGER Microcontroller BE LIABLE FOR *
-* ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR           *
-* CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT  *
-* OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;    *
-* OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF      *
-* LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT          *
-* (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE  *
-* USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH   *
-* DAMAGE.                                                            *
+*       Thank you for your fairness !                                *
 *                                                                    *
 **********************************************************************
--------------------------- END-OF-HEADER -----------------------------
+*                                                                    *
+*       OS version: V5.22.0.0                                        *
+*                                                                    *
+**********************************************************************
 
-File    : SEGGER_SYSVIEW_Config_embOS_Win32.c
+-------------------------- END-OF-HEADER -----------------------------
+File    : SEGGER_SYSVIEW_Config_embOS_Posix.c
 Purpose : Sample setup configuration of SystemView with embOS.
-Revision: $Rev: 28344 $
 */
+
+#define _GNU_SOURCE
+
 #include "RTOS.h"
 #include "SEGGER_SYSVIEW.h"
 #include "SEGGER_SYSVIEW_Conf.h"
 #include "SEGGER_SYSVIEW_embOS.h"
-#include "SEGGER_SYSVIEW_Win32.h"
+#include "SEGGER_SYSVIEW_Posix.h"
 #include "SEGGER_RTT.h"
 
-#define WIN32_LEAN_AND_MEAN
+#include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include <Windows.h>
 #include <time.h>
-#include <winsock2.h>
+#include <errno.h>
+#include <unistd.h>
+#include <pthread.h>
+#include <sys/ioctl.h>
+#include <sys/socket.h>
+#include <sys/resource.h>
+#include <arpa/inet.h>
+#include <netinet/tcp.h>
 
 /*********************************************************************
 *
@@ -103,34 +94,32 @@ Revision: $Rev: 28344 $
 **********************************************************************
 */
 
+
+
 #define SYSVIEW_COMM_APP_HELLO_SIZE     32
 #define SYSVIEW_COMM_TARGET_HELLO_SIZE  32
 
+#define HANDLE_ERROR(e, msg)            do { errno = e; perror(msg); exit(EXIT_FAILURE); } while (0)
 
-#ifdef WIN32
-  #define _SYS_THREAD_PROC_EX_TYPE U32 __stdcall
-  #define _SYS_THREAD_PROC_EX_R_TYPE U32
-#else
-  #define _SYS_THREAD_PROC_EX_TYPE void*
-  #define _SYS_THREAD_PROC_EX_R_TYPE void*
-#endif
+#define _INVALID_SOCKET                 (-1)
 
-#define _SYS_THREAD_CREATE_SUSPENDED     (1)
+#define _SYS_THREAD_CREATE_SUSPENDED    (1)
 
-#define _SYS_SOCKET_INVALID_HANDLE       (-1)
-#define _SYS_SOCKET_IP_ADDR_ANY          0
-#define _SYS_SOCKET_IP_ADDR_LOCALHOST    0x7F000001                  // 127.0.0.1 (localhost)
+#define _SYS_SOCKET_INVALID_HANDLE      (-1)
+#define _SYS_SOCKET_IP_ADDR_ANY         0
+#define _SYS_SOCKET_IP_ADDR_LOCALHOST   0x7F000001                  // 127.0.0.1 (localhost)
 
-#define _SYS_SOCKET_PORT_ANY             0
+#define _SYS_SOCKET_PORT_ANY            0
 
-#define _SYS_SOCKET_ERR_UNSPECIFIED      -1
-#define _SYS_SOCKET_ERR_WOULDBLOCK       -2
-#define _SYS_SOCKET_ERR_TIMEDOUT         -3
-#define _SYS_SOCKET_ERR_CONNRESET        -4
+#define _SYS_SOCKET_ERR_UNSPECIFIED     -1
+#define _SYS_SOCKET_ERR_WOULDBLOCK      -2
+#define _SYS_SOCKET_ERR_TIMEDOUT        -3
+#define _SYS_SOCKET_ERR_CONNRESET       -4
+#define _SYS_SOCKET_ERR_INTERRUPT       -5
 
-#define _SYS_SOCKET_SHUT_RD              0
-#define _SYS_SOCKET_SHUT_WR              1
-#define _SYS_SOCKET_SHUT_RDWR            2
+#define _SYS_SOCKET_SHUT_RD             0
+#define _SYS_SOCKET_SHUT_WR             1
+#define _SYS_SOCKET_SHUT_RDWR           2
 
 /*********************************************************************
 *
@@ -139,26 +128,22 @@ Revision: $Rev: 28344 $
 **********************************************************************
 */
 typedef void* _SYS_HANDLE;
-typedef int _SYS_SOCKET_HANDLE;
-typedef _SYS_THREAD_PROC_EX_TYPE _SYS_THREAD_PROC_EX(void* pPara);
+typedef int   _SYS_SOCKET_HANDLE;
+typedef void* _SYS_THREAD_PROC_EX(void*);
 
 /*********************************************************************
 *
 *       Static data
 *
 **********************************************************************
-*/// "Hello" message expected by SystemView App: SEGGER SystemView VM.mm.rr
-static const U8          _abHelloMsg[SYSVIEW_COMM_TARGET_HELLO_SIZE] = { 'S', 'E', 'G', 'G', 'E', 'R', ' ', 'S', 'y', 's', 't', 'e', 'm', 'V', 'i', 'e', 'w', ' ', 'V', '0' + SEGGER_SYSVIEW_MAJOR, '.', '0' + (SEGGER_SYSVIEW_MINOR / 10), '0' + (SEGGER_SYSVIEW_MINOR % 10), '.', '0' + (SEGGER_SYSVIEW_REV / 10), '0' + (SEGGER_SYSVIEW_REV % 10), '\0', 0, 0, 0, 0, 0 };
-static volatile int      _CloseRequested;            // Indicator for threads to terminate themselves
-static volatile int      _SysViewCommThreadRunning;  // Indicator for status of the "SysView communication" thread
+*/
+// "Hello" message expected by SystemView App: SEGGER SystemView VM.mm.rr
+static const U8     _abHelloMsg[SYSVIEW_COMM_TARGET_HELLO_SIZE] = { 'S', 'E', 'G', 'G', 'E', 'R', ' ', 'S', 'y', 's', 't', 'e', 'm', 'V', 'i', 'e', 'w', ' ', 'V', '0' + SEGGER_SYSVIEW_MAJOR, '.', '0' + (SEGGER_SYSVIEW_MINOR / 10), '0' + (SEGGER_SYSVIEW_MINOR % 10), '.', '0' + (SEGGER_SYSVIEW_REV / 10), '0' + (SEGGER_SYSVIEW_REV % 10), '\0', 0, 0, 0, 0, 0 };
+static volatile int _CloseRequested;            // Indicator for threads to terminate themselves
+static volatile int _SysViewCommThreadRunning;  // Indicator for status of the "SysView communication" thread
 
-static int               _int1   = 1;
-
-static U64               _TSFreq;
-static U32               _TSDiv;
-
-static CRITICAL_SECTION  _csLockString;
-static char              _sISRNames[MAX_ISRNAMES_LENGTH];
+static int          _int1 = 1;
+static char         _sISRNames[MAX_ISRNAMES_LENGTH];
 
 /*********************************************************************
 *
@@ -169,10 +154,42 @@ static char              _sISRNames[MAX_ISRNAMES_LENGTH];
 
 /*********************************************************************
 *
+*       _OpenSocketNoInherit
+*
+*  Function description
+*    Opens a socket and sets the SOCK_CLOEXEC flag,
+*    so that the socket handle will not be inherited by child processes.
+*
+*  Parameters
+*    See doc. for socket()
+*
+*  Return value
+*    See doc. for socket()
+*/
+static int _OpenSocketNoInherit(int Domain, int Type, int Protocol) {
+  int hSock;
+  //
+  // (200117) LG:
+  // Testing the functionality of SOCK_CLOEXEC when opening sockets has shown that it does not seem to work correctly on
+  // Ubuntu 18.04 LTS (64bit)
+  //
+  // --> One more reason to have child processes on Linux close any open file descriptor's that they might have inherited on start
+  //
+  Type |= SOCK_CLOEXEC;                    // This flag is supported since Linux 2.6.27 (Oct 2008) (http://man7.org/linux/man-pages/man2/socket.2.html)
+  hSock = socket(Domain, Type, Protocol);
+  if (hSock == _INVALID_SOCKET) {
+    goto Done;
+  }
+Done:
+  return hSock;
+}
+
+/*********************************************************************
+*
 *       SYS_Sleep
 */
 static void _SYS_Sleep(int ms) {
-  Sleep(ms);
+  usleep(ms * 1000);
 }
 
 /*********************************************************************
@@ -180,7 +197,19 @@ static void _SYS_Sleep(int ms) {
 *       SYS_GetLastError
 */
 static U32 _SYS_GetLastError(void) {
-  return GetLastError();
+  return errno;
+}
+
+/*********************************************************************
+*
+*       _SetThreadName
+*/
+static void _SetThreadName(pthread_t Thread, const char* sThreadName) {
+  char sName[16];
+
+  strncpy(sName, sThreadName, 15);
+  sName[15] = '\0';
+  pthread_setname_np(Thread, sName);
 }
 
 /*********************************************************************
@@ -188,54 +217,61 @@ static U32 _SYS_GetLastError(void) {
 *       SYS_CreateThreadEx
 */
 static _SYS_HANDLE _SYS_CreateThreadEx(_SYS_THREAD_PROC_EX* pfThreadProc, void* pPara, U64* pThreadId, const char* sName, U32 Flags) {
-  _SYS_HANDLE hThread;
-  U32 ThreadId;
-  U32 CreateFlags;
+  pthread_t          Thread;
+  pthread_attr_t     Attr;
+  int                Policy;
+  int                Result;
+  struct sched_param SchedulerParameters;
+  struct rlimit      ResourceLimit;
 
-  CreateFlags = 0;
-  if (Flags & _SYS_THREAD_CREATE_SUSPENDED) {
-    CreateFlags = CREATE_SUSPENDED;
+  SEGGER_USE_PARA(Flags);
+  Thread = pthread_self();
+  Result = pthread_getattr_np(Thread, &Attr);
+  if (Result != 0) {
+    HANDLE_ERROR(Result, "pthread_getattr_np");
   }
-  hThread = (_SYS_HANDLE)CreateThread(NULL, 0, pfThreadProc, pPara, CreateFlags, &ThreadId);
-  if (sName != NULL) {
-    OS_SIM_SetThreadName(ThreadId, sName);
+  Result = pthread_attr_getschedpolicy(&Attr, &Policy);
+  if (Result != 0) {
+    HANDLE_ERROR(Result, "pthread_attr_getschedpolicy");
   }
-  if (hThread) {
-    if (pThreadId) {
-      *pThreadId = ThreadId;
+  Result = pthread_attr_init(&Attr);
+  if (Result != 0) {
+    HANDLE_ERROR(Result, "pthread_attr_init");
+  }
+  Result = pthread_attr_setdetachstate(&Attr, PTHREAD_CREATE_DETACHED);
+  if (Result != 0) {
+    HANDLE_ERROR(Result, "pthread_attr_setdetachstate");
+  }
+  if (Policy == SCHED_FIFO) {
+    Result = pthread_attr_setinheritsched(&Attr, PTHREAD_EXPLICIT_SCHED);
+    if (Result != 0) {
+      HANDLE_ERROR(Result, "pthread_attr_setinheritsched");
+    }
+    Result = getrlimit(RLIMIT_RTPRIO, &ResourceLimit);
+    if (Result != 0) {
+      HANDLE_ERROR(errno, "getrlimit");
+    }
+    Result = pthread_attr_setschedpolicy(&Attr, SCHED_FIFO);
+    if (Result != 0) {
+      HANDLE_ERROR(Result, "pthread_attr_setschedpolicy");
+    }
+    SchedulerParameters.sched_priority = ResourceLimit.rlim_max;
+    Result = pthread_attr_setschedparam(&Attr, &SchedulerParameters);
+    if (Result != 0) {
+      HANDLE_ERROR(Result, "pthread_attr_setschedparam");
     }
   }
-  return hThread;
-}
-
-/*********************************************************************
-*
-*       _WSAStartup
-*
-*  Function description
-*    Initializes Winsock API. Needs to be called once before using any socket API.
-*    May be called multiple times.
-*/
-static void _WSAStartup(void) {
-  WORD    wVersionRequested;
-  WSADATA wsaData;
-  //
-  // Init Winsock API
-  //
-  wVersionRequested = MAKEWORD(2, 2);
-  WSAStartup(wVersionRequested, &wsaData);
-}
-
-/*********************************************************************
-*
-*       _WSACleanup
-*
-*  Function description
-*    Cleans up Winsock API. WSACleanup() needs to be called as many times
-*    as WSAStartup() if socket API is no longer needed.
-*/
-static void _WSACleanup(void) {
-  WSACleanup();
+  Result = pthread_create(&Thread, &Attr, pfThreadProc, pPara);
+  if (Result != 0) {
+    HANDLE_ERROR(Result, "pthread_create");
+  }
+  if (sName) {
+    _SetThreadName(Thread, sName);
+  }
+  if (pThreadId) {
+    *pThreadId = (U64)(intptr_t)Thread;
+  }
+  return (_SYS_HANDLE)(Thread);
 }
 
 /*********************************************************************
@@ -249,24 +285,19 @@ static void _WSACleanup(void) {
 *    Handle to socket
 */
 static _SYS_SOCKET_HANDLE _SYS_SOCKET_OpenTCP(void) {
-  SOCKET sock;
-  //
-  // Init Winsock API as this is the first socket-related function being called
-  // WSACleanup is called on SocketClose()
-  //
-  _WSAStartup();
+  int sock;
   //
   // Create socket
   //
-  sock = socket(AF_INET, SOCK_STREAM, 0);
-  if (sock != INVALID_SOCKET) {
+  sock = _OpenSocketNoInherit(AF_INET, SOCK_STREAM, 0);
+  if (sock != _INVALID_SOCKET) {
     //
     // Disable Nagle's algorithm to speed things up
     // Nagle's algorithm prevents small packets from being transmitted and collects some time until data is actually sent out
     //
     setsockopt(sock, IPPROTO_TCP, TCP_NODELAY, (char*)&_int1, sizeof(int));
   } else {
-    return _SYS_SOCKET_INVALID_HANDLE;
+    sock = _SYS_SOCKET_INVALID_HANDLE;
   }
   return (_SYS_SOCKET_HANDLE)sock;
 }
@@ -282,29 +313,12 @@ static _SYS_SOCKET_HANDLE _SYS_SOCKET_OpenTCP(void) {
 *    hSocket  Handle to socket that has been returned by _SYS_SOCKET_OpenTCP() / _SYS_SOCKET_OpenUDP()
 */
 static void _SYS_SOCKET_Close(_SYS_SOCKET_HANDLE hSocket) {
-  SOCKET Sock;
-  int OptVal;
-  int OptLen;
-  //
-  // MSDN: A socket that is using the SO_EXCLUSIVEADDRUSE option must be shut down properly prior to closing it. Failure to do so can cause a denial of service attack if the associated service needs to restart.
-  //
-  Sock = (SOCKET)hSocket;
-  OptLen = 4;
-  OptVal = 0;  // Make sure it is zero initialized in case getsockopt does not fill it completely
-  getsockopt(Sock, SOL_SOCKET, -5, (char*)&OptVal, &OptLen);  // SO_EXCLUSIVEADDRUSE (Define not known in the VC6 headers, we use...)
-  if (OptVal) {
-    shutdown(Sock, SD_BOTH);
-  }
+  int sock;
   //
   // Close socket
   //
-  closesocket(Sock);
-  //
-  // De-init Winsock API. Needs to be called as often as WSAStartup() has been called
-  // Has an internal reference counter
-  // If the counter reaches 0, all sockets opened by the process, are forced closed
-  //
-  _WSACleanup();
+  sock = (int)hSocket;
+  close(sock);
 }
 
 /*********************************************************************
@@ -325,9 +339,9 @@ static void _SYS_SOCKET_Close(_SYS_SOCKET_HANDLE hSocket) {
 *     < 0: Error
 */
 static int _SYS_SOCKET_ListenAtTCPAddr(_SYS_SOCKET_HANDLE hSocket, U32 IPAddr, U32 Port, unsigned NumConnectionsQueued) {
-  struct sockaddr_in addr;
-  SOCKET Sock;
   int r;
+  int sock;
+  struct sockaddr_in addr;
   //
   // Option SO_REUSEADDR:
   //
@@ -385,8 +399,6 @@ static int _SYS_SOCKET_ListenAtTCPAddr(_SYS_SOCKET_HANDLE hSocket, U32 IPAddr, U
   // This makes sure hijacking the socket data is not possible.
   // But it still allows the special behavior in case a bind() to a closed socket in TIME_WAIT state is possible. (See "Second effect of SO_REUSEADDR (TIME_WAIT)" above)
   //
-  // MSDN: A socket that is using the SO_EXCLUSIVEADDRUSE option must be shut down properly prior to closing it. Failure to do so can cause a denial of service attack if the associated service needs to restart.
-  //
   // Linux:
   // Listening socket:
   // SO_REUSEADDR does not have any effect for the "original idea" (see above). Linux is more restrictive than BSD sockets here.
@@ -408,17 +420,16 @@ static int _SYS_SOCKET_ListenAtTCPAddr(_SYS_SOCKET_HANDLE hSocket, U32 IPAddr, U
   // As this is not acceptable for us as the DLL and other J-Link utilities must be able to be started / terminated multiple times in a row,
   // we make use of SO_REUSEADDR for all of our listener sockets which need to bind() to a specific port
   //
-  Sock = (SOCKET)hSocket;
-  r = setsockopt(Sock, SOL_SOCKET, -5, (char*)&_int1, sizeof(int));  // SO_EXCLUSIVEADDRUSE (Define not known in the VC6 headers, we use...)
+  sock = (int)hSocket;
+  r = setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, (char*)&_int1, sizeof(int));
   if (r == 0) {
     addr.sin_family      = AF_INET;
     addr.sin_port        = htons((U16)Port);
     addr.sin_addr.s_addr = htonl(IPAddr);
-    r = bind(Sock, (struct sockaddr*)&addr, sizeof(addr));
+    r = bind(sock, (struct sockaddr*)&addr, sizeof(addr));
     if (r == 0) {
-      r = listen(Sock, NumConnectionsQueued);
-    }
-    if (r) {
+      r = listen(sock, NumConnectionsQueued);
+    } else {
       r = -1;
     }
   } else {
@@ -442,15 +453,14 @@ static int _SYS_SOCKET_ListenAtTCPAddr(_SYS_SOCKET_HANDLE hSocket, U32 IPAddr, U
 *  Return value
 *    == 1  O.K., socket ready
 *    == 0  O.K., socket not ready yet
-*     < 0  Error
 */
 static unsigned _SYS_SOCKET_IsReady(_SYS_SOCKET_HANDLE hSocket) {
-  SOCKET Sock;
+  int sock;
   int IsReady;
   unsigned long v;
 
-  Sock = (SOCKET)hSocket;
-  ioctlsocket(Sock, FIONREAD, &v);     // Check if socket is ready to read from
+  sock = (int)hSocket;
+  ioctl(sock, FIONREAD, &v);     // Check if socket is ready to read from
   IsReady = v ? 1 : 0;
   return IsReady;
 }
@@ -471,48 +481,17 @@ static unsigned _SYS_SOCKET_IsReady(_SYS_SOCKET_HANDLE hSocket) {
 *     < 0  Error
 */
 static int _SYS_SOCKET_IsReadable(_SYS_SOCKET_HANDLE hSocket, int TimeoutMs) {
-  SOCKET Sock;
+  int Sock;
   struct timeval tv;
   fd_set rfds;
-  fd_set efds;
   int v;
-  //
-  //
-  // Two possible cases when opening a TCP connection:
-  // 1) On the other side, there is a server listening on the destination port
-  // 2) On the other side, there is NO server listening on the destination port
-  //
-  // Reg 1)
-  //   In such cases, the socket is reported non-writable for a few [us] up to a few [s] depending on if this is a localhost, LAN or internet connection
-  //   After that period, the socket is reported as writable
-  //
-  // Reg 2)
-  //   In such cases, the following happens (S = Server):
-  //   C -> S: SYN
-  //   S -> C: RST ACK
-  //   This means, the server has rejected the connection and closed it
-  //   In such a case, we need to close the socket and try connecting again
-  //
-  // However, Windows is difficult regarding 2)...
-  // Usually an RST means "it's over, you can close the socket. There is nobody listening"
-  // Windows keeps the socket in connecting state, so IsReadable() IsWriteable() simply returns 0 instead of 1 (which would allow a following send/receive to return with error)
-  // In the background, Windows performs the SYN sending another 3 times in intervals of 500ms before giving up and reporting an error state
-  // Usually, the retransmissions are there in case we do not get an ACK from the other side and therefore must assume that the packet got lost
-  // Then also the interval time is doubled for each retransmission
-  // However, Microsoft decided to also retry it in case of RST ACK but without increasing the interval time
-  // This is explained here: https://support.microsoft.com/en-in/help/175523/info-winsock-tcp-connection-performance-to-unused-ports
-  //
-  // Unfortunately, even after this 1.5 seconds, Windows not necessarily reports the socket as readable/writable but instead returns "exceptional state" on select()
-  // Therefore, we also pass the "exceptional state" structure to select() to catch this case
-  //
-  Sock = (SOCKET)hSocket;
+
+  Sock = (int)hSocket;
   FD_ZERO(&rfds);       // Zero init file descriptor list
   FD_SET(Sock, &rfds);  // Add socket to file descriptor list to be monitored by select()
-  FD_ZERO(&efds);
-  FD_SET(Sock, &efds);
   tv.tv_sec = (long)(TimeoutMs / 1000);
   tv.tv_usec = (TimeoutMs % 1000) * 1000;
-  v = select(0, &rfds, NULL, &efds, &tv);   // > 0: in case of success, == 0: Timeout, < 0: Error
+  v = select(Sock + 1, &rfds, NULL, NULL, &tv);   // > 0: in case of success, == 0: Timeout, < 0: Error
   return v;
 }
 
@@ -533,35 +512,33 @@ static int _SYS_SOCKET_IsReadable(_SYS_SOCKET_HANDLE hSocket, int TimeoutMs) {
 *      -2  Timeout
 */
 static _SYS_SOCKET_HANDLE _SYS_SOCKET_AcceptEx(_SYS_SOCKET_HANDLE hSocket, int TimeoutMs) {
-  SOCKET SockChild;
   int r;
   //
   // accept() itself does not allow using timeouts
-  // Therefore we check readability first and then call accept() which should not block then
+  // Therefore we use a combination of select() to wait for the socket to become ready (with timeout)
+  // and then call accept() which should not block then.
   //
+  if ((int)hSocket < 0) {   // Some GLibc versions throw exceptions when calling socket functions with a negative handle.
+    return _SYS_SOCKET_INVALID_HANDLE;
+  }
   r = _SYS_SOCKET_IsReadable(hSocket, TimeoutMs);
   if (r < 0) {
-    return _SYS_SOCKET_INVALID_HANDLE; // error
+    r = _SYS_SOCKET_INVALID_HANDLE; // error
   } else if (r == 0) {
-    return -2;                        // timeout
+    r = -2;                        // timeout
   } else {
-    SockChild = accept((SOCKET)hSocket, NULL, NULL);
-    if (SockChild != INVALID_SOCKET) {
-      //
-      // If connection is successfully established, handle it as an implicit open(), so also init Winsock API as WSACleanup() is called on SocketClose()
-      // No matter if the socket has been opened via open() or accept()
-      //
-      _WSAStartup();
+    r = accept((int)hSocket, NULL, NULL);
+    if (r >= 0) {
       //
       // Disable Nagle's algorithm to speed things up
       // Nagle's algorithm prevents small packets from being transmitted and collects some time until data is actually sent out
       //
-      setsockopt(SockChild, IPPROTO_TCP, TCP_NODELAY, (char*)&_int1, sizeof(int));
+      setsockopt(r, IPPROTO_TCP, TCP_NODELAY, (char*)&_int1, sizeof(int));
     } else {
-      return _SYS_SOCKET_INVALID_HANDLE;
+      r = _SYS_SOCKET_INVALID_HANDLE;
     }
   }
-  return (_SYS_SOCKET_HANDLE)SockChild;
+  return (_SYS_SOCKET_HANDLE)r;
 }
 
 /*********************************************************************
@@ -582,23 +559,29 @@ static _SYS_SOCKET_HANDLE _SYS_SOCKET_AcceptEx(_SYS_SOCKET_HANDLE hSocket, int T
 *    (1) Returns as soon as something has been received (may be less than MaxNumBytes) or error happened
 */
 static int _SYS_SOCKET_Receive(_SYS_SOCKET_HANDLE hSocket, void* pData, U32 MaxNumBytes) {
-  int r;
+  int sock;
   int Err;
-  SOCKET Sock;
+  int r;
 
-  Sock = (SOCKET)hSocket;
-  r = recv(Sock, (char*)pData, MaxNumBytes, 0);
+  sock = (int)hSocket;
+  r = recv(sock, pData, MaxNumBytes, 0);
   if (r < 0) {
-    Err = WSAGetLastError();
+    Err = errno;
     switch (Err) {
-    case WSAEWOULDBLOCK:
+#if EAGAIN != EWOULDBLOCK
+    case EAGAIN:
+#endif
+    case EWOULDBLOCK:
       r = _SYS_SOCKET_ERR_WOULDBLOCK;
       break;
-    case WSAECONNRESET:
+    case ENETRESET:
       r = _SYS_SOCKET_ERR_CONNRESET;
       break;
-    case WSAETIMEDOUT:
+    case ETIMEDOUT:
       r = _SYS_SOCKET_ERR_TIMEDOUT;
+      break;
+    case EINTR:
+      r = _SYS_SOCKET_ERR_INTERRUPT;
       break;
     default:
       r = _SYS_SOCKET_ERR_UNSPECIFIED;
@@ -618,52 +601,21 @@ static int _SYS_SOCKET_Receive(_SYS_SOCKET_HANDLE hSocket, void* pData, U32 MaxN
 *    hSocket  Handle to socket that has been returned by _SYS_SOCKET_OpenTCP() / _SYS_SOCKET_OpenUDP()
 *
 *  Return value
-*    == 1  O.K., socket writable
-*    == 0  O.K., socket not writable yet
+*    == 1  O.K., socket writeable
+*    == 0  O.K., socket not writeable yet
 */
 static int _SYS_SOCKET_IsWriteable(_SYS_SOCKET_HANDLE hSocket, int TimeoutMs) {
-  SOCKET Sock;
+  int Sock;
   struct timeval tv;
   fd_set wfds;
-  fd_set efds;
   int v;
-  //
-  //
-  // Two possible cases when opening a TCP connection:
-  // 1) On the other side, there is a server listening on the destination port
-  // 2) On the other side, there is NO server listening on the destination port
-  //
-  // Reg 1)
-  //   In such cases, the socket is reported non-writeable for a few [us] up to a few [s] depending on if this is a localhost, LAN or internet connection
-  //   After that period, the socket is reported as writeable
-  //
-  // Reg 2)
-  //   In such cases, the following happens (S = Server):
-  //   C -> S: SYN
-  //   S -> C: RST ACK
-  //   This means, the server has rejected the connection and closed it
-  //   In such a case, we need to close the socket and try connecting again
-  //
-  // However, Windows is difficult regarding 2)...
-  // Usually an RST means "it's over, you can close the socket. There is nobody listening"
-  // Windows keeps the socket in connecting state, so IsReadable() IsWriteable() simply returns 0 instead of 1 (which would allow a following send/receive to return with error)
-  // In the background, Windows performs the SYN sending another 3 times in intervals of 500ms before giving up and reporting an error state
-  // Usually, the retransmissions are there in case we do not get an ACK from the other side and therefore must assume that the packet got lost
-  // Then also the interval time is doubled for each retransmission
-  // However, Microsoft decided to also retry it in case of RST ACK but without increasing the interval time
-  // This is explained here: https://support.microsoft.com/en-in/help/175523/info-winsock-tcp-connection-performance-to-unused-ports
-  //
-  // Unfortunately, even after this 1.5 seconds, Windows not necessarily reports the socket as readable/writable but instead returns "exceptional state" on select()
-  // Therefore, we also pass the "exceptional state" structure to select() to catch this case
-  //
-  Sock = (SOCKET)hSocket;
+
+  Sock = (int)hSocket;
   FD_ZERO(&wfds);       // Zero init file descriptor list
   FD_SET(Sock, &wfds);  // Add socket to file descriptor list to be monitored by select()
-  FD_ZERO(&efds);
-  FD_SET(Sock, &efds);
   tv.tv_sec = (long)(TimeoutMs / 1000);
   tv.tv_usec = (TimeoutMs % 1000) * 1000;
-  v = select(0, NULL, &wfds, &efds, &tv);   // > 0: in case of success, == 0: Timeout, < 0: Error
+  v = select(Sock + 1, NULL, &wfds, NULL, &tv);   // > 0: in case of success, == 0: Timeout, < 0: Error
   return v;
 }
 
@@ -679,18 +631,27 @@ static int _SYS_SOCKET_IsWriteable(_SYS_SOCKET_HANDLE hSocket, int TimeoutMs) {
 *
 *  Return value
 *    >= 0:  O.K., number of bytes sent
-*     < 0:  Error, see _SYS_SOCKET_ERR_*
+*     < 0:  Error
+*     See _SYS_SOCKET_ERR_
 */
 static int _SYS_SOCKET_Send(_SYS_SOCKET_HANDLE hSocket, const void* pData, U32 NumBytes) {
-  int r;
+  int sock;
   int Err;
-  SOCKET Sock;
+  int r;
 
-  Sock = (SOCKET)hSocket;
-  r = send(Sock, pData, NumBytes, 0);
-  if (r == SOCKET_ERROR) {
-    Err = WSAGetLastError();
-    r = (Err == WSAEWOULDBLOCK) ? _SYS_SOCKET_ERR_WOULDBLOCK : _SYS_SOCKET_ERR_UNSPECIFIED;
+  sock = (int)hSocket;
+  //
+  // Sending without MSG_NOSIGNAL can cause a SIGPIPE to be sent if the
+  // connection was closed by peer and our process would be killed.
+  //
+  r = send(sock, pData, NumBytes, MSG_NOSIGNAL);
+  if (r < 0) {
+    Err = errno;
+    if ((Err == EAGAIN) || (Err == EWOULDBLOCK)) {
+      r = _SYS_SOCKET_ERR_WOULDBLOCK;
+    } else {
+      r = _SYS_SOCKET_ERR_UNSPECIFIED;
+    }
   }
   return r;
 }
@@ -731,7 +692,7 @@ static void _cbSendSystemDesc(void) {
 *  Parameters
 *    pPara    Expected to be the ID of the RTT <Up> channel used by SysView
 */
-_SYS_THREAD_PROC_EX_TYPE _SysViewCommThread(void* pPara) {
+static void* _SysViewCommThread(void* pPara) {
   _SYS_SOCKET_HANDLE hSockListen;
   _SYS_SOCKET_HANDLE hSockSV;
   int Result;
@@ -744,7 +705,7 @@ _SYS_THREAD_PROC_EX_TYPE _SysViewCommThread(void* pPara) {
   _SysViewCommThreadRunning = 1;
   Result = 0;
   ChannelID = (int)pPara;
-  hSockSV = _SYS_SOCKET_INVALID_HANDLE;
+  hSockSV   = _SYS_SOCKET_INVALID_HANDLE;
   v = 0;
   //
   // Try and connect to SystemView instance
@@ -853,7 +814,7 @@ Done:
     _SYS_SOCKET_Close(hSockListen);
   }
   _SysViewCommThreadRunning = 0;
-  return Result;
+  return (void*)Result;
 }
 
 /*********************************************************************
@@ -869,8 +830,8 @@ static void _SetupComm(void) {
   //
   // Initialize SysView communication
   //
-  r = SEGGER_SYSVIEW_GetChannelID();                                                               // Retrieve the ID of the RTT <Up> / <Down> channel used by SysView
-  _SYS_CreateThreadEx(_SysViewCommThread, (void*)r, &ThreadID, "SysView Communication Thread", 0);  // Start thread handling TCP/IP connection and communication with SysView instance
+  r = SEGGER_SYSVIEW_GetChannelID();                                              // Retrieve the ID of the RTT <Up> / <Down> channel used by SysView
+  _SYS_CreateThreadEx(_SysViewCommThread, (void*)r, &ThreadID, "SystemView", 0);  // Start thread handling TCP/IP connection and communication with SysView instance
 }
 
 /*********************************************************************
@@ -888,24 +849,7 @@ static void _SetupComm(void) {
 *    Configure SystemView and embOS for use of SystemView.
 */
 void SEGGER_SYSVIEW_Conf(void) {
-  LARGE_INTEGER TSFreq;
-
-  //
-  // Get the performance counter frequency and scale it down to be < 1 GHz.
-  // (We can only handle cycles >= 1ns)
-  //
-  QueryPerformanceFrequency(&TSFreq);
-  _TSDiv = 1;
-  if (TSFreq.QuadPart > 1000000000LL) {
-    _TSDiv = (U32)(TSFreq.QuadPart / 1000000000LL);
-    if (TSFreq.QuadPart % 1000000000LL) {
-      _TSDiv++;
-    }
-    _TSFreq = TSFreq.QuadPart;
-    TSFreq.QuadPart /= _TSDiv;
-  }
-  SEGGER_SYSVIEW_Init(TSFreq.LowPart, TSFreq.LowPart,
-                      &SYSVIEW_X_OS_TraceAPI, _cbSendSystemDesc);
+  SEGGER_SYSVIEW_Init(1000000000, 1000000, &SYSVIEW_X_OS_TraceAPI, _cbSendSystemDesc);
   OS_SetTraceAPI(&embOS_TraceAPI_SYSVIEW);    // Configure embOS to use SYSVIEW.
 #if SYSVIEW_START_ON_INIT
   SEGGER_SYSVIEW_Start();                     // Start recording to catch system initialization.
@@ -923,14 +867,13 @@ void SEGGER_SYSVIEW_Conf(void) {
 *    On Windows use the performance counter.
 */
 U32 SEGGER_SYSVIEW_X_GetTimestamp(void) {
-  LARGE_INTEGER TS;
+  struct timespec Timespec;
+  OS_U64          Timestamp;
 
-  QueryPerformanceCounter(&TS);
-  if (_TSDiv > 1) {
-    TS.QuadPart /= _TSDiv;
-  }
-
-  return TS.LowPart;
+  clock_gettime(CLOCK_MONOTONIC, &Timespec);
+  Timestamp  = Timespec.tv_sec * 1000000000;
+  Timestamp += Timespec.tv_nsec;
+  return Timestamp;
 }
 
 /*********************************************************************
@@ -941,7 +884,7 @@ U32 SEGGER_SYSVIEW_X_GetTimestamp(void) {
 *    Get the "dummy" interrupt ID.
 */
 U32 SEGGER_SYSVIEW_X_GetInterruptId(void) {
-  return GetCurrentThreadId();
+  return pthread_self();
 }
 
 /*********************************************************************
@@ -959,28 +902,20 @@ U32 SEGGER_SYSVIEW_X_GetInterruptId(void) {
 *    It uses the thread ID as an unique ID for SystemView.
 */
 void SEGGER_SYSVIEW_X_SetISRName(const char* sName) {
-  static int CriticalSectionInitialized = 0;
   char s[100];
 
-  //
-  // Make sure the used critical section is initialized.
-  //
-  if (CriticalSectionInitialized == 0) {
-    InitializeCriticalSection(&_csLockString);
-    CriticalSectionInitialized = 1;
-  }
   //
   // Check whether the string fits in the string buffer.
   //
   if (strlen(sName) < (sizeof(s) - 10)) {
+    OS_INT_IncDI();
     //
     // If this is the first entry we don't need the comma.
     //
-    EnterCriticalSection(&_csLockString);
     if (strlen(_sISRNames) == 0) {
-      sprintf(s, "I#%u=%s", (unsigned int)GetCurrentThreadId(), sName);
+      sprintf(s, "I#%u=%s", (unsigned int)pthread_self(), sName);
     } else {
-      sprintf(s, ",I#%u=%s", (unsigned int)GetCurrentThreadId(), sName);
+      sprintf(s, ",I#%u=%s", (unsigned int)pthread_self(), sName);
     }
     //
     // Add new ISR name to the ISR name string and inform SystemView (if enough space is left in the string buffer).
@@ -994,7 +929,7 @@ void SEGGER_SYSVIEW_X_SetISRName(const char* sName) {
         SEGGER_SYSVIEW_SendSysDesc(_sISRNames);
       }
     }
-    LeaveCriticalSection(&_csLockString);
+    OS_INT_DecRI();
   }
 }
 
