@@ -53,17 +53,14 @@ rebuild strips debug symbols and removable local symbols while preserving the
 global symbols and relocation-required local labels needed for linking.
 
 Simulation-specific SEGGER configuration headers, the MEMSHM RTT memory owner
-API, the Win32/POSIX MEMSHM owner implementations, the generic embOS SystemView
-configuration source, platform configuration sources and the embOS SystemView
-interface are stored in the local SEGGER directory so this board support package
-owns its target configuration.
+API, the Win32/POSIX MEMSHM owner implementations, platform SystemView
+configuration sources and the embOS SystemView interface are stored in the local
+SEGGER directory so this board support package owns its target configuration.
 
 The simulation target maps host shared memory object /rtt_sim and uses the
 local SEGGER_RTT_Conf.h and SEGGER_SYSVIEW_Conf.h for both shared targets.
 The host-specific SystemView configuration source for the selected platform is
-linked by the Start target, so SEGGER_SYSVIEW_Config_embOS.c remains a local
-board-support configuration file and is not linked beside the Win32 or POSIX
-configuration source.
+linked by the Start target.
 The default build.sh and CMake configuration select the 64-bit simulation
 profile. SystemView is always built and linked for simulation.
 

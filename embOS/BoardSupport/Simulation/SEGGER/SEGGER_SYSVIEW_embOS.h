@@ -55,8 +55,7 @@ Revision: $Rev: 9599 $
 #include "SEGGER_SYSVIEW.h"
 
 // embOS trace API that targets SYSVIEW
-extern const OS_TRACE_API embOS_TraceAPI_SYSVIEW;
-extern const OS_TRACE_API embOS_TraceAPI_SYSVIEW_NoAPIInstrumentation;
+extern const OS_TRACE_API          embOS_TraceAPI_SYSVIEW;
 
 // Services provided to SYSVIEW by embOS
 extern const SEGGER_SYSVIEW_OS_API SYSVIEW_X_OS_TraceAPI;
