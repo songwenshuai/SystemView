@@ -21,6 +21,8 @@
 *.a
 *.la
 *.lo
+!embOS/Lib/
+!embOS/Lib/*.a
 
 # Shared objects (inc. Windows DLLs)
 *.dll

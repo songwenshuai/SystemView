@@ -1,0 +1,198 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Build: Start Simulation (Debug, 32-bit)",
+            "type": "shell",
+            "command": "bash",
+            "args": [
+                "./build.sh",
+                "--x86",
+                "--debug"
+            ],
+            "linux": {
+                "args": [
+                    "./build.sh",
+                    "--x86",
+                    "--debug"
+                ]
+            },
+            "osx": {
+                "args": [
+                    "-c",
+                    "echo '32-bit embOS simulation is not supported on macOS.'; exit 1"
+                ]
+            },
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "group": "build",
+            "problemMatcher": [
+                "$gcc"
+            ]
+        },
+        {
+            "label": "Build: Start Simulation (Release, 32-bit)",
+            "type": "shell",
+            "command": "bash",
+            "args": [
+                "./build.sh",
+                "--x86",
+                "--release"
+            ],
+            "linux": {
+                "args": [
+                    "./build.sh",
+                    "--x86",
+                    "--release"
+                ]
+            },
+            "osx": {
+                "args": [
+                    "-c",
+                    "echo '32-bit embOS simulation is not supported on macOS.'; exit 1"
+                ]
+            },
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "group": "build",
+            "problemMatcher": [
+                "$gcc"
+            ]
+        },
+        {
+            "label": "Build: Start Simulation (Debug, 64-bit)",
+            "type": "shell",
+            "command": "bash",
+            "args": [
+                "./build.sh",
+                "--x86_64",
+                "--debug"
+            ],
+            "linux": {
+                "args": [
+                    "./build.sh",
+                    "--x86_64",
+                    "--debug"
+                ]
+            },
+            "osx": {
+                "args": [
+                    "./build.sh",
+                    "--x86_64",
+                    "--debug"
+                ]
+            },
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "problemMatcher": [
+                "$gcc"
+            ]
+        },
+        {
+            "label": "Build: Start Simulation (Release, 64-bit)",
+            "type": "shell",
+            "command": "bash",
+            "args": [
+                "./build.sh",
+                "--x86_64",
+                "--release"
+            ],
+            "linux": {
+                "args": [
+                    "./build.sh",
+                    "--x86_64",
+                    "--release"
+                ]
+            },
+            "osx": {
+                "args": [
+                    "./build.sh",
+                    "--x86_64",
+                    "--release"
+                ]
+            },
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "group": "build",
+            "problemMatcher": [
+                "$gcc"
+            ]
+        },
+        {
+            "label": "Build: Start Simulation (Windows Debug, 32-bit)",
+            "type": "shell",
+            "command": "bash.exe",
+            "args": [
+                "./build.sh",
+                "--x86",
+                "--debug"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "group": "build",
+            "problemMatcher": [
+                "$msCompile"
+            ]
+        },
+        {
+            "label": "Build: Start Simulation (Windows Release, 32-bit)",
+            "type": "shell",
+            "command": "bash.exe",
+            "args": [
+                "./build.sh",
+                "--x86",
+                "--release"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "group": "build",
+            "problemMatcher": [
+                "$msCompile"
+            ]
+        },
+        {
+            "label": "Build: Start Simulation (Windows Debug, 64-bit)",
+            "type": "shell",
+            "command": "bash.exe",
+            "args": [
+                "./build.sh",
+                "--x86_64",
+                "--debug"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "group": "build",
+            "problemMatcher": [
+                "$msCompile"
+            ]
+        },
+        {
+            "label": "Build: Start Simulation (Windows Release, 64-bit)",
+            "type": "shell",
+            "command": "bash.exe",
+            "args": [
+                "./build.sh",
+                "--x86_64",
+                "--release"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "group": "build",
+            "problemMatcher": [
+                "$msCompile"
+            ]
+        }
+    ]
+}

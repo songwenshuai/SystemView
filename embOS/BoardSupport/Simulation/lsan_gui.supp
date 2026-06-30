@@ -1,0 +1,22 @@
+# LeakSanitizer suppressions for Linux host GUI runtime allocations.
+#
+# SDL2 window creation can load Mesa, NVIDIA WSL, or other host graphics
+# drivers. Some graphics-driver and compatibility-library allocations are
+# process-lifetime resources that remain reported by LSan if leak checking runs
+# after SDL_Quit(). The ASan GUI entry point runs LSan before SDL_Quit(), and
+# this file stays limited to host GUI stack frames so embOS and application
+# leaks remain visible.
+
+leak:libLLVM
+leak:libGLX_mesa
+leak:libEGL_mesa
+leak:libgbm
+leak:libdrm
+leak:swrast_dri
+leak:iris_dri
+leak:radeonsi_dri
+leak:nouveau_dri
+leak:zink_dri
+leak:virtio_gpu_dri
+leak:libnvwgf2umx
+leak:__pthread_cond_broadcast_2_0

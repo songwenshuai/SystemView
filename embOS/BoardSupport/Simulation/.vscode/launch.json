@@ -1,0 +1,229 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Launch: Start Simulation (Debug, 32-bit)",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/Output/32dp/Start_Simulation",
+            "cwd": "${workspaceFolder}",
+            "preLaunchTask": "Build: Start Simulation (Debug, 32-bit)",
+            "stopAtEntry": true,
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                },
+                {
+                    "description": "Set Disassembly Flavor to Intel",
+                    "text": "set disassembly-flavor intel",
+                    "ignoreFailures": true
+                },
+                {
+                    "description": "Ignore SIGUSR1",
+                    "text": "handle SIGUSR1 nostop noprint pass",
+                    "ignoreFailures": true
+                },
+                {
+                    "description": "Ignore SIGUSR2",
+                    "text": "handle SIGUSR2 nostop noprint pass",
+                    "ignoreFailures": true
+                }
+            ],
+            "osx": {
+                "MIMode": "lldb",
+                "setupCommands": [
+                    {
+                        "description": "Ignore SIGUSR1",
+                        "text": "process handle SIGUSR1 -n false -p true -s false",
+                        "ignoreFailures": true
+                    },
+                    {
+                        "description": "Ignore SIGUSR2",
+                        "text": "process handle SIGUSR2 -n false -p true -s false",
+                        "ignoreFailures": true
+                    }
+                ]
+            }
+        },
+        {
+            "name": "Launch: Start Simulation (Release, 32-bit)",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/Output/32r/Start_Simulation",
+            "cwd": "${workspaceFolder}",
+            "preLaunchTask": "Build: Start Simulation (Release, 32-bit)",
+            "stopAtEntry": true,
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                },
+                {
+                    "description": "Set Disassembly Flavor to Intel",
+                    "text": "set disassembly-flavor intel",
+                    "ignoreFailures": true
+                },
+                {
+                    "description": "Ignore SIGUSR1",
+                    "text": "handle SIGUSR1 nostop noprint pass",
+                    "ignoreFailures": true
+                },
+                {
+                    "description": "Ignore SIGUSR2",
+                    "text": "handle SIGUSR2 nostop noprint pass",
+                    "ignoreFailures": true
+                }
+            ],
+            "osx": {
+                "MIMode": "lldb",
+                "setupCommands": [
+                    {
+                        "description": "Ignore SIGUSR1",
+                        "text": "process handle SIGUSR1 -n false -p true -s false",
+                        "ignoreFailures": true
+                    },
+                    {
+                        "description": "Ignore SIGUSR2",
+                        "text": "process handle SIGUSR2 -n false -p true -s false",
+                        "ignoreFailures": true
+                    }
+                ]
+            }
+        },
+        {
+            "name": "Launch: Start Simulation (Debug, 64-bit)",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/Output/64dp/Start_Simulation",
+            "cwd": "${workspaceFolder}",
+            "preLaunchTask": "Build: Start Simulation (Debug, 64-bit)",
+            "stopAtEntry": true,
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                },
+                {
+                    "description": "Set Disassembly Flavor to Intel",
+                    "text": "set disassembly-flavor intel",
+                    "ignoreFailures": true
+                },
+                {
+                    "description": "Ignore SIGUSR1",
+                    "text": "handle SIGUSR1 nostop noprint pass",
+                    "ignoreFailures": true
+                },
+                {
+                    "description": "Ignore SIGUSR2",
+                    "text": "handle SIGUSR2 nostop noprint pass",
+                    "ignoreFailures": true
+                }
+            ],
+            "osx": {
+                "MIMode": "lldb",
+                "setupCommands": [
+                    {
+                        "description": "Ignore SIGUSR1",
+                        "text": "process handle SIGUSR1 -n false -p true -s false",
+                        "ignoreFailures": true
+                    },
+                    {
+                        "description": "Ignore SIGUSR2",
+                        "text": "process handle SIGUSR2 -n false -p true -s false",
+                        "ignoreFailures": true
+                    }
+                ]
+            }
+        },
+        {
+            "name": "Launch: Start Simulation (Release, 64-bit)",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/Output/64r/Start_Simulation",
+            "cwd": "${workspaceFolder}",
+            "preLaunchTask": "Build: Start Simulation (Release, 64-bit)",
+            "stopAtEntry": true,
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                },
+                {
+                    "description": "Set Disassembly Flavor to Intel",
+                    "text": "set disassembly-flavor intel",
+                    "ignoreFailures": true
+                },
+                {
+                    "description": "Ignore SIGUSR1",
+                    "text": "handle SIGUSR1 nostop noprint pass",
+                    "ignoreFailures": true
+                },
+                {
+                    "description": "Ignore SIGUSR2",
+                    "text": "handle SIGUSR2 nostop noprint pass",
+                    "ignoreFailures": true
+                }
+            ],
+            "osx": {
+                "MIMode": "lldb",
+                "setupCommands": [
+                    {
+                        "description": "Ignore SIGUSR1",
+                        "text": "process handle SIGUSR1 -n false -p true -s false",
+                        "ignoreFailures": true
+                    },
+                    {
+                        "description": "Ignore SIGUSR2",
+                        "text": "process handle SIGUSR2 -n false -p true -s false",
+                        "ignoreFailures": true
+                    }
+                ]
+            }
+        },
+        {
+            "name": "Launch: Start Simulation (Windows Debug, 32-bit)",
+            "type": "cppvsdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/Output/Debug/Start.exe",
+            "cwd": "${workspaceFolder}",
+            "preLaunchTask": "Build: Start Simulation (Windows Debug, 32-bit)",
+            "stopAtEntry": true
+        },
+        {
+            "name": "Launch: Start Simulation (Windows Release, 32-bit)",
+            "type": "cppvsdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/Output/Release/Start.exe",
+            "cwd": "${workspaceFolder}",
+            "preLaunchTask": "Build: Start Simulation (Windows Release, 32-bit)",
+            "stopAtEntry": true
+        },
+        {
+            "name": "Launch: Start Simulation (Windows Debug, 64-bit)",
+            "type": "cppvsdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/Output/Debug_64/Start.exe",
+            "cwd": "${workspaceFolder}",
+            "preLaunchTask": "Build: Start Simulation (Windows Debug, 64-bit)",
+            "stopAtEntry": true
+        },
+        {
+            "name": "Launch: Start Simulation (Windows Release, 64-bit)",
+            "type": "cppvsdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/Output/Release_64/Start.exe",
+            "cwd": "${workspaceFolder}",
+            "preLaunchTask": "Build: Start Simulation (Windows Release, 64-bit)",
+            "stopAtEntry": true
+        }
+    ]
+}

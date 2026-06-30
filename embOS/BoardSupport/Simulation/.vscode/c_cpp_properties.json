@@ -1,0 +1,75 @@
+{
+    "configurations": [
+        {
+            "name": "Linux Debug 32-bit",
+            "compileCommands": "${workspaceFolder}/build/32dp/compile_commands.json",
+            "compilerPath": "/usr/bin/gcc",
+            "cStandard": "c99",
+            "intelliSenseMode": "linux-gcc-x86"
+        },
+        {
+            "name": "Linux Release 32-bit",
+            "compileCommands": "${workspaceFolder}/build/32r/compile_commands.json",
+            "compilerPath": "/usr/bin/gcc",
+            "cStandard": "c99",
+            "intelliSenseMode": "linux-gcc-x86"
+        },
+        {
+            "name": "Linux Debug 64-bit",
+            "compileCommands": "${workspaceFolder}/build/64dp/compile_commands.json",
+            "compilerPath": "/usr/bin/gcc",
+            "cStandard": "c99",
+            "intelliSenseMode": "linux-gcc-x64"
+        },
+        {
+            "name": "Linux Release 64-bit",
+            "compileCommands": "${workspaceFolder}/build/64r/compile_commands.json",
+            "compilerPath": "/usr/bin/gcc",
+            "cStandard": "c99",
+            "intelliSenseMode": "linux-gcc-x64"
+        },
+        {
+            "name": "macOS Debug 64-bit",
+            "compileCommands": "${workspaceFolder}/build/64dp/compile_commands.json",
+            "compilerPath": "/usr/bin/clang",
+            "cStandard": "c99",
+            "intelliSenseMode": "macos-clang-x64"
+        },
+        {
+            "name": "macOS Release 64-bit",
+            "compileCommands": "${workspaceFolder}/build/64r/compile_commands.json",
+            "compilerPath": "/usr/bin/clang",
+            "cStandard": "c99",
+            "intelliSenseMode": "macos-clang-x64"
+        },
+        {
+            "name": "Windows Debug 32-bit",
+            "compileCommands": "${workspaceFolder}/build/32dp/compile_commands.json",
+            "compilerPath": "cl.exe",
+            "cStandard": "c99",
+            "intelliSenseMode": "windows-msvc-x86"
+        },
+        {
+            "name": "Windows Release 32-bit",
+            "compileCommands": "${workspaceFolder}/build/32r/compile_commands.json",
+            "compilerPath": "cl.exe",
+            "cStandard": "c99",
+            "intelliSenseMode": "windows-msvc-x86"
+        },
+        {
+            "name": "Windows Debug 64-bit",
+            "compileCommands": "${workspaceFolder}/build/64dp/compile_commands.json",
+            "compilerPath": "cl.exe",
+            "cStandard": "c99",
+            "intelliSenseMode": "windows-msvc-x64"
+        },
+        {
+            "name": "Windows Release 64-bit",
+            "compileCommands": "${workspaceFolder}/build/64r/compile_commands.json",
+            "compilerPath": "cl.exe",
+            "cStandard": "c99",
+            "intelliSenseMode": "windows-msvc-x64"
+        }
+    ],
+    "version": 4
+}

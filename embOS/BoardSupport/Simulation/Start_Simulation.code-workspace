@@ -1,0 +1,16 @@
+{
+    "folders": [
+        {
+            "path": ".",
+            "name": "Start Simulation"
+        },
+        {
+            "path": "./../../Inc",
+            "name": "embOS Inc"
+        },
+        {
+            "path": "./../../Config",
+            "name": "embOS Config"
+        }
+    ]
+}
