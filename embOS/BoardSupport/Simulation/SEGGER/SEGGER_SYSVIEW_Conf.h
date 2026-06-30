@@ -1,35 +1,18 @@
 /*********************************************************************
-*                     SEGGER Microcontroller GmbH                    *
+*                   (c) SEGGER Microcontroller GmbH                  *
 *                        The Embedded Experts                        *
+*                           www.segger.com                           *
 **********************************************************************
 *                                                                    *
-*       (c) 1995 - 2026 SEGGER Microcontroller GmbH                  *
-*                                                                    *
-*       Internet: segger.com  Support: support_embos@segger.com      *
-*                                                                    *
-**********************************************************************
-*                                                                    *
-*       embOS-Classic * Real time operating system                   *
-*                                                                    *
-*       Please note:                                                 *
-*                                                                    *
-*       Knowledge of this file may under no circumstances            *
-*       be used to write a similar product or a real-time            *
-*       operating system for in-house use.                           *
-*                                                                    *
-*       Thank you for your fairness !                                *
-*                                                                    *
-**********************************************************************
-*                                                                    *
-*       OS version: V5.22.0.0                                        *
+*         SEGGER SystemView  * Real-time application analysis        *
+*              https://github.com/SEGGERMicro/SystemView             *
 *                                                                    *
 **********************************************************************
 
--------------------------- END-OF-HEADER -----------------------------
-File    : SEGGER_SYSVIEW_Conf.h
+---------------------------END-OF-HEADER------------------------------
+
 Purpose : SEGGER SystemView configuration file.
           Set defines which deviate from the defaults (see SEGGER_SYSVIEW_ConfDefaults.h) here.
-Revision: $Rev: 21292 $
 
 Additional information:
   Required defines which must be set are:
@@ -52,6 +35,33 @@ Additional information:
 *
 **********************************************************************
 */
+
+/*********************************************************************
+*
+*       Define: SEGGER_SYSVIEW_RTT_*_ADDRESS
+*
+*  Description
+*    Shared-memory addresses used by the SystemView RTT transport.
+*  Notes
+*    SEGGER_SYSVIEW_RTT_CB_ADDRESS defaults to SEGGER_RTT_CB_ADDRESS.
+*    SEGGER_SYSVIEW_RTT_UP_BUFFER_ADDRESS and
+*    SEGGER_SYSVIEW_RTT_DOWN_BUFFER_ADDRESS must be defined by the
+*    target configuration.  All addresses must point into the same
+*    mapped RTT shared-memory region.
+*/
+// #define SEGGER_SYSVIEW_RTT_CB_ADDRESS           SEGGER_RTT_CB_ADDRESS
+// #define SEGGER_SYSVIEW_RTT_NAME_ADDRESS         (0u)
+// #define SEGGER_SYSVIEW_RTT_UP_BUFFER_ADDRESS    (0x00000000u)
+// #define SEGGER_SYSVIEW_RTT_DOWN_BUFFER_ADDRESS  (0x00000000u)
+// #define SEGGER_SYSVIEW_RTT_BUFFER_SIZE          1024
+// #define SEGGER_SYSVIEW_RTT_DOWN_BUFFER_SIZE     8
+
+
+/*********************************************************************
+* TODO: Add your defines here.                                       *
+**********************************************************************
+*/
+
 #define SEGGER_SYSVIEW_APP_NAME         "embOS start project"
 #define SEGGER_SYSVIEW_DEVICE_NAME      "Simulation"
 #define SEGGER_SYSVIEW_RTT_BUFFER_SIZE  (64 * 1024)
