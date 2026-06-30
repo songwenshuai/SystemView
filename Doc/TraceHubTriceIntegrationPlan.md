@@ -56,8 +56,10 @@ Trice 仓库由三部分组成：
 | `li.json` 读写 | `Trice/internal/id/*` | 维护 ID 到源码文件、行号、宏位置的映射 | `insert`、`clean`、诊断信息需要同一事实源 |
 | TREX 解码 | `Trice/internal/trexDecoder/trexDecoder.go` | 解析 Trice 二进制记录，按 ID 查表还原文本 | TraceHub 运行时必须直接解码二进制日志 |
 | 格式化解析 | `Trice/internal/fmtspec/fmtspec.go` | 解析 `%d`、`%u`、`%x`、`%f`、`%s`、宽度修饰等格式 | 参数类型和字节宽度由格式字符串决定 |
-| 帧解码 | `Trice/internal/trexDecoder` 与 `Trice/src/*Decode.c` | 支持 none、COBS、TCOBSv1、TCOBSv2 中实际使用的帧格式 | RTT 通道读到的是帧流，不是完整日志文本 |
+| 帧解码 | `Trice/internal/trexDecoder` 与 `Trice/src/*Decode.c` | 阶段二支持 none、COBS、TCOBSv1；TCOBSv2 仅在补齐 C 实现和样例后启用 | RTT 通道读到的是帧流，不是完整日志文本 |
 | tag 解析和过滤 | `Trice/internal/emitter/*`、`Trice/internal/args/init.go` | 从格式字符串中识别 `err:`、`wrn:`、`info:`、`dbg:` 等 tag | Trice 没有目标端日志等级，TraceHub 必须在主机侧承接 |
+
+帧格式边界必须以当前可验证实现为准。Go 工具当前能够接受 `tcobsv2` 配置，但 `Trice/src` 中可直接复用的 C 解码实现只有 COBS 和 TCOBSv1，阶段二不能承诺 TCOBSv2 运行时支持。用户配置了未支持的 framing 时，`ServicePlan` 必须直接报错，不能静默回退到其他 framing。
 
 ### 4.2 按工作流决定是否重写
 
@@ -128,6 +130,9 @@ tracehub-trice-id     # pre-build tool: insert, clean, add, generate
 
 ```text
 TraceHub/
+  Core/
+    TraceSource.h
+    TraceSource.c
   App/
   Log/
   RTT/
@@ -153,14 +158,14 @@ TraceHub/
 
 | 模块 | 职责 |
 | --- | --- |
-| `TraceSource` | 描述日志来源，包括名称、核心类型、RTT 通道、解码类型、ID 表路径 |
+| `TraceSource` | 描述日志来源，包括名称、核心类型、RTT 通道、解码类型、ID 表路径；该模块属于公共基础层，不能放在 App 层导致 Log 反向依赖 App |
 | `TraceDecoder` | 解码器统一接口，屏蔽文本日志和 Trice 二进制日志差异 |
 | `TextTraceDecoder` | 承接现有 `LogLineParser` 文本解析能力 |
 | `TriceDecoder` | 解析 Trice 帧、TREX 记录和参数格式化 |
 | `TriceIdTable` | 加载或接收生成的 ID 查找表 |
 | `TriceFormat` | 解析格式字符串，计算参数类型和宽度 |
 | `TriceTag` | 提取 tag、映射日志等级、执行 pick/ban 过滤 |
-| `TriceFraming` | 统一 COBS、TCOBSv1、TCOBSv2、none 帧处理 |
+| `TriceFraming` | 统一 none、COBS、TCOBSv1 帧处理；TCOBSv2 仅在补齐 C 解码实现后加入 |
 | `Tools/TriceIdTool` | 生成独立可执行文件 `tracehub-trice-id`，实现 `insert`、`clean`、`add`、`generate` |
 
 ### 5.4 TraceHub 现有模块调整
@@ -173,6 +178,16 @@ TraceHub/
 6. `Log/LogMerger` 从固定 `LOG_SOURCE_MAX` 改成按 source 数量初始化。
 7. `Log/SwimLaneRenderer` 从双列固定布局改成按 source 列表渲染，两个核心场景仍保持紧凑显示。
 8. `Log/LogSwimLane` 输出 source 名称，不依赖 Linux/RTOS 枚举名称。
+
+### 5.5 Source 模型和容量约束
+
+source 模型必须先定义容量和依赖边界，避免下游模块各自推导。
+
+1. `TraceSource` 放在公共基础层，例如 `TraceHub/Core`，由 `App`、`Log` 和 `Trice` 共同依赖；`Log` 不能包含 `App` 头文件。
+2. 全局定义 `TRACEHUB_MAX_SOURCES`，所有 source id、数组上限、renderer 列数、merger 状态和 recorder 状态都使用同一个上限。
+3. `ServicePlan` 负责校验配置的 source 数量、source 名称唯一性、RTT 通道唯一性和 SystemView 通道冲突。
+4. 共享内存仿真和 RTT 配置必须显式保证 up-buffer 数量大于等于所有 enabled source 与 SystemView 所需通道数；容量不足时在 plan 阶段报错。
+5. `CoreLogRecorder` 按 source 配置 `record_mode`，取值为 `text_clean`、`raw_binary`、`off`。文本 source 才能使用 text clean；Trice source 的原始帧只能使用 raw binary 或 off。
 
 ## 6. Trice 日志等级处理方案
 
@@ -207,6 +222,8 @@ TraceHub 应按以下规则承接日志等级：
 1. 现有两个文本核心日志仍能按时间戳合并。
 2. swimlane 输出不再依赖硬编码 Linux/RTOS 枚举。
 3. 新 source 模型能够表达两个 Trice 核心。
+4. source 数量、source id 和 RTT 通道容量在 `ServicePlan` 阶段统一校验，下游模块不再重复判断。
+5. `CoreLogRecorder` 能按 source 区分 `text_clean`、`raw_binary` 和 `off`，二进制 source 不会进入文本清理函数。
 
 ### 7.2 阶段二：TraceHub 运行时 Trice 解码
 
@@ -214,18 +231,21 @@ TraceHub 应按以下规则承接日志等级：
 
 交付内容：
 
-1. 引入 `TriceDecoder`，支持实际固件使用的帧格式。
-2. 复用或移植 `Trice/src` 中已有 COBS/TCOBS 解码代码。
+1. 引入 `TriceDecoder`，阶段二支持 none、COBS、TCOBSv1；TCOBSv2 必须等到 C 解码实现和固定样例齐全后再启用。
+2. 复用或移植 `Trice/src` 中已有 COBS/TCOBSv1 解码代码。
 3. 实现 TREX 记录解析，包括 ID、类型、cycle counter、时间戳和参数 payload。
 4. 实现 `til.json` 加载或 generated C table 读取。
 5. 实现格式字符串参数解析和安全格式化。
 6. 实现 tag 提取、等级映射和过滤。
+7. 建立运行时 Trice 配置矩阵，明确每个 Go `log` 选项在 C runtime 中是支持、拒绝还是延期。
 
 完成标准：
 
 1. 给定 Trice 原始字节流和匹配 ID 表，TraceHub 输出确定文本。
 2. 两个核心的 Trice 日志能进入同一个 `LogMerger`。
 3. 解码错误包含 source 名称、通道、ID、帧位置等诊断信息。
+4. 未支持的 framing、timestamp 模式、ID 模式和 X0/XTEA 选项必须在 plan 阶段失败，不能运行时静默降级。
+5. `til.json` 与 generated C table 的同一输入样例解码输出一致。
 
 ### 7.3 阶段三：C 版 Trice ID 工具
 
@@ -271,7 +291,7 @@ TraceHub 应按以下规则承接日志等级：
 
 1. XTEA 解密。
 2. `TRICE_X0` 扩展记录。
-3. `TRICE_S`、`TRICE_N`、`TRICE_B`、`TRICE_F` 的完整参数类型覆盖。
+3. 在阶段二已覆盖固件实际使用基础形式的前提下，补齐 `TRICE_S`、`TRICE_N`、`TRICE_B`、`TRICE_F` 的所有变体和边界样例。
 4. 彩色终端输出和更细的 tag 过滤策略。
 
 完成标准：
@@ -334,6 +354,25 @@ tracehub-trice-id generate --til build/trice/til.json --output build/trice/trice
 
 `tracehub-trice-id` 的返回码必须直接表达构建前检查结果：成功返回 0，任何 ID 冲突、源码解析失败、表文件不一致和格式参数不匹配都返回非零。
 
+### 8.3 运行时 Trice 选项矩阵
+
+运行时只迁移 Go `log` 命令中会影响 TraceHub 解码和显示的选项。阶段二必须按下表实现或拒绝，不能隐式忽略。
+
+| Go 选项语义 | C runtime 配置 | 阶段二要求 |
+| --- | --- | --- |
+| `framing` / `packageFraming` | `framing=none,cobs,tcobsv1` | 支持；`tcobsv2` 阶段二拒绝 |
+| endianness | `endian=little,big` | 支持 |
+| `til` / `li` | `til=...`、`li=...` | `til` 必需；`li` 可选 |
+| `logLevel`、`pick`、`ban` | `log-level=...`、`pick=...`、`ban=...` | 支持；`pick` 和 `ban` 同时设置时报错 |
+| `defaultTRICEBitwidth` | `default-bit-width=8,16,32,64` | 支持或在 generated table 中固化 |
+| target timestamp size | `target-timestamp=none,16,32` | 支持实际固件模式；未知模式拒绝 |
+| `doubled16BitID` | `doubled-16-bit-id=true,false` | 若固件使用则必须支持；否则显式拒绝 |
+| `singleFraming` | `single-framing=true,false` | 支持或拒绝，行为必须明确 |
+| `noCycleCheck` | `cycle-check=true,false` | 支持；关闭时仍记录诊断计数 |
+| `addNL` | decoder 输出策略 | TraceHub 统一管理换行，runtime decoder 不直接追加终端换行 |
+| XTEA password/key | `password=...` 或 `key=...` | 阶段五支持；阶段二拒绝 |
+| X0 selector mode | `x0-mode=...` | 阶段五支持；阶段二拒绝 |
+
 ## 9. 验证计划
 
 ### 9.1 运行时解码验证
@@ -359,6 +398,14 @@ tracehub-trice-id generate --til build/trice/til.json --output build/trice/trice
 3. RTT 通道冲突检查对 text、trice、systemview 一致生效。
 4. swimlane 输出列名来自 source descriptor。
 
+### 9.4 Go 与 C 黄金样例验证
+
+1. 从当前 Go `trice` 工具生成一组固定输入和期望输出，作为 C runtime 的黄金样例。
+2. 黄金样例同时覆盖 `til.json` 加载路径和 generated C table 静态表路径。
+3. 每个样例保存原始 bytes、framing、endianness、TIL、可选 LI 和期望文本输出。
+4. 对 TCOBSv2、XTEA、X0 等阶段二未支持能力，验证配置阶段必须失败。
+5. 对 malformed frame、unknown ID、payload length mismatch、format count mismatch，验证错误信息包含 source、channel、frame offset 和 ID。
+
 ## 10. 风险和约束
 
 1. C/C++ 源码扫描不能只依赖正则表达式，必须正确处理注释、字符串、宏续行和嵌套括号。
@@ -367,6 +414,8 @@ tracehub-trice-id generate --til build/trice/til.json --output build/trice/trice
 4. Trice 格式化必须严格检查参数数量和宽度，不允许在 payload 不匹配时继续输出。
 5. 多 source 合并必须保留每个 source 的顺序和诊断信息，不能只按文本内容排序。
 6. 日志等级规则必须集中定义，不允许在两个核心或多个模块中重复维护 tag 映射。
+7. generated C table 是运行时解码的规范化输入，必须包含所有运行时需要的派生字段，避免 runtime 重复解析和重复推导。
+8. TCOBSv2、XTEA、X0 等延期能力必须显式拒绝，不允许通过默认值或 fallback 掩盖配置错误。
 
 ## 11. 推荐落地顺序
 
@@ -398,8 +447,8 @@ tracehub-trice-id updates firmware source and ID table
 
 | 文件 | 放置位置 | 功能 |
 | --- | --- | --- |
-| `TraceSource.h` | `TraceHub/App` | 定义 `TraceHubSource_t`、source 类型、source id、source 名称、RTT 通道、输出前缀、解码器类型 |
-| `TraceSource.c` | `TraceHub/App` | 提供 source 初始化、名称校验、通道冲突检查、默认 source 构造、旧 Linux/RTOS 选项到 source 的转换 |
+| `TraceSource.h` | `TraceHub/Core` | 定义 `TraceHubSource_t`、source 类型、source id、source 名称、RTT 通道、输出前缀、解码器类型和 source 上限 |
+| `TraceSource.c` | `TraceHub/Core` | 提供 source 初始化、名称校验、通道冲突检查、默认 source 构造、旧 Linux/RTOS 选项到 source 的转换 |
 | `TraceDecoder.h` | `TraceHub/Log` | 定义统一解码器接口，包含 init、feed、flush、cleanup 和输出 `LogEntry_t` 的回调 |
 | `TextTraceDecoder.c` | `TraceHub/Log` | 封装现有 `LogLineParser` 和文本行缓冲逻辑，使文本日志成为一种 decoder |
 | `TextTraceDecoder.h` | `TraceHub/Log` | 暴露文本 decoder 创建和配置接口 |
@@ -433,7 +482,7 @@ tracehub-trice-id updates firmware source and ID table
 | `TraceHub/Log/SwimLaneRenderer.h` | config 没有 source 列信息 | 增加 source label 数组和 source_count；保留 width、color、stream | renderer 布局由 source 列表驱动 |
 | `TraceHub/Log/SwimLaneRenderer.c` | 固定 Linux/RTOS 两列、两种颜色、两种宽度 | 把列宽、label、颜色、空列输出改成按 source_count 循环；两个 source 场景保持紧凑布局 | source id 决定列位置，不出现 Linux/RTOS 条件 |
 | `TraceHub/Log/LogSwimLane.c` | 已经接收 source 字符串 | 保持接口；调用方传入动态 source label | 不需要引入 Trice 条件 |
-| `TraceHub/CMakeLists.txt` | 只有 `tracehub` 一个目标和固定 source 列表 | 加入新增 App/Log 文件；增加 include dir；不新增 `tracehub-trice-id` 入口到 runtime target | 阶段一只改变 runtime source 模型 |
+| `TraceHub/CMakeLists.txt` | 只有 `tracehub` 一个目标和固定 source 列表 | 加入新增 Core/Log 文件；增加 include dir；不新增 `tracehub-trice-id` 入口到 runtime target | 阶段一只改变 runtime source 模型 |
 
 #### 阶段一测试文件
 
@@ -452,9 +501,9 @@ tracehub-trice-id updates firmware source and ID table
 
 | 文件 | 放置位置 | 功能 | 对应 Go 来源 |
 | --- | --- | --- | --- |
-| `TriceConfig.h` | `TraceHub/Trice` | 定义 Trice endianness、framing、timestamp、cycle、filter 配置结构 | `Trice/internal/args/init.go` 中 log flags 子集 |
-| `TriceFraming.h` | `TraceHub/Trice` | 声明 none、COBS、TCOBSv1、TCOBSv2 帧状态机接口 | `Trice/internal/trexDecoder/trexDecoder.go` 的 `nextPackage` |
-| `TriceFraming.c` | `TraceHub/Trice` | 管理 0 分隔帧、leftover buffer、decode buffer；调用 COBS/TCOBS decode | `nextPackage` |
+| `TriceConfig.h` | `TraceHub/Trice` | 定义 Trice endianness、framing、timestamp、cycle、filter、default bit width、single framing、doubled ID 配置结构 | `Trice/internal/args/init.go` 中 log flags 子集 |
+| `TriceFraming.h` | `TraceHub/Trice` | 声明 none、COBS、TCOBSv1 帧状态机接口；TCOBSv2 枚举保留为 unsupported | `Trice/internal/trexDecoder/trexDecoder.go` 的 `nextPackage` |
+| `TriceFraming.c` | `TraceHub/Trice` | 管理 0 分隔帧、leftover buffer、decode buffer；调用 COBS/TCOBSv1 decode；TCOBSv2 直接报 unsupported | `nextPackage` |
 | `TriceRecord.h` | `TraceHub/Trice` | 定义 TREX record 头解析结果：type、id、timestamp、cycle、param bytes | `trexDecoder.Read` 中 tyId/nc 解析 |
 | `TriceRecord.c` | `TraceHub/Trice` | 解析 2 字节 tyId、S0/S2/S4/X0、nc count/cycle、payload 长度和 padding | `trexDecoder.Read` |
 | `TriceIdTable.h` | `TraceHub/Trice` | 定义 `TriceIdTable_t`、`TriceIdEntry_t`、TIL/LI 记录结构 | `Trice/internal/id/id.go` |
@@ -467,8 +516,8 @@ tracehub-trice-id updates firmware source and ID table
 | `TriceType.c` | `TraceHub/Trice` | 从 `TRICE`、`TRICE32_2`、`TRICE_B` 等类型计算 payload 规则 | `generate.go`、`trexDecoder.sprintTrice` |
 | `TriceFormatter.h` | `TraceHub/Trice` | 声明 payload 到文本的格式化接口 | `trexDecoder.unSignedOrSignedOut` |
 | `TriceFormatter.c` | `TraceHub/Trice` | 按 bit width、format spec 和 endian 生成文本；覆盖 S0/S2/S4 常规参数 | `trexDecoder` formatter functions |
-| `TriceSpecial.h` | `TraceHub/Trice` | 声明 S/N/B/F 特殊 Trice 类型处理 | `triceS`、`triceN`、`trice8B` 等 |
-| `TriceSpecial.c` | `TraceHub/Trice` | 处理 dynamic string、dynamic buffer、function style 输出 | `trexDecoder` special handlers |
+| `TriceSpecial.h` | `TraceHub/Trice` | 声明 S/N/B/F 特殊 Trice 类型处理；阶段二只启用固件实际使用的基础形式 | `triceS`、`triceN`、`trice8B` 等 |
+| `TriceSpecial.c` | `TraceHub/Trice` | 处理 dynamic string、dynamic buffer、function style 输出；未支持 special kind 必须报错 | `trexDecoder` special handlers |
 | `TriceTag.h` | `TraceHub/Trice` | 定义 tag、log level、pick、ban 过滤结构 | `lineTransformerANSI.go` |
 | `TriceTag.c` | `TraceHub/Trice` | 识别 `err:`、`wrn:`、`info:`、`dbg:` 等 tag，映射等级和过滤 | `FindTagName`、`colorize` |
 | `TriceDecoder.h` | `TraceHub/Trice` | 声明 Trice runtime decoder 创建、feed、flush、destroy | `trexDecoder.New`、`Read` |
@@ -490,13 +539,13 @@ tracehub-trice-id updates firmware source and ID table
 
 | 文件 | 修改内容 | 完成标准 |
 | --- | --- | --- |
-| `TraceHub/App/TraceSource.h` | source descriptor 增加 Trice 配置字段：`til_path`、`li_path`、`framing`、`endianness`、`log_level`、`pick`、`ban` | source 能完整描述一个 Trice core |
+| `TraceHub/Core/TraceSource.h` | source descriptor 增加 Trice 配置字段：`til_path`、`li_path`、`framing`、`endianness`、`log_level`、`pick`、`ban`、`default_bit_width`、`target_timestamp`、`doubled_16_bit_id`、`single_framing`、`cycle_check` | source 能完整描述一个 Trice core |
 | `TraceHub/App/Options.c` | `--source` 解析支持 `type=trice`、`til=...`、`li=...`、`framing=...`、`endian=...`、`log-level=...` | CLI 输入能构造 Trice source |
 | `TraceHub/App/ServicePlan.c` | 校验 Trice source 必须有 ID 表；校验 framing 和 endian；构造 source log prefix | 错误在 plan 阶段暴露 |
 | `TraceHub/Log/TraceDecoder.h` | 增加 Trice decoder factory 注册或明确 switch | collector 通过 decoder type 创建实例 |
 | `TraceHub/Log/LogCollectorState.c` | 初始化 source 时创建 text 或 Trice decoder；cleanup 时释放 decoder | decoder 生命周期归 source state |
 | `TraceHub/Log/LogCollectorRuntime.c` | raw bytes 送入 `TraceDecoder_Feed`，decoder 自己决定何时输出 entry | Trice 二进制不经过 CR/LF 切分 |
-| `TraceHub/CMakeLists.txt` | 增加 `TRACEHUB_TRICE_DIR`、Trice decoder sources、COBS/TCOBS C sources、include dir | runtime target 包含 Trice 解码模块 |
+| `TraceHub/CMakeLists.txt` | 增加 `TRACEHUB_TRICE_DIR`、Trice decoder sources、COBS/TCOBSv1 C sources、include dir | runtime target 包含 Trice 解码模块 |
 
 #### 阶段二测试文件
 
@@ -510,6 +559,14 @@ tracehub-trice-id updates firmware source and ID table
 | `TraceHub/Tests/Unit/TriceDecoderTest.c` | 新增 | 给定 bytes + TIL 输出确定文本 |
 | `TraceHub/Tests/Unit/TriceTagTest.c` | 新增 | tag 到等级映射、pick、ban、unclassified |
 
+#### 阶段二配置完成标准
+
+1. `TriceConfig` 明确记录每个影响解码的选项，不能依赖散落在 decoder 内部的隐式默认值。
+2. `ServicePlan` 对 unsupported 配置集中报错，包括 TCOBSv2、XTEA、X0、未知 timestamp 模式和未知 ID 模式。
+3. `default_bit_width` 要么来自 source 配置，要么由 generated C table 固化，不能在 runtime 多处重复推导。
+4. `pick` 和 `ban` 同时出现时直接报错，和 Go 工具行为保持一致。
+5. decoder 输出不包含终端换行控制，换行和文件输出由 TraceHub 显示与落盘层统一处理。
+
 ### 12.3 阶段三：新增独立编译前工具 `tracehub-trice-id`
 
 目标：替代 Go `trice insert`，让固件构建前 ID 管理完全由 C 工具完成。该工具是独立 executable，不进入 `tracehub` runtime CLI。
@@ -519,8 +576,8 @@ tracehub-trice-id updates firmware source and ID table
 | 文件 | 放置位置 | 功能 | 对应 Go 来源 |
 | --- | --- | --- | --- |
 | `main.c` | `TraceHub/Tools/TriceIdTool` | `tracehub-trice-id` 入口，分发 `insert`、`clean`、`add`、`generate` | `Trice/cmd/trice/main.go`、`args/handler.go` |
-| `TriceIdOptions.h` | `TraceHub/Tools/TriceIdTool` | 定义工具 CLI options：src、exclude、til、li、id range、aliases、dry-run、verbose | `args/init.go` |
-| `TriceIdOptions.c` | `TraceHub/Tools/TriceIdTool` | 解析 `insert/clean/add/generate` 的命令行参数，严格拒绝未知选项 | `flagsRefreshAndUpdate`、`insertIDsInit` |
+| `TriceIdOptions.h` | `TraceHub/Tools/TriceIdTool` | 定义工具 CLI options：src、exclude、til、li、id range、aliases、saliases、dry-run、verbose、default bit width、stamp size、LI path kind、add param count | `args/init.go` |
+| `TriceIdOptions.c` | `TraceHub/Tools/TriceIdTool` | 解析 `insert/clean/add/generate` 的命令行参数，严格拒绝未知选项，明确记录不迁移的 Go 选项 | `flagsRefreshAndUpdate`、`insertIDsInit` |
 | `TriceFileWalk.h` | `TraceHub/Tools/TriceIdTool` | 声明 source root 遍历、exclude、source file 后缀过滤 | `id/srcs.go`、`id/Update.go` |
 | `TriceFileWalk.c` | `TraceHub/Tools/TriceIdTool` | 遍历 `.c/.h/.cpp/.hpp/.inc` 等源文件，按显式列表处理 | `isSourceFile`、`CompactSrcs` |
 | `TriceSourceScan.h` | `TraceHub/Tools/TriceIdTool` | 声明源码扫描器和 `TriceMacroUse_t` | `id/match.go` |
@@ -581,6 +638,8 @@ TriceIdOptions_Parse
 5. 参数数量和格式字符串不匹配：严格报错，不写源码和表文件。
 6. 同一轮处理中出现重复 ID：严格报错。
 
+`insert` 和 `clean` 还必须保留 Go 工具对 `triceConfig.h` 的副作用：`insert` 将 `#define TRICE_CLEAN 1` 切换为 `0`，`clean` 将 `#define TRICE_CLEAN 0` 切换为 `1`。该修改必须通过源码扫描和原子写文件路径完成，不能用脚本式替换绕过上下文校验。
+
 ### 12.4 阶段四：补齐 `clean`、`add`、`generate`
 
 目标：覆盖 Trice 常用源码维护工作流，使用户不需要 Go 工具完成 ID 生命周期。
@@ -597,6 +656,21 @@ TriceIdOptions_Parse
 2. 三个子命令不重复实现 JSON 读写。
 3. 三个子命令对格式数量、ID 冲突、非法路径执行同一套错误策略。
 4. `generate` 输出的 C table 能被 `TriceIdTable` runtime loader 使用。
+
+#### generated C table schema
+
+`generate` 输出的 C table 是运行时的规范化输入，必须包含下列字段。字段名称可以按项目风格调整，但语义必须完整。
+
+| 字段 | 来源 | 用途 |
+| --- | --- | --- |
+| `id` | `til.json` key | runtime 按 ID 查找记录 |
+| `type` | TIL `Type` | 保留原始 Trice type，诊断和一致性检查使用 |
+| `format_string` | TIL `Strg` | 输出文本和 tag 提取使用 |
+| `bit_width` | `TriceType` 派生 | payload 读数宽度，避免 runtime 重复解析 type |
+| `param_count` | `TriceType` 和 `TriceFormat` 派生 | payload 长度校验和源码参数数量校验 |
+| `special_kind` | `TriceType` 派生 | 区分常规、S、N、B、F、X0 等处理路径 |
+| `tag` | `TriceTag` 派生 | 日志等级和 pick/ban 过滤 |
+| `location` | 可选 LI | 诊断输出使用 |
 
 ### 12.5 阶段五：高级 Trice 能力
 
@@ -626,7 +700,7 @@ TriceIdOptions_Parse
 | 原子写回源码 | `TraceHub/Tools/TriceIdTool/TriceAtomicFile.c` | 迁移到 `tracehub-trice-id` |
 | C printf format parser | `TraceHub/Trice/TriceFormat.c` | 迁移为 runtime 和 tool 共享能力 |
 | TREX 二进制解码 | `TraceHub/Trice/TriceDecoder.c`、`TraceHub/Trice/TriceRecord.c` | 迁移到 `tracehub` 运行时 |
-| COBS/TCOBS framing | `TraceHub/Trice/TriceFraming.c`，复用 `Trice/src/cobsDecode.c`、`Trice/src/tcobsv1Decode.c` | 迁移到 `tracehub` 运行时 |
+| COBS/TCOBSv1 framing | `TraceHub/Trice/TriceFraming.c`，复用 `Trice/src/cobsDecode.c`、`Trice/src/tcobsv1Decode.c` | 阶段二迁移 none、COBS、TCOBSv1；TCOBSv2 阶段二不迁移 |
 | endian、payload value 转换 | `TraceHub/Trice/TriceDecoder.c`、`TraceHub/Trice/TriceFormatter.c` | 迁移到 `tracehub` 运行时 |
 | selector-0 / X0 | `TraceHub/Trice/TriceTypeX0.c` | 迁移到 `tracehub` 运行时 |
 | tag、logLevel、pick、ban | `TraceHub/Trice/TriceTag.c`，可选 `TraceHub/Trice/TriceAnsi.c` | 迁移到 `tracehub` 运行时 |
@@ -636,7 +710,7 @@ TriceIdOptions_Parse
 
 | 原 Go 能力 | 迁移情况 |
 | --- | --- |
-| `log` | 不迁移 Go 的完整 `log` 命令；只把 Trice 运行时解码参数迁移到 `tracehub --source`，包括 framing、endianness、TIL、logLevel、pick、ban、password。RTT/shared-memory 接入仍由 TraceHub 自己负责。 |
+| `log` | 不迁移 Go 的完整 `log` 命令；只把 Trice 运行时解码参数迁移到 `tracehub --source`，包括 framing、endianness、TIL/LI、logLevel、pick、ban、default bit width、timestamp、cycle check、doubled ID、single framing。password/key 阶段五迁移。RTT/shared-memory 接入仍由 TraceHub 自己负责。 |
 | `scan` | 迁移底层扫描能力，用于 `insert/clean/add/generate`；不保留 Go 风格的独立 `scan` 子命令。若后续需要暴露用户命令，应作为 `tracehub-trice-id scan` 单独设计。 |
 
 ### 13.3 不迁移的能力
@@ -657,17 +731,17 @@ TriceIdOptions_Parse
 | Go 文件 | 迁移目标 | 迁移内容 |
 | --- | --- | --- |
 | `Trice/internal/args/handler.go` | `TraceHub/Tools/TriceIdTool/main.c`、`TriceIdOptions.c`、`TraceHub/App/Options.c` | `insert/clean/add/generate` 进入 `tracehub-trice-id`；`log` 的 Trice runtime flags 子集进入 `tracehub --source` |
-| `Trice/internal/args/init.go` | `TriceIdOptions.c`、`App/Options.c` | ID range、src/exclude、til/li、framing、endianness、logLevel、pick、ban |
+| `Trice/internal/args/init.go` | `TriceIdOptions.c`、`App/Options.c` | ID range、src/exclude、til/li、framing、endianness、logLevel、pick、ban、default bit width、stamp size、target timestamp、doubled ID、single framing、cycle check、LI path kind、aliases、saliases、dry-run |
 | `Trice/internal/id/id.go` | `TraceHub/Trice/TriceIdTable.h` | ID、format、LI 数据结构 |
 | `Trice/internal/id/manage.go` | `TraceHub/Trice/TriceIdTable.c`、`TriceIdState.c`、`TriceIdAlloc.c` | TIL/LI JSON、reverse lookup、ID 分配、AddFmtCount |
 | `Trice/internal/id/switchIDs.go` | `TriceIdState.c`、`TriceIdRange.c`、`TriceIdAlloc.c` | 处理前状态、ID range、tag range、处理后写回 |
-| `Trice/internal/id/helper.go` | `TriceSourceScan.c`、`TriceMacro.c`、`TriceAtomicFile.c` | disabled regions、别名、原子写文件 |
+| `Trice/internal/id/helper.go` | `TriceSourceScan.c`、`TriceMacro.c`、`TriceAtomicFile.c` | disabled regions、别名、SAlias、参数数量解析、原子写文件 |
 | `Trice/internal/id/match.go` | `TriceSourceScan.c` | TRICE 宏定位、format string、ID 参数位置 |
 | `Trice/internal/id/Update.go` | `TriceFileWalk.c`、`TriceMacro.c` | source 文件过滤、刷新已有 ID、格式数量校验 |
-| `Trice/internal/id/insertIDs.go` | `TriceIdInsert.c` | `insert` 核心算法 |
-| `Trice/internal/id/cleanIDs.go`、`zeroIDs.go` | `TriceIdClean.c` | `clean` 和 zero ID 逻辑 |
+| `Trice/internal/id/insertIDs.go` | `TriceIdInsert.c` | `insert` 核心算法，包含 `TRICE_CLEAN` 从 1 到 0 的配置切换 |
+| `Trice/internal/id/cleanIDs.go`、`zeroIDs.go` | `TriceIdClean.c` | `clean` 和 zero ID 逻辑，包含 `TRICE_CLEAN` 从 0 到 1 的配置切换 |
 | `Trice/internal/id/addIDs.go` | `TriceIdAdd.c`、`TriceIdPath.c` | `add` 和 LI path 规则 |
-| `Trice/internal/id/generate.go`、`generateTil.go` | `TriceIdGenerate.c`、`TriceType.c` | C table/header 生成、bit width、param count |
+| `Trice/internal/id/generate.go`、`generateTil.go` | `TriceIdGenerate.c`、`TriceType.c` | C table/header 生成、bit width、param count、special kind、tag 派生字段 |
 | `Trice/internal/fmtspec/fmtspec.go` | `TraceHub/Trice/TriceFormat.c` | C printf spec parser 和 normalization |
 | `Trice/internal/decoder/decoder.go` | `TriceFormat.c`、`TriceFormatter.c`、`TriceDecoder.c` | endian 读数、format spec kind、payload value 转换 |
 | `Trice/internal/decoder/typeX0.go` | `TriceTypeX0.c` | selector-0 counted payload |
@@ -687,4 +761,7 @@ TriceIdOptions_Parse
 5. Trice 二进制 raw bytes 不能经过文本清理函数。
 6. 所有 source 名称、通道、decoder type 必须在 `TraceSource` 和 `ServicePlan` 阶段解析完成，下游只消费 resolved source。
 7. 所有错误信息必须带 source name 或文件路径；runtime 错误带 channel 和 frame/ID，tool 错误带 source file 和 line。
-8. 每阶段完成后需要用户执行对应构建或测试命令验证，AI 不执行编译和测试命令。
+8. `TraceSource` 只能位于公共基础层，`Log`、`Trice` 和 `Tools` 模块不能包含 `App` 头文件。
+9. generated C table 必须由 `TriceIdTable` 统一加载，runtime 不能另写一套静态表访问规则。
+10. 未支持的 Trice 特性必须在 `ServicePlan` 或 `tracehub-trice-id` 参数解析阶段报错，禁止使用 fallback 掩盖。
+11. 每阶段完成后需要用户执行对应构建或测试命令验证，AI 不执行编译和测试命令。
