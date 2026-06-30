@@ -74,11 +74,16 @@ static unsigned       _NumWrites;
 static unsigned       _NumFailures;
 static unsigned       _BadRTTAddressCount;
 static unsigned       _BadRTTNameCount;
+static unsigned       _BadRTTBufferCount;
 static unsigned       _RTTAllocUpCount;
 static unsigned       _RTTConfigUpCount;
 static unsigned       _RTTConfigDownCount;
 static unsigned       _RTTWriteSkipFailCount;
 static unsigned       _NextRTTChannel;
+static uintptr_t      _ExpectedUpBufferAddress;
+static uintptr_t      _ExpectedDownBufferAddress;
+static unsigned       _ExpectedUpBufferSize;
+static unsigned       _ExpectedDownBufferSize;
 static U8             _DownBytes[TEST_DOWN_BUFFER_SIZE];
 static unsigned       _DownRdOff;
 static unsigned       _DownWrOff;
@@ -212,6 +217,26 @@ static void _CheckRTTName(const char* sName) {
 
 /*********************************************************************
 *
+*       _CheckRTTBuffer()
+*
+*  Function description
+*    Verifies that SystemView passed an expected shared-memory RTT
+*    buffer address and size into a stubbed RTT configuration API call.
+*
+*  Parameters
+*    pBuffer          RTT buffer pointer supplied by SystemView.
+*    BufferSize       RTT buffer size supplied by SystemView.
+*    ExpectedAddress  Expected RTT buffer address.
+*    ExpectedSize     Expected RTT buffer size.
+*/
+static void _CheckRTTBuffer(void* pBuffer, unsigned BufferSize, uintptr_t ExpectedAddress, unsigned ExpectedSize) {
+  if (((uintptr_t)pBuffer != ExpectedAddress) || (BufferSize != ExpectedSize)) {
+    _BadRTTBufferCount++;
+  }
+}
+
+/*********************************************************************
+*
 *       _CaptureWrite()
 *
 *  Function description
@@ -248,11 +273,10 @@ static void _CaptureWrite(uintptr_t Address, unsigned Channel, const void* pBuff
 *    Allocated channel id.
 */
 int SEGGER_RTT_AllocUpBuffer(uintptr_t Address, const char* sName, void* pBuffer, unsigned BufferSize, unsigned Flags) {
-  (void)pBuffer;
-  (void)BufferSize;
   TEST_ASSERT_EQ_U(SEGGER_RTT_MODE_NO_BLOCK_SKIP, Flags);
   _CheckRTTAddress(Address);
   _CheckRTTName(sName);
+  _CheckRTTBuffer(pBuffer, BufferSize, _ExpectedUpBufferAddress, _ExpectedUpBufferSize);
   _RTTAllocUpCount++;
   return (int)_NextRTTChannel++;
 }
@@ -270,11 +294,10 @@ int SEGGER_RTT_AllocUpBuffer(uintptr_t Address, const char* sName, void* pBuffer
 */
 int SEGGER_RTT_ConfigUpBuffer(uintptr_t Address, unsigned BufferIndex, const char* sName, void* pBuffer, unsigned BufferSize, unsigned Flags) {
   (void)BufferIndex;
-  (void)pBuffer;
-  (void)BufferSize;
   TEST_ASSERT_EQ_U(SEGGER_RTT_MODE_NO_BLOCK_SKIP, Flags);
   _CheckRTTAddress(Address);
   _CheckRTTName(sName);
+  _CheckRTTBuffer(pBuffer, BufferSize, _ExpectedUpBufferAddress, _ExpectedUpBufferSize);
   _RTTConfigUpCount++;
   return 0;
 }
@@ -292,11 +315,10 @@ int SEGGER_RTT_ConfigUpBuffer(uintptr_t Address, unsigned BufferIndex, const cha
 */
 int SEGGER_RTT_ConfigDownBuffer(uintptr_t Address, unsigned BufferIndex, const char* sName, void* pBuffer, unsigned BufferSize, unsigned Flags) {
   (void)BufferIndex;
-  (void)pBuffer;
-  (void)BufferSize;
   TEST_ASSERT_EQ_U(SEGGER_RTT_MODE_NO_BLOCK_SKIP, Flags);
   _CheckRTTAddress(Address);
   _CheckRTTName(sName);
+  _CheckRTTBuffer(pBuffer, BufferSize, _ExpectedDownBufferAddress, _ExpectedDownBufferSize);
   _RTTConfigDownCount++;
   return 0;
 }
@@ -550,16 +572,19 @@ static void _ClearWrites(void) {
 *
 *  Function description
 *    Resets the RTT transport stub to a known state before a test case.
+*    Cumulative validation failures are preserved for the final result.
 */
 static void _ResetRTTStub(void) {
   _ClearWrites();
-  _BadRTTAddressCount = 0u;
-  _BadRTTNameCount    = 0u;
   _RTTAllocUpCount    = 0u;
   _RTTConfigUpCount   = 0u;
   _RTTConfigDownCount = 0u;
   _RTTWriteSkipFailCount = 0u;
   _NextRTTChannel     = 1u;
+  _ExpectedUpBufferAddress   = (uintptr_t)SEGGER_SYSVIEW_RTT_UP_BUFFER_ADDRESS;
+  _ExpectedDownBufferAddress = (uintptr_t)SEGGER_SYSVIEW_RTT_DOWN_BUFFER_ADDRESS;
+  _ExpectedUpBufferSize      = SEGGER_SYSVIEW_RTT_BUFFER_SIZE;
+  _ExpectedDownBufferSize    = SEGGER_SYSVIEW_RTT_DOWN_BUFFER_SIZE;
   _DownRdOff          = 0u;
   _DownWrOff          = 0u;
   _Timestamp          = 100u;
@@ -1099,8 +1124,8 @@ static void _TestEncodeAPI(void) {
 static void _TestInitAndControlAPI(void) {
   SEGGER_SYSVIEW_CORE_CONTEXT* pMainContext;
   SEGGER_SYSVIEW_CORE_CONTEXT ExtraContext;
-  char UpBuffer[32];
-  char DownBuffer[8];
+  uintptr_t ExtraUpBufferAddress;
+  uintptr_t ExtraDownBufferAddress;
 
   _ResetCallbacks();
   _ResetRTTStub();
@@ -1124,8 +1149,14 @@ static void _TestInitAndControlAPI(void) {
   TEST_ASSERT_EQ_U(1u, _RTTAllocUpCount);
   TEST_ASSERT_EQ_U(1u, _RTTConfigDownCount);
 
+  ExtraUpBufferAddress = 0x12340400u;
+  ExtraDownBufferAddress = 0x12340500u;
+  _ExpectedUpBufferAddress = ExtraUpBufferAddress;
+  _ExpectedDownBufferAddress = ExtraDownBufferAddress;
+  _ExpectedUpBufferSize = 32u;
+  _ExpectedDownBufferSize = 8u;
   memset(&ExtraContext, 0, sizeof(ExtraContext));
-  SEGGER_SYSVIEW_InitAdditionalBuffer(&ExtraContext, UpBuffer, sizeof(UpBuffer), DownBuffer, sizeof(DownBuffer));
+  SEGGER_SYSVIEW_InitAdditionalBuffer(&ExtraContext, ExtraUpBufferAddress, 32u, ExtraDownBufferAddress, 8u);
   TEST_ASSERT_EQ_U(2u, ExtraContext.UpChannel);
   TEST_ASSERT_EQ_U(2u, _RTTAllocUpCount);
   TEST_ASSERT_EQ_U(2u, _RTTConfigDownCount);
@@ -1647,6 +1678,7 @@ int main(void) {
 
   TEST_ASSERT_EQ_U(0u, _BadRTTAddressCount);
   TEST_ASSERT_EQ_U(0u, _BadRTTNameCount);
+  TEST_ASSERT_EQ_U(0u, _BadRTTBufferCount);
 
   if (_NumFailures != 0u) {
     printf("SEGGER_SYSVIEW_PublicAPI_Test: %u failure(s)\n", _NumFailures);

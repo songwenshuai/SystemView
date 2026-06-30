@@ -38,19 +38,23 @@ Additional information:
 
 /*********************************************************************
 *
-*       Define: SEGGER_SYSVIEW_SECTION
+*       Define: SEGGER_SYSVIEW_RTT_*_ADDRESS
 *
 *  Description
-*    Section to place the SystemView RTT Buffer into.
-*  Default
-*    undefined: Do not place into a specific section.
+*    Shared-memory addresses used by the SystemView RTT transport.
 *  Notes
-*    If SEGGER_RTT_SECTION is defined, the default changes to use
-*    this section for the SystemView RTT Buffer, too.
+*    SEGGER_SYSVIEW_RTT_CB_ADDRESS defaults to SEGGER_RTT_CB_ADDRESS.
+*    SEGGER_SYSVIEW_RTT_UP_BUFFER_ADDRESS and
+*    SEGGER_SYSVIEW_RTT_DOWN_BUFFER_ADDRESS must be defined by the
+*    target configuration.  All addresses must point into the same
+*    mapped RTT shared-memory region.
 */
-#if !(defined SEGGER_SYSVIEW_SECTION) && (defined SEGGER_RTT_BUFFER_SECTION)
-  #define SEGGER_SYSVIEW_SECTION                  SEGGER_RTT_BUFFER_SECTION
-#endif
+// #define SEGGER_SYSVIEW_RTT_CB_ADDRESS           SEGGER_RTT_CB_ADDRESS
+// #define SEGGER_SYSVIEW_RTT_NAME_ADDRESS         (0u)
+// #define SEGGER_SYSVIEW_RTT_UP_BUFFER_ADDRESS    (0x00000000u)
+// #define SEGGER_SYSVIEW_RTT_DOWN_BUFFER_ADDRESS  (0x00000000u)
+// #define SEGGER_SYSVIEW_RTT_BUFFER_SIZE          1024
+// #define SEGGER_SYSVIEW_RTT_DOWN_BUFFER_SIZE     8
 
 
 /*********************************************************************

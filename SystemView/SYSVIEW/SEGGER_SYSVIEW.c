@@ -130,11 +130,9 @@ Additional information:
 
 #define RTT_CB_ADDRESS ((uintptr_t)SEGGER_SYSVIEW_RTT_CB_ADDRESS)
 #define RTT_NAME       ((const char*)(uintptr_t)SEGGER_SYSVIEW_RTT_NAME_ADDRESS)
-
-#if SEGGER_SYSVIEW_CPU_CACHE_LINE_SIZE
-  #if (SEGGER_SYSVIEW_RTT_BUFFER_SIZE % SEGGER_SYSVIEW_CPU_CACHE_LINE_SIZE)
-    #error "SEGGER_SYSVIEW_RTT_BUFFER_SIZE must be a multiple of SEGGER_SYSVIEW_CPU_CACHE_LINE_SIZE"
-  #endif
+#define RTT_UP_BUFFER  ((void*)(uintptr_t)SEGGER_SYSVIEW_RTT_UP_BUFFER_ADDRESS)
+#if (SEGGER_SYSVIEW_POST_MORTEM_MODE != 1)
+  #define RTT_DOWN_BUFFER ((void*)(uintptr_t)SEGGER_SYSVIEW_RTT_DOWN_BUFFER_ADDRESS)
 #endif
 
 /*********************************************************************
@@ -223,94 +221,6 @@ static int _SendPacket_Ex(SEGGER_SYSVIEW_CORE_CONTEXT* pInfo, U32 TimeStamp, U8*
 **********************************************************************
 */
 static const U8 _abSync[10] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
-
-#if SEGGER_SYSVIEW_CPU_CACHE_LINE_SIZE
-  #ifdef SEGGER_SYSVIEW_SECTION
-    //
-    // Alignment + special section required
-    //
-    #if (defined __GNUC__)
-      __attribute__ ((section (SEGGER_SYSVIEW_SECTION), aligned (SEGGER_SYSVIEW_CPU_CACHE_LINE_SIZE))) static char _UpBuffer  [SEGGER_SYSVIEW_RTT_BUFFER_SIZE];
-      #if (SEGGER_SYSVIEW_POST_MORTEM_MODE != 1)
-        __attribute__ ((section (SEGGER_SYSVIEW_SECTION), aligned (SEGGER_SYSVIEW_CPU_CACHE_LINE_SIZE))) static char _DownBuffer[8];  // Small, fixed-size buffer, for back-channel comms
-      #endif
-    #elif (defined __ICCARM__) || (defined __ICCRX__)
-      #pragma location=SEGGER_SYSVIEW_SECTION
-      #pragma data_alignment=SEGGER_RTT_CPU_CACHE_LINE_SIZE
-      static char _UpBuffer  [SEGGER_SYSVIEW_RTT_BUFFER_SIZE];
-      #if (SEGGER_SYSVIEW_POST_MORTEM_MODE != 1)
-        #pragma location=SEGGER_SYSVIEW_SECTION
-        #pragma data_alignment=SEGGER_RTT_CPU_CACHE_LINE_SIZE
-        static char _DownBuffer[8];  // Small, fixed-size buffer, for back-channel comms
-      #endif
-    #elif (defined __CC_ARM)
-      __attribute__ ((section (SEGGER_SYSVIEW_SECTION), aligned (SEGGER_SYSVIEW_CPU_CACHE_LINE_SIZE), zero_init)) static char _UpBuffer  [SEGGER_SYSVIEW_RTT_BUFFER_SIZE];
-      #if (SEGGER_SYSVIEW_POST_MORTEM_MODE != 1)
-        __attribute__ ((section (SEGGER_SYSVIEW_SECTION), aligned (SEGGER_SYSVIEW_CPU_CACHE_LINE_SIZE), zero_init)) static char _DownBuffer[8];  // Small, fixed-size buffer, for back-channel comms
-      #endif
-    #else
-      #error "Do not know how to place SystemView buffers in specific section"
-    #endif
-  #else
-    //
-    // Only alignment required
-    //
-    #if (defined __GNUC__)
-      __attribute__ ((aligned (SEGGER_SYSVIEW_CPU_CACHE_LINE_SIZE))) static char _UpBuffer  [SEGGER_SYSVIEW_RTT_BUFFER_SIZE];
-      #if (SEGGER_SYSVIEW_POST_MORTEM_MODE != 1)
-        __attribute__ ((aligned (SEGGER_SYSVIEW_CPU_CACHE_LINE_SIZE))) static char _DownBuffer[8];  // Small, fixed-size buffer, for back-channel comms
-      #endif
-    #elif (defined __ICCARM__) || (defined __ICCRX__)
-      #pragma data_alignment=SEGGER_RTT_CPU_CACHE_LINE_SIZE
-      static char _UpBuffer  [SEGGER_SYSVIEW_RTT_BUFFER_SIZE];
-      #if (SEGGER_SYSVIEW_POST_MORTEM_MODE != 1)
-        #pragma data_alignment=SEGGER_RTT_CPU_CACHE_LINE_SIZE
-        static char _DownBuffer[8];  // Small, fixed-size buffer, for back-channel comms
-      #endif
-    #elif (defined __CC_ARM)
-      __attribute__ ((aligned (SEGGER_SYSVIEW_CPU_CACHE_LINE_SIZE), zero_init)) static char _UpBuffer  [SEGGER_SYSVIEW_RTT_BUFFER_SIZE];
-      #if (SEGGER_SYSVIEW_POST_MORTEM_MODE != 1)
-        __attribute__ ((aligned (SEGGER_SYSVIEW_CPU_CACHE_LINE_SIZE), zero_init)) static char _DownBuffer[8];  // Small, fixed-size buffer, for back-channel comms
-      #endif
-    #else
-      #error "Do not know how to align SystemView buffers to cache line size"
-    #endif
-  #endif
-#else
-  #ifdef SEGGER_SYSVIEW_SECTION
-    //
-    // Only special section required
-    //
-    #if (defined __GNUC__)
-      __attribute__ ((section (SEGGER_SYSVIEW_SECTION))) static char _UpBuffer  [SEGGER_SYSVIEW_RTT_BUFFER_SIZE];
-      #if (SEGGER_SYSVIEW_POST_MORTEM_MODE != 1)
-        __attribute__ ((section (SEGGER_SYSVIEW_SECTION))) static char _DownBuffer[8];  // Small, fixed-size buffer, for back-channel comms
-      #endif
-    #elif (defined __ICCARM__) || (defined __ICCRX__)
-      #pragma location=SEGGER_SYSVIEW_SECTION
-      static char _UpBuffer  [SEGGER_SYSVIEW_RTT_BUFFER_SIZE];
-      #if (SEGGER_SYSVIEW_POST_MORTEM_MODE != 1)
-        #pragma location=SEGGER_SYSVIEW_SECTION
-        static char _DownBuffer[8];  // Small, fixed-size buffer, for back-channel comms
-      #endif
-    #elif (defined __CC_ARM)
-      __attribute__ ((section (SEGGER_SYSVIEW_SECTION), zero_init)) static char _UpBuffer  [SEGGER_SYSVIEW_RTT_BUFFER_SIZE];
-      #if (SEGGER_SYSVIEW_POST_MORTEM_MODE != 1)
-        __attribute__ ((section (SEGGER_SYSVIEW_SECTION), zero_init)) static char _DownBuffer[8];  // Small, fixed-size buffer, for back-channel comms
-      #endif
-    #else
-      #error "Do not know how to place SystemView buffers in specific section"
-    #endif
-  #else
-    //
-    // Neither special section nor alignment required
-    //
-    static char _UpBuffer  [SEGGER_SYSVIEW_RTT_BUFFER_SIZE];
-    #if (SEGGER_SYSVIEW_POST_MORTEM_MODE != 1)
-      static char _DownBuffer[8];  // Small, fixed-size buffer, for back-channel comms
-    #endif
-  #endif
-#endif
 
 static SEGGER_SYSVIEW_GLOBALS _SYSVIEW_Globals;
 
@@ -1569,6 +1479,8 @@ void SEGGER_SYSVIEW_Init(U32 SysFreq, U32 CPUFreq, const SEGGER_SYSVIEW_OS_API *
 *    SEGGER SystemView packets.
 *    The channel is assigned the label "SysView" for client software
 *    to identify the SystemView channel.
+*    The RTT control block and transport buffers are selected by
+*    SEGGER_SYSVIEW_RTT_*_ADDRESS configuration macros.
 *
 *    The channel is configured with the macro SEGGER_SYSVIEW_RTT_CHANNEL.
 */
@@ -1579,9 +1491,9 @@ void SEGGER_SYSVIEW_Init_Ex(U32 SysFreq, U32 CPUFreq, const SEGGER_SYSVIEW_OS_AP
 
   #if (SEGGER_SYSVIEW_POST_MORTEM_MODE == 1)
 #if SEGGER_SYSVIEW_RTT_CHANNEL > 0
-  SEGGER_RTT_ConfigUpBuffer(RTT_CB_ADDRESS, SEGGER_SYSVIEW_RTT_CHANNEL, RTT_NAME, &_UpBuffer[0],   sizeof(_UpBuffer),   SEGGER_RTT_MODE_NO_BLOCK_SKIP);
+  SEGGER_RTT_ConfigUpBuffer(RTT_CB_ADDRESS, SEGGER_SYSVIEW_RTT_CHANNEL, RTT_NAME, RTT_UP_BUFFER, SEGGER_SYSVIEW_RTT_BUFFER_SIZE, SEGGER_RTT_MODE_NO_BLOCK_SKIP);
 #else
-  Channel = SEGGER_RTT_AllocUpBuffer(RTT_CB_ADDRESS, RTT_NAME, &_UpBuffer[0], sizeof(_UpBuffer), SEGGER_RTT_MODE_NO_BLOCK_SKIP);
+  Channel = SEGGER_RTT_AllocUpBuffer(RTT_CB_ADDRESS, RTT_NAME, RTT_UP_BUFFER, SEGGER_SYSVIEW_RTT_BUFFER_SIZE, SEGGER_RTT_MODE_NO_BLOCK_SKIP);
   _SYSVIEW_Globals.MainContext.UpChannel = (Channel < 0) ? 0u : (U8)Channel;
 #endif
   _SYSVIEW_Globals.MainContext.RAMBaseAddress   = SEGGER_SYSVIEW_ID_BASE;
@@ -1596,15 +1508,15 @@ void SEGGER_SYSVIEW_Init_Ex(U32 SysFreq, U32 CPUFreq, const SEGGER_SYSVIEW_OS_AP
   _SYSVIEW_Globals.MainContext.PacketCount      = 0;
 #else // (SEGGER_SYSVIEW_POST_MORTEM_MODE == 1)
 #if SEGGER_SYSVIEW_RTT_CHANNEL > 0
-  SEGGER_RTT_ConfigUpBuffer   (RTT_CB_ADDRESS, SEGGER_SYSVIEW_RTT_CHANNEL, RTT_NAME, &_UpBuffer[0],   sizeof(_UpBuffer),   SEGGER_RTT_MODE_NO_BLOCK_SKIP);
-  SEGGER_RTT_ConfigDownBuffer (RTT_CB_ADDRESS, SEGGER_SYSVIEW_RTT_CHANNEL, RTT_NAME, &_DownBuffer[0], sizeof(_DownBuffer), SEGGER_RTT_MODE_NO_BLOCK_SKIP);
+  SEGGER_RTT_ConfigUpBuffer   (RTT_CB_ADDRESS, SEGGER_SYSVIEW_RTT_CHANNEL, RTT_NAME, RTT_UP_BUFFER,   SEGGER_SYSVIEW_RTT_BUFFER_SIZE,      SEGGER_RTT_MODE_NO_BLOCK_SKIP);
+  SEGGER_RTT_ConfigDownBuffer (RTT_CB_ADDRESS, SEGGER_SYSVIEW_RTT_CHANNEL, RTT_NAME, RTT_DOWN_BUFFER, SEGGER_SYSVIEW_RTT_DOWN_BUFFER_SIZE, SEGGER_RTT_MODE_NO_BLOCK_SKIP);
   _SYSVIEW_Globals.MainContext.UpChannel = (U8)SEGGER_SYSVIEW_RTT_CHANNEL;
 #else
-  Channel = SEGGER_RTT_AllocUpBuffer(RTT_CB_ADDRESS, RTT_NAME, &_UpBuffer[0], sizeof(_UpBuffer), SEGGER_RTT_MODE_NO_BLOCK_SKIP);
+  Channel = SEGGER_RTT_AllocUpBuffer(RTT_CB_ADDRESS, RTT_NAME, RTT_UP_BUFFER, SEGGER_SYSVIEW_RTT_BUFFER_SIZE, SEGGER_RTT_MODE_NO_BLOCK_SKIP);
   _SYSVIEW_Globals.MainContext.UpChannel = (Channel < 0) ? 0u : (U8)Channel;
   _SYSVIEW_Globals.MainContext.DownChannel = _SYSVIEW_Globals.MainContext.UpChannel;
   if (Channel >= 0) {
-    SEGGER_RTT_ConfigDownBuffer(RTT_CB_ADDRESS, _SYSVIEW_Globals.MainContext.DownChannel, RTT_NAME, &_DownBuffer[0], sizeof(_DownBuffer), SEGGER_RTT_MODE_NO_BLOCK_SKIP);
+    SEGGER_RTT_ConfigDownBuffer(RTT_CB_ADDRESS, _SYSVIEW_Globals.MainContext.DownChannel, RTT_NAME, RTT_DOWN_BUFFER, SEGGER_SYSVIEW_RTT_DOWN_BUFFER_SIZE, SEGGER_RTT_MODE_NO_BLOCK_SKIP);
   }
 #endif
   _SYSVIEW_Globals.MainContext.RAMBaseAddress   = SEGGER_SYSVIEW_ID_BASE;
@@ -1628,19 +1540,19 @@ void SEGGER_SYSVIEW_Init_Ex(U32 SysFreq, U32 CPUFreq, const SEGGER_SYSVIEW_OS_AP
 *    Used to store SystemView events for other cores.
 *
 *  Parameters
-*    pContext       - Context of respective core.
-*    pUpBuffer      - Pointer to RTT up-buffer.
-*    SizeUpBuffer   - Size of RTT up-buffer.
-*    pDownBuffer    - Pointer to RTT down-buffer.
-*    SizeDownBuffer - Size of RTT down-buffer.
+*    pContext          - Context of respective core.
+*    UpBufferAddress   - Address of RTT up-buffer.
+*    UpBufferSize      - Size of RTT up-buffer.
+*    DownBufferAddress - Address of RTT down-buffer.
+*    DownBufferSize    - Size of RTT down-buffer.
 */
-void SEGGER_SYSVIEW_InitAdditionalBuffer(SEGGER_SYSVIEW_CORE_CONTEXT* pContext, void* pUpBuffer, unsigned UpBufferSize, void* pDownBuffer, unsigned DownBufferSize) {
+void SEGGER_SYSVIEW_InitAdditionalBuffer(SEGGER_SYSVIEW_CORE_CONTEXT* pContext, uintptr_t UpBufferAddress, unsigned UpBufferSize, uintptr_t DownBufferAddress, unsigned DownBufferSize) {
   int Channel;
 
-  Channel = SEGGER_RTT_AllocUpBuffer(RTT_CB_ADDRESS, RTT_NAME, pUpBuffer, UpBufferSize, SEGGER_RTT_MODE_NO_BLOCK_SKIP);
+  Channel = SEGGER_RTT_AllocUpBuffer(RTT_CB_ADDRESS, RTT_NAME, (void*)UpBufferAddress, UpBufferSize, SEGGER_RTT_MODE_NO_BLOCK_SKIP);
   pContext->UpChannel = (Channel < 0) ? 0u : (U8)Channel;
   if (Channel >= 0) {
-    SEGGER_RTT_ConfigDownBuffer(RTT_CB_ADDRESS, pContext->UpChannel, RTT_NAME, pDownBuffer, DownBufferSize, SEGGER_RTT_MODE_NO_BLOCK_SKIP);
+    SEGGER_RTT_ConfigDownBuffer(RTT_CB_ADDRESS, pContext->UpChannel, RTT_NAME, (void*)DownBufferAddress, DownBufferSize, SEGGER_RTT_MODE_NO_BLOCK_SKIP);
   }
 }
 

@@ -260,6 +260,20 @@ extern "C" {
 
 /*********************************************************************
 *
+*       Define: SEGGER_SYSVIEW_RTT_UP_BUFFER_ADDRESS
+*
+*  Description
+*    Shared-memory address of the SystemView RTT up-buffer.
+*  Notes
+*    The buffer must be located in the same mapped shared-memory region
+*    as SEGGER_SYSVIEW_RTT_CB_ADDRESS.
+*/
+#ifndef   SEGGER_SYSVIEW_RTT_UP_BUFFER_ADDRESS
+  #error "SEGGER_SYSVIEW_RTT_UP_BUFFER_ADDRESS must be defined"
+#endif
+
+/*********************************************************************
+*
 *       Define: SEGGER_SYSVIEW_RTT_BUFFER_SIZE
 *
 *  Description
@@ -490,6 +504,71 @@ extern "C" {
 */
 #ifndef   SEGGER_SYSVIEW_POST_MORTEM_MODE
   #define SEGGER_SYSVIEW_POST_MORTEM_MODE         0
+#endif
+
+/*********************************************************************
+*
+*       Define: SEGGER_SYSVIEW_RTT_DOWN_BUFFER_ADDRESS
+*
+*  Description
+*    Shared-memory address of the SystemView RTT down-buffer.
+*  Notes
+*    The buffer must be located in the same mapped shared-memory region
+*    as SEGGER_SYSVIEW_RTT_CB_ADDRESS.  Post-mortem mode does not use a
+*    down-buffer.
+*/
+#if (SEGGER_SYSVIEW_POST_MORTEM_MODE != 1)
+  #ifndef   SEGGER_SYSVIEW_RTT_DOWN_BUFFER_ADDRESS
+    #error "SEGGER_SYSVIEW_RTT_DOWN_BUFFER_ADDRESS must be defined"
+  #endif
+#endif
+
+/*********************************************************************
+*
+*       Define: SEGGER_SYSVIEW_RTT_DOWN_BUFFER_SIZE
+*
+*  Description
+*    Number of bytes that SystemView uses for the RTT down-buffer.
+*/
+#if (SEGGER_SYSVIEW_POST_MORTEM_MODE != 1)
+  #ifndef   SEGGER_SYSVIEW_RTT_DOWN_BUFFER_SIZE
+    #define SEGGER_SYSVIEW_RTT_DOWN_BUFFER_SIZE   8
+  #endif
+#endif
+
+#if (SEGGER_SYSVIEW_RTT_CB_ADDRESS == 0)
+  #error "SEGGER_SYSVIEW_RTT_CB_ADDRESS must not be zero"
+#endif
+
+#if (SEGGER_SYSVIEW_RTT_UP_BUFFER_ADDRESS == 0)
+  #error "SEGGER_SYSVIEW_RTT_UP_BUFFER_ADDRESS must not be zero"
+#endif
+
+#if (SEGGER_SYSVIEW_RTT_BUFFER_SIZE == 0)
+  #error "SEGGER_SYSVIEW_RTT_BUFFER_SIZE must not be zero"
+#endif
+
+#if (SEGGER_SYSVIEW_POST_MORTEM_MODE != 1)
+  #if (SEGGER_SYSVIEW_RTT_DOWN_BUFFER_ADDRESS == 0)
+    #error "SEGGER_SYSVIEW_RTT_DOWN_BUFFER_ADDRESS must not be zero"
+  #endif
+  #if (SEGGER_SYSVIEW_RTT_DOWN_BUFFER_SIZE == 0)
+    #error "SEGGER_SYSVIEW_RTT_DOWN_BUFFER_SIZE must not be zero"
+  #endif
+#endif
+
+#if SEGGER_SYSVIEW_CPU_CACHE_LINE_SIZE
+  #if (SEGGER_SYSVIEW_RTT_BUFFER_SIZE % SEGGER_SYSVIEW_CPU_CACHE_LINE_SIZE)
+    #error "SEGGER_SYSVIEW_RTT_BUFFER_SIZE must be a multiple of SEGGER_SYSVIEW_CPU_CACHE_LINE_SIZE"
+  #endif
+  #if (SEGGER_SYSVIEW_RTT_UP_BUFFER_ADDRESS % SEGGER_SYSVIEW_CPU_CACHE_LINE_SIZE)
+    #error "SEGGER_SYSVIEW_RTT_UP_BUFFER_ADDRESS must be aligned to SEGGER_SYSVIEW_CPU_CACHE_LINE_SIZE"
+  #endif
+  #if (SEGGER_SYSVIEW_POST_MORTEM_MODE != 1)
+    #if (SEGGER_SYSVIEW_RTT_DOWN_BUFFER_ADDRESS % SEGGER_SYSVIEW_CPU_CACHE_LINE_SIZE)
+      #error "SEGGER_SYSVIEW_RTT_DOWN_BUFFER_ADDRESS must be aligned to SEGGER_SYSVIEW_CPU_CACHE_LINE_SIZE"
+    #endif
+  #endif
 #endif
 
 /*********************************************************************

@@ -156,8 +156,12 @@ SystemView 使用以下配置宏接入共享 RTT：
 - `SEGGER_RTT_SYSCALL_CB_ADDRESS`：`RTT/Syscalls` stdio retargeting 使用的 RTTCB 基地址，默认继承 `SEGGER_RTT_CB_ADDRESS`。
 - `SEGGER_SYSVIEW_RTT_CB_ADDRESS`：SystemView 使用的 RTT control block 基地址，默认继承 `SEGGER_RTT_CB_ADDRESS`。只有在 SystemView 和 stdio retargeting 有意使用不同 RTTCB 时，才需要单独覆盖。
 - `SEGGER_SYSVIEW_RTT_NAME_ADDRESS`：可选的 SystemView RTT channel name 字符串地址，默认 `0u`，即不安装 name。需要 channel name 时，应用必须把字符串放在共享内存中，并让该地址能编码成相对 `SEGGER_SYSVIEW_RTT_CB_ADDRESS` 的 64 位 offset。
+- `SEGGER_SYSVIEW_RTT_UP_BUFFER_ADDRESS`：SystemView RTT up-buffer 地址，必须显式定义并指向同一个共享内存窗口。
+- `SEGGER_SYSVIEW_RTT_DOWN_BUFFER_ADDRESS`：SystemView RTT down-buffer 地址，实时模式必须显式定义并指向同一个共享内存窗口。
+- `SEGGER_SYSVIEW_RTT_BUFFER_SIZE`：SystemView RTT up-buffer 大小。
+- `SEGGER_SYSVIEW_RTT_DOWN_BUFFER_SIZE`：SystemView RTT down-buffer 大小。
 
-SystemView 内置 `_UpBuffer`/`_DownBuffer` 或 `SEGGER_SYSVIEW_InitAdditionalBuffer()` 传入的 buffer 也必须位于 RTT 共享内存窗口内。通常做法是用 linker section 把这些 buffer 放进共享内存，或者由平台分配共享 buffer 后再传入初始化接口。
+SystemView 不再内置 transport buffer，也不再由链接脚本放置 transport buffer。主 SystemView buffer 必须通过 `SEGGER_SYSVIEW_RTT_UP_BUFFER_ADDRESS` 和 `SEGGER_SYSVIEW_RTT_DOWN_BUFFER_ADDRESS` 指定；额外 core buffer 通过 `SEGGER_SYSVIEW_InitAdditionalBuffer()` 传入显式地址。所有地址都必须位于 RTT 共享内存窗口内。
 
 ## 内存要求
 

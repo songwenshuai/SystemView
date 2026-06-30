@@ -40,12 +40,15 @@ Purpose : Host-side SystemView configuration for the public API unit
 //
 #define SEGGER_SYSVIEW_RTT_CB_ADDRESS          (0x12340000u)
 #define SEGGER_SYSVIEW_RTT_NAME_ADDRESS        (0x12340100u)
+#define SEGGER_SYSVIEW_RTT_UP_BUFFER_ADDRESS   (0x12340200u)
+#define SEGGER_SYSVIEW_RTT_DOWN_BUFFER_ADDRESS (0x12340300u)
 
 //
 // Small deterministic packet and buffer sizes keep the host test fast
 // while still exercising packet encoding and string limiting paths.
 //
 #define SEGGER_SYSVIEW_RTT_BUFFER_SIZE         256
+#define SEGGER_SYSVIEW_RTT_DOWN_BUFFER_SIZE    64
 #define SEGGER_SYSVIEW_MAX_STRING_LEN          64
 #define SEGGER_SYSVIEW_MAX_ARGUMENTS           16
 #define SEGGER_SYSVIEW_USE_STATIC_BUFFER       1
