@@ -169,6 +169,62 @@ static int _TestExplicitOversizedWidthFails(void) {
     return 0;
 }
 
+static int _TestPublicRenderLifecycle(void) {
+    SwimLane_Config_t        config;
+    const SwimLane_State_t  *state;
+    LogEntry_t              *entry;
+    FILE                    *file;
+    char                     buffer[512];
+    size_t                   len;
+
+    file = tmpfile();
+    TEST_ASSERT(file != NULL);
+
+    memset(&config, 0, sizeof(config));
+    config.total_width    = 80u;
+    config.show_header    = true;
+    config.show_separator = true;
+    config.color_enabled  = false;
+    config.output_stream  = file;
+
+    TEST_ASSERT(SwimLane_RenderHeader() == -1);
+    TEST_ASSERT(SwimLane_RenderSeparator() == -1);
+    TEST_ASSERT(SwimLane_RenderEntry(NULL) == -1);
+    TEST_ASSERT(SwimLane_GetState() == NULL);
+    TEST_ASSERT(SwimLane_Init(NULL) == -1);
+    TEST_ASSERT(SwimLane_Init(&config) == 0);
+    TEST_ASSERT(SwimLane_Init(&config) == -1);
+
+    state = SwimLane_GetState();
+    TEST_ASSERT(state != NULL);
+    TEST_ASSERT(state->initialized);
+    TEST_ASSERT(!state->header_shown);
+    TEST_ASSERT(SwimLane_GetRowCount() == 0u);
+    TEST_ASSERT(SwimLane_RenderHeader() == 0);
+    TEST_ASSERT(state->header_shown);
+    TEST_ASSERT(SwimLane_RenderSeparator() == 0);
+
+    entry = LogEntry_Create(61000000u, LOG_SOURCE_LINUX, "left side", strlen("left side"));
+    TEST_ASSERT(entry != NULL);
+    TEST_ASSERT(SwimLane_RenderEntry(entry) == 0);
+    TEST_ASSERT(SwimLane_GetRowCount() == 1u);
+    LogEntry_Destroy(entry);
+
+    TEST_ASSERT(fflush(file) == 0);
+    rewind(file);
+    len = fread(buffer, 1u, sizeof(buffer) - 1u, file);
+    TEST_ASSERT(!ferror(file));
+    buffer[len] = '\0';
+    TEST_ASSERT(strstr(buffer, "LINUX") != NULL);
+    TEST_ASSERT(strstr(buffer, "left side") != NULL);
+
+    SwimLane_Cleanup();
+    TEST_ASSERT(SwimLane_GetState() == NULL);
+    TEST_ASSERT(SwimLane_GetRowCount() == 0u);
+    TEST_ASSERT(fclose(file) == 0);
+    return 0;
+}
+
 /*********************************************************************
 *
 *       main()
@@ -191,6 +247,9 @@ int main(void) {
         return 1;
     }
     if (_TestExplicitOversizedWidthFails() != 0) {
+        return 1;
+    }
+    if (_TestPublicRenderLifecycle() != 0) {
         return 1;
     }
     return 0;

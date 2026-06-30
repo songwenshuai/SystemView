@@ -61,19 +61,10 @@ Purpose : Low-level RTT memory mapping backend abstraction
 #include <stddef.h>
 #include <stdbool.h>
 
+#include "Utils.h"
+
 #if defined(__cplusplus)
 extern "C" {
-#endif
-
-/*********************************************************************
-*
-*       Defines
-*
-**********************************************************************
-*/
-
-#ifndef TRACEHUB_MIN
-  #define TRACEHUB_MIN(a,b)         (((a) < (b)) ? (a) : (b))
 #endif
 
 /*********************************************************************

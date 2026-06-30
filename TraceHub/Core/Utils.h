@@ -57,6 +57,17 @@ Purpose : Common utility functions for RTT bridge
 **********************************************************************
 */
 
+/*********************************************************************
+*
+*       Defines
+*
+**********************************************************************
+*/
+
+#ifndef TRACEHUB_MIN
+  #define TRACEHUB_MIN(a,b)         (((a) < (b)) ? (a) : (b))
+#endif
+
 #if defined(__cplusplus)         // Allow usage of this module from C++ files (disable name mangling)
 extern "C" {     /* Make sure we have C-declarations in C++ programs */
 #endif

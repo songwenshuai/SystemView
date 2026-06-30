@@ -52,7 +52,8 @@ BUILD_UNIT_TESTS=""
 BUILD_SIM_TESTS=""
 TOOLCHAIN_FILE=""
 APP_BIN="tracehub"
-INSTALL_SUBDIR="usershell/TraceHub"
+INSTALL_BINDIR="bin"
+INSTALL_LIBDIR="lib"
 APP_ARGS=()  # Arguments to pass to tracehub when using -r
 
 # ==============================================================================
@@ -356,6 +357,8 @@ CMAKE_ARGS=(
     "-S" "$SCRIPT_DIR"
     "-DCMAKE_BUILD_TYPE=$BUILD_TYPE"
     "-DCMAKE_INSTALL_PREFIX=$INSTALL_PREFIX"
+    "-DCMAKE_INSTALL_BINDIR=$INSTALL_BINDIR"
+    "-DCMAKE_INSTALL_LIBDIR=$INSTALL_LIBDIR"
     "-DBUILD_UNIT_TESTS=$BUILD_UNIT_TESTS"
     "-DBUILD_SIM_TESTS=$BUILD_SIM_TESTS"
     "-GNinja"
@@ -470,7 +473,7 @@ echo "Build Type:        $BUILD_TYPE"
 echo ""
 
 # Show installed executables
-if [ -d "$INSTALL_PREFIX/$INSTALL_SUBDIR/bin" ]; then
+if [ -d "$INSTALL_PREFIX/$INSTALL_BINDIR" ]; then
     echo "Installed Executables:"
     while IFS= read -r exe; do
         if [ -f "$exe" ]; then
@@ -478,12 +481,12 @@ if [ -d "$INSTALL_PREFIX/$INSTALL_SUBDIR/bin" ]; then
             EXENAME=$(basename "$exe")
             printf "  %-50s %10s\n" "$EXENAME" "$SIZE"
         fi
-    done < <(find "$INSTALL_PREFIX/$INSTALL_SUBDIR/bin" -type f -executable 2>/dev/null | sort)
+    done < <(find "$INSTALL_PREFIX/$INSTALL_BINDIR" -type f -executable 2>/dev/null | sort)
     echo ""
 fi
 
 # Show installed libraries
-if [ -d "$INSTALL_PREFIX/$INSTALL_SUBDIR/lib" ]; then
+if [ -d "$INSTALL_PREFIX/$INSTALL_LIBDIR" ]; then
     echo "Installed Libraries:"
     while IFS= read -r lib; do
         if [ -f "$lib" ]; then
@@ -491,7 +494,7 @@ if [ -d "$INSTALL_PREFIX/$INSTALL_SUBDIR/lib" ]; then
             LIBNAME=$(basename "$lib")
             printf "  %-50s %10s\n" "$LIBNAME" "$SIZE"
         fi
-    done < <(find "$INSTALL_PREFIX/$INSTALL_SUBDIR/lib" \( -name "*.so*" -o -name "*.a" \) 2>/dev/null | sort)
+    done < <(find "$INSTALL_PREFIX/$INSTALL_LIBDIR" \( -name "*.so*" -o -name "*.a" \) 2>/dev/null | sort)
     echo ""
 fi
 
@@ -511,9 +514,9 @@ echo ""
 # Print usage hint
 if [ $RUN_AFTER_BUILD -eq 0 ]; then
     print_info "To run the application:"
-    echo "  $INSTALL_PREFIX/$INSTALL_SUBDIR/bin/$APP_BIN --help"
+    echo "  $INSTALL_PREFIX/$INSTALL_BINDIR/$APP_BIN --help"
     echo "  or"
-    echo "  LD_LIBRARY_PATH=$INSTALL_PREFIX/$INSTALL_SUBDIR/lib $SCRIPT_DIR/$APP_BIN --help"
+    echo "  LD_LIBRARY_PATH=$INSTALL_PREFIX/$INSTALL_LIBDIR $SCRIPT_DIR/$APP_BIN --help"
     echo ""
 fi
 
@@ -526,7 +529,7 @@ if [ $RUN_AFTER_BUILD -eq 1 ]; then
     print_info "Running application..."
     echo ""
 
-    LIB_PATH="${INSTALL_PREFIX}/$INSTALL_SUBDIR/lib"
+    LIB_PATH="${INSTALL_PREFIX}/$INSTALL_LIBDIR"
 
     if [ -n "${LD_LIBRARY_PATH:-}" ]; then
         export LD_LIBRARY_PATH="${LIB_PATH}:${LD_LIBRARY_PATH}"

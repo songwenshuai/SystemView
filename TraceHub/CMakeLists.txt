@@ -262,10 +262,10 @@ add_executable(${TRACEHUB_TARGET} ${SOURCES})
 # Configure Installation Directories
 # ==============================================================================
 
-set(CMAKE_INSTALL_BINDIR "usershell/TraceHub/bin" CACHE PATH "Binary install directory" FORCE)
-set(CMAKE_INSTALL_LIBDIR "usershell/TraceHub/lib" CACHE PATH "Library install directory" FORCE)
-set(CMAKE_INSTALL_INCLUDEDIR "usershell/TraceHub/include" CACHE PATH "Header install directory" FORCE)
-set(CMAKE_INSTALL_DATADIR "usershell/TraceHub/share" CACHE PATH "Data install directory" FORCE)
+set(CMAKE_INSTALL_BINDIR "bin" CACHE PATH "Binary install directory" FORCE)
+set(CMAKE_INSTALL_LIBDIR "lib" CACHE PATH "Library install directory" FORCE)
+set(CMAKE_INSTALL_INCLUDEDIR "include" CACHE PATH "Header install directory" FORCE)
+set(CMAKE_INSTALL_DATADIR "share" CACHE PATH "Data install directory" FORCE)
 
 # ==============================================================================
 # Find Required Packages

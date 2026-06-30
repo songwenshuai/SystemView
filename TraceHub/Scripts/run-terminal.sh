@@ -117,7 +117,7 @@ Options:
 Environment:
   TRACEHUB_BIN         Explicit tracehub executable path. If unset, this script
                        checks $ROOT_DIR/tracehub and
-                       $ROOT_DIR/install/usershell/TraceHub/bin/tracehub.
+                       $ROOT_DIR/install/bin/tracehub.
 
 Examples:
   sudo $0

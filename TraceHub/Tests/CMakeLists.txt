@@ -114,6 +114,7 @@ set(COMMON_DEFINITIONS
 set(COMMON_LIBRARIES
     Threads::Threads
     $<$<PLATFORM_ID:Linux>:rt>
+    $<$<PLATFORM_ID:Windows>:ws2_32>
 )
 
 # ==============================================================================
@@ -201,6 +202,134 @@ if(BUILD_UNIT_TESTS)
     target_include_directories(test_swimlane_renderer PRIVATE ${COMMON_INCLUDES})
     target_link_libraries(test_swimlane_renderer PRIVATE ${COMMON_LIBRARIES})
     add_test(NAME test_swimlane_renderer COMMAND test_swimlane_renderer)
+
+    add_executable(test_core_api
+        Unit/CoreApiTest.c
+        ${TRACEHUB_CORE_DIR}/ByteQueue.c
+        ${TRACEHUB_CORE_DIR}/SYS.c
+        ${TRACEHUB_CORE_DIR}/Utils.c
+    )
+
+    target_include_directories(test_core_api PRIVATE ${COMMON_INCLUDES})
+    target_link_libraries(test_core_api PRIVATE ${COMMON_LIBRARIES})
+    add_test(NAME test_core_api COMMAND test_core_api)
+
+    add_executable(test_logentry
+        Unit/LogEntryTest.c
+        ${TRACEHUB_LOG_DIR}/LogEntry.c
+    )
+
+    target_include_directories(test_logentry PRIVATE ${COMMON_INCLUDES})
+    add_test(NAME test_logentry COMMAND test_logentry)
+
+    add_executable(test_log_api
+        Unit/LogApiTest.c
+        ${TRACEHUB_LOG_DIR}/LogMain.c
+        ${TRACEHUB_LOG_DIR}/LogFile.c
+        ${TRACEHUB_LOG_DIR}/LogText.c
+        ${TRACEHUB_LOG_DIR}/LogHexdump.c
+        ${TRACEHUB_LOG_DIR}/LogSwimLane.c
+        ${TRACEHUB_CORE_DIR}/SYS.c
+        ${TRACEHUB_CORE_DIR}/Utils.c
+    )
+
+    target_include_directories(test_log_api PRIVATE ${COMMON_INCLUDES})
+    target_link_libraries(test_log_api PRIVATE ${COMMON_LIBRARIES})
+    add_test(NAME test_log_api COMMAND test_log_api)
+
+    add_executable(test_network_api
+        Unit/NetworkApiTest.c
+        ${TRACEHUB_NETWORK_DIR}/Socket.c
+        ${TRACEHUB_NETWORK_DIR}/TelnetCodec.c
+    )
+
+    target_include_directories(test_network_api PRIVATE ${COMMON_INCLUDES})
+    target_link_libraries(test_network_api PRIVATE ${COMMON_LIBRARIES})
+    add_test(NAME test_network_api COMMAND test_network_api)
+
+    add_executable(test_rtt_api
+        Unit/RTTApiTest.c
+        ${TRACEHUB_RTT_DIR}/RTTMemory.c
+        ${TRACEHUB_RTT_DIR}/RTTBridge.c
+    )
+
+    target_include_directories(test_rtt_api PRIVATE ${COMMON_INCLUDES})
+    target_compile_definitions(test_rtt_api PRIVATE ${COMMON_DEFINITIONS})
+    add_test(NAME test_rtt_api COMMAND test_rtt_api)
+
+    add_executable(test_rtt_memshm_backend
+        Unit/RTTMemoryMemshmBackendTest.c
+        ${TRACEHUB_RTT_DIR}/RTTMemory.c
+        ${TRACEHUB_RTT_DIR}/RTTMemory_memshm.c
+    )
+
+    target_include_directories(test_rtt_memshm_backend PRIVATE ${COMMON_INCLUDES})
+    target_compile_definitions(test_rtt_memshm_backend PRIVATE ${COMMON_DEFINITIONS})
+    target_link_libraries(test_rtt_memshm_backend PRIVATE ${COMMON_LIBRARIES})
+    add_test(NAME test_rtt_memshm_backend COMMAND test_rtt_memshm_backend)
+
+    if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+        add_executable(test_rtt_smem_backend
+            Unit/RTTMemorySmemBackendTest.c
+            ${TRACEHUB_RTT_DIR}/RTTMemory.c
+            ${TRACEHUB_RTT_DIR}/RTTMemory_smem.c
+        )
+
+        target_include_directories(test_rtt_smem_backend PRIVATE ${COMMON_INCLUDES})
+        target_compile_definitions(test_rtt_smem_backend PRIVATE RTTMEM_USE_SMEM=1)
+        target_link_libraries(test_rtt_smem_backend PRIVATE ${COMMON_LIBRARIES})
+        add_test(NAME test_rtt_smem_backend COMMAND test_rtt_smem_backend)
+    endif()
+
+    add_executable(test_app_api
+        Unit/AppApiTest.c
+        ${TRACEHUB_APP_DIR}/Options.c
+        ${TRACEHUB_APP_DIR}/ServicePlan.c
+        ${TRACEHUB_APP_DIR}/CLI.c
+        ${TRACEHUB_APP_DIR}/TraceHubSignal.c
+        ${TRACEHUB_APP_DIR}/RunLoop.c
+    )
+
+    target_include_directories(test_app_api PRIVATE ${COMMON_INCLUDES})
+    target_compile_definitions(test_app_api PRIVATE ${COMMON_DEFINITIONS})
+    add_test(NAME test_app_api COMMAND test_app_api)
+
+    add_executable(test_corelog_recorder_api
+        Unit/CoreLogRecorderApiTest.c
+        ${TRACEHUB_LOG_DIR}/CoreLogRecorderState.c
+        ${TRACEHUB_LOG_DIR}/CoreLogRecorderSource.c
+        ${TRACEHUB_LOG_DIR}/CoreLogRecorderRuntime.c
+        ${TRACEHUB_LOG_DIR}/CoreLogRecorderStats.c
+        ${TRACEHUB_LOG_DIR}/LogMain.c
+        ${TRACEHUB_LOG_DIR}/LogFile.c
+        ${TRACEHUB_LOG_DIR}/LogText.c
+        ${TRACEHUB_CORE_DIR}/SYS.c
+        ${TRACEHUB_CORE_DIR}/Utils.c
+    )
+
+    target_include_directories(test_corelog_recorder_api PRIVATE ${COMMON_INCLUDES})
+    target_compile_definitions(test_corelog_recorder_api PRIVATE
+        CORE_LOG_RECORDER_DEFAULT_QUEUE_SIZE=8192u
+    )
+    target_link_libraries(test_corelog_recorder_api PRIVATE ${COMMON_LIBRARIES})
+    add_test(NAME test_corelog_recorder_api COMMAND test_corelog_recorder_api)
+
+    add_executable(test_services_api
+        Unit/ServicesApiTest.c
+        ${TRACEHUB_SERVICES_DIR}/TerminalService.c
+        ${TRACEHUB_SERVICES_DIR}/TerminalState.c
+        ${TRACEHUB_SERVICES_DIR}/SystemViewService.c
+        ${TRACEHUB_SERVICES_DIR}/SystemViewState.c
+        ${TRACEHUB_SERVICES_DIR}/SystemViewRecord.c
+        ${TRACEHUB_CORE_DIR}/ByteQueue.c
+    )
+
+    target_include_directories(test_services_api PRIVATE ${COMMON_INCLUDES})
+    target_compile_definitions(test_services_api PRIVATE
+        TERMINAL_DEFAULT_NETWORK_QUEUE_SIZE=8192u
+        SYSTEMVIEW_DEFAULT_NETWORK_QUEUE_SIZE=8192u
+    )
+    add_test(NAME test_services_api COMMAND test_services_api)
 endif()
 
 # ==============================================================================
@@ -230,5 +359,17 @@ if(BUILD_UNIT_TESTS)
     message(STATUS "  - test_logcollector : collector timestamp assignment checks")
     message(STATUS "  - test_logmerger : log merger unit checks")
     message(STATUS "  - test_swimlane_renderer : swimlane renderer layout checks")
+    message(STATUS "  - test_core_api : core utility API checks")
+    message(STATUS "  - test_logentry : log entry API checks")
+    message(STATUS "  - test_log_api : logging API checks")
+    message(STATUS "  - test_network_api : socket and Telnet codec API checks")
+    message(STATUS "  - test_rtt_api : RTT memory and bridge API checks")
+    message(STATUS "  - test_rtt_memshm_backend : real MEMSHM backend API checks")
+    if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+        message(STATUS "  - test_rtt_smem_backend : Linux SMEM backend API checks")
+    endif()
+    message(STATUS "  - test_app_api : options, service plan, CLI, signal, and run loop API checks")
+    message(STATUS "  - test_corelog_recorder_api : core log recorder API checks")
+    message(STATUS "  - test_services_api : Terminal and SystemView service API checks")
 endif()
 message(STATUS "==============================================================================")

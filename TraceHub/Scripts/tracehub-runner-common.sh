@@ -15,7 +15,7 @@ tracehub_runner_resolve_executable() {
 
     for candidate in \
         "$root_dir/tracehub" \
-        "$root_dir/install/usershell/TraceHub/bin/tracehub"
+        "$root_dir/install/bin/tracehub"
     do
         if [ -f "$candidate" ] && [ -x "$candidate" ]; then
             printf "%s\n" "$candidate"
@@ -26,7 +26,7 @@ tracehub_runner_resolve_executable() {
     printf "tracehub executable not found\n" >&2
     printf "Set TRACEHUB_BIN or provide one of:\n" >&2
     printf "  %s\n" "$root_dir/tracehub" >&2
-    printf "  %s\n" "$root_dir/install/usershell/TraceHub/bin/tracehub" >&2
+    printf "  %s\n" "$root_dir/install/bin/tracehub" >&2
     return 1
 }
 

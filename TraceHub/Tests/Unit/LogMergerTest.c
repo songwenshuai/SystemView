@@ -262,6 +262,36 @@ static int _TestSwimLaneFileWriterStripsTerminalControls(void) {
     return 0;
 }
 
+static int _TestWriteEntryContracts(void) {
+    LogMerger_Config_t config;
+    LogEntry_t        *entry;
+
+    TEST_ASSERT(LogMerger_WriteEntry(NULL) == -1);
+    TEST_ASSERT(LogMerger_WriteEntry((const LogEntry_t *)1) == -1);
+    TEST_ASSERT(!LogMerger_HasFileError());
+
+    _FillConfig(&config, LOG_MERGER_DEFAULT_BUFFER_SIZE, true, false);
+    TEST_ASSERT(LogMerger_Init(&config) == 0);
+    entry = _CreateEntry(42u, LOG_SOURCE_LINUX);
+    TEST_ASSERT(entry != NULL);
+    TEST_ASSERT(LogMerger_WriteEntry(entry) == 0);
+    TEST_ASSERT(!LogMerger_HasFileError());
+    LogEntry_Destroy(entry);
+    LogMerger_Cleanup();
+
+    _FillConfig(&config, LOG_MERGER_DEFAULT_BUFFER_SIZE, true, false);
+    config.log_enabled = true;
+    config.log_prefix = "tracehub_unit_merger";
+    TEST_ASSERT(LogMerger_Init(&config) == 0);
+    entry = _CreateEntry(43u, LOG_SOURCE_LINUX);
+    TEST_ASSERT(entry != NULL);
+    TEST_ASSERT(LogMerger_WriteEntry(entry) == 0);
+    TEST_ASSERT(!LogMerger_HasFileError());
+    LogEntry_Destroy(entry);
+    LogMerger_Cleanup();
+    return 0;
+}
+
 static int _TestOutputFailureDoesNotAdvanceDelivered(void) {
     LogMerger_Config_t config;
     TestOutputState_t  output_state;
@@ -425,6 +455,10 @@ int main(void) {
         return 1;
     }
     if (_TestSwimLaneFileWriterStripsTerminalControls() != 0) {
+        return 1;
+    }
+    if (_TestWriteEntryContracts() != 0) {
+        LogMerger_Cleanup();
         return 1;
     }
     if (_TestOutputFailureDoesNotAdvanceDelivered() != 0) {

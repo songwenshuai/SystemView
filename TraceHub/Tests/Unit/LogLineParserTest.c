@@ -110,6 +110,48 @@ static int _ExpectNoTimestamp(const char *line) {
     return 0;
 }
 
+static int _ExpectEmptyContent(const char *line) {
+    uint64_t    timestamp;
+    const char *content;
+
+    timestamp = 0u;
+    content   = NULL;
+    TEST_ASSERT(LogLineParser_ParseTimestampPrefix(line, &timestamp, &content) ==
+                LOG_LINE_TIMESTAMP_PARSE_EMPTY_CONTENT);
+    TEST_ASSERT(content == NULL);
+    return 0;
+}
+
+static int _TestWhitespaceHelpers(void) {
+    char        line[] = "message \t\r\n";
+    const char *p;
+
+    TEST_ASSERT(LogLineParser_TrimTrailingWhitespace(line) == strlen("message"));
+    TEST_ASSERT(strcmp(line, "message") == 0);
+    TEST_ASSERT(LogLineParser_TrimTrailingWhitespace(NULL) == 0u);
+
+    p = LogLineParser_SkipHorizontalWhitespace(" \tcontent");
+    TEST_ASSERT(p != NULL);
+    TEST_ASSERT(strcmp(p, "content") == 0);
+    TEST_ASSERT(LogLineParser_SkipHorizontalWhitespace(NULL) == NULL);
+    return 0;
+}
+
+static int _TestUtf8BoundaryAdjustment(void) {
+    static const char text[] = "A\xE2\x82\xAC""B";
+    static const char continuation[] = "\x82";
+
+    TEST_ASSERT(LogLineParser_AdjustUtf8Boundary(NULL, 1u) == 0u);
+    TEST_ASSERT(LogLineParser_AdjustUtf8Boundary(text, 0u) == 0u);
+    TEST_ASSERT(LogLineParser_AdjustUtf8Boundary(text, 1u) == 1u);
+    TEST_ASSERT(LogLineParser_AdjustUtf8Boundary(text, 2u) == 1u);
+    TEST_ASSERT(LogLineParser_AdjustUtf8Boundary(text, 3u) == 1u);
+    TEST_ASSERT(LogLineParser_AdjustUtf8Boundary(text, 4u) == 4u);
+    TEST_ASSERT(LogLineParser_AdjustUtf8Boundary(text, 5u) == 5u);
+    TEST_ASSERT(LogLineParser_AdjustUtf8Boundary(continuation, 1u) == 0u);
+    return 0;
+}
+
 /*********************************************************************
 *
 *       main()
@@ -122,6 +164,13 @@ static int _ExpectNoTimestamp(const char *line) {
 *    1  A test failed.
 */
 int main(void) {
+    if (_TestWhitespaceHelpers() != 0) {
+        return 1;
+    }
+    if (_TestUtf8BoundaryAdjustment() != 0) {
+        return 1;
+    }
+
     if (_ExpectTimestamp("[123] message", 123u, "message") != 0) {
         return 1;
     }
@@ -142,6 +191,25 @@ int main(void) {
         return 1;
     }
     if (_ExpectNoTimestamp("[12:00:00.1000] clock") != 0) {
+        return 1;
+    }
+    if (_ExpectNoTimestamp("[12:60:00] clock") != 0) {
+        return 1;
+    }
+    if (_ExpectNoTimestamp("[12:00:60] clock") != 0) {
+        return 1;
+    }
+    if (_ExpectNoTimestamp("[123]message") != 0) {
+        return 1;
+    }
+    if (_ExpectEmptyContent("[123]") != 0) {
+        return 1;
+    }
+    if (_ExpectEmptyContent("[123] \t") != 0) {
+        return 1;
+    }
+    if (LogLineParser_ParseTimestampPrefix(NULL, NULL, NULL) !=
+        LOG_LINE_TIMESTAMP_PARSE_NONE) {
         return 1;
     }
 
