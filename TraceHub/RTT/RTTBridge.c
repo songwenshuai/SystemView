@@ -220,7 +220,7 @@ static void _CleanupMemoryMapping(void) {
 static int _FindValidRTTRegion(uintptr_t *address, size_t *region_size) {
     uintptr_t map_base;
     uintptr_t search_base;
-    uintptr_t candidate;
+    PTR_ADDR  candidate;
     uint64_t  backend_base;
     uint64_t  search_backend_address;
     uint64_t  search_offset64;
@@ -281,12 +281,16 @@ static int _FindValidRTTRegion(uintptr_t *address, size_t *region_size) {
         return -2;
     }
 
-    candidate = search_base;
+    candidate = (PTR_ADDR)search_base;
     if (SEGGER_RTT_FindValidControlBlock(&candidate, search_size, region_size) != 0) {
         return -1;
     }
+    if (candidate > (PTR_ADDR)UINTPTR_MAX) {
+        Log_Error("Found RTT control block is outside local address range\n");
+        return -2;
+    }
 
-    *address = candidate;
+    *address = (uintptr_t)candidate;
     return 0;
 }
 

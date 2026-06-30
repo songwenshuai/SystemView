@@ -31,8 +31,8 @@ static unsigned char _aRTTMemory[SEGGER_RTT__REQUIRED_MEM_SIZE + SEGGER_RTT__CB_
 *
 *       _GetRTTAddress
 */
-static uintptr_t _GetRTTAddress(void) {
-  return ((uintptr_t)_aRTTMemory + SEGGER_RTT__CB_ALIGNMENT_MASK) & ~(uintptr_t)SEGGER_RTT__CB_ALIGNMENT_MASK;
+static PTR_ADDR _GetRTTAddress(void) {
+  return ((PTR_ADDR)_aRTTMemory + SEGGER_RTT__CB_ALIGNMENT_MASK) & ~(PTR_ADDR)SEGGER_RTT__CB_ALIGNMENT_MASK;
 }
 
 /*********************************************************************
@@ -40,7 +40,7 @@ static uintptr_t _GetRTTAddress(void) {
 *       main
 */
 void main(void) {
-  uintptr_t RTTAddress;
+  PTR_ADDR RTTAddress;
 
   RTTAddress = _GetRTTAddress();
   SEGGER_RTT_Init(RTTAddress);

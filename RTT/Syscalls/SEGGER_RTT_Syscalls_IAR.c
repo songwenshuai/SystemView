@@ -58,7 +58,7 @@ size_t __write(int handle, const unsigned char * buffer, size_t size);
 */
 size_t __write(int handle, const unsigned char * buffer, size_t size) {
   (void) handle;  /* Not used, avoid warning */
-  SEGGER_RTT_Write((uintptr_t)SEGGER_RTT_SYSCALL_CB_ADDRESS, 0u, (const char*)buffer, (unsigned)size);
+  SEGGER_RTT_Write((PTR_ADDR)SEGGER_RTT_SYSCALL_CB_ADDRESS, 0u, (const char*)buffer, (unsigned)size);
   return size;
 }
 
@@ -74,7 +74,7 @@ size_t __write(int handle, const unsigned char * buffer, size_t size) {
 */
 size_t __write_buffered(int handle, const unsigned char * buffer, size_t size) {
   (void) handle;  /* Not used, avoid warning */
-  SEGGER_RTT_Write((uintptr_t)SEGGER_RTT_SYSCALL_CB_ADDRESS, 0u, (const char*)buffer, (unsigned)size);
+  SEGGER_RTT_Write((PTR_ADDR)SEGGER_RTT_SYSCALL_CB_ADDRESS, 0u, (const char*)buffer, (unsigned)size);
   return size;
 }
 

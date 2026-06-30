@@ -127,16 +127,16 @@ static const char _aTerminalStr[] = "Terminal";  // Default terminal name copied
 // Runtime down-buffer offset helpers for systems where another core
 // initialized the control block with its own MaxNumUpBuffers value.
 //
-#define SEGGER_RTT__CB_OFF_A_DOWN_RUNTIME(MaxNumUpBuffers)             (SEGGER_RTT__CB_OFF_A_UP + ((uintptr_t)(MaxNumUpBuffers) * SEGGER_RTT__BUFFER_SIZE))
+#define SEGGER_RTT__CB_OFF_A_DOWN_RUNTIME(MaxNumUpBuffers)             (SEGGER_RTT__CB_OFF_A_UP + ((PTR_ADDR)(MaxNumUpBuffers) * SEGGER_RTT__BUFFER_SIZE))
 #define SEGGER_RTT__CB_OFF_A_DOWN_RUNTIME_INDEX(MaxNumUpBuffers, BufferIndex) \
-                                                                      (SEGGER_RTT__CB_OFF_A_DOWN_RUNTIME(MaxNumUpBuffers) + ((uintptr_t)(BufferIndex) * SEGGER_RTT__BUFFER_SIZE))
+                                                                      (SEGGER_RTT__CB_OFF_A_DOWN_RUNTIME(MaxNumUpBuffers) + ((PTR_ADDR)(BufferIndex) * SEGGER_RTT__BUFFER_SIZE))
 #define SEGGER_RTT_SPINLOCK_SW_MAGIC                                  (0x5254534Cu)
 #define SEGGER_RTT_SPINLOCK_SW_OFF_MAGIC                              (0u)
 #define SEGGER_RTT_SPINLOCK_SW_OFF_MAX_CORES                          (4u)
 #define SEGGER_RTT_SPINLOCK_SW_OFF_ENTERING                           (SEGGER_RTT_SPINLOCK_SW_HEADER_SIZE)
 #define SEGGER_RTT_SPINLOCK_SW_OFF_NUMBER                             (SEGGER_RTT_SPINLOCK_SW_OFF_ENTERING + (SEGGER_RTT_SPINLOCK_MAX_CORES * SEGGER_RTT_SPINLOCK_SW_WORD_SIZE))
-#define SEGGER_RTT_SPINLOCK_SW_ENTERING_ADDR(Address, Id)             (SEGGER_RTT__ADDR((Address), SEGGER_RTT_SPINLOCK_SW_OFF_ENTERING + ((uintptr_t)(Id) * SEGGER_RTT_SPINLOCK_SW_WORD_SIZE)))
-#define SEGGER_RTT_SPINLOCK_SW_NUMBER_ADDR(Address, Id)               (SEGGER_RTT__ADDR((Address), SEGGER_RTT_SPINLOCK_SW_OFF_NUMBER + ((uintptr_t)(Id) * SEGGER_RTT_SPINLOCK_SW_WORD_SIZE)))
+#define SEGGER_RTT_SPINLOCK_SW_ENTERING_ADDR(Address, Id)             (SEGGER_RTT__ADDR((Address), SEGGER_RTT_SPINLOCK_SW_OFF_ENTERING + ((PTR_ADDR)(Id) * SEGGER_RTT_SPINLOCK_SW_WORD_SIZE)))
+#define SEGGER_RTT_SPINLOCK_SW_NUMBER_ADDR(Address, Id)               (SEGGER_RTT__ADDR((Address), SEGGER_RTT_SPINLOCK_SW_OFF_NUMBER + ((PTR_ADDR)(Id) * SEGGER_RTT_SPINLOCK_SW_WORD_SIZE)))
 
 /*********************************************************************
 *
@@ -202,8 +202,8 @@ static size_t _GetRequiredMemSize(unsigned NumBuffers) {
 *    Checks whether a software spinlock object fits into a directly
 *    accessible memory range.
 */
-static int _CheckSpinLockRange(uintptr_t Address, size_t Size) {
-  if ((Address == 0u) || ((Address & (uintptr_t)(SEGGER_RTT_SPINLOCK_SW_WORD_SIZE - 1u)) != 0u)) {
+static int _CheckSpinLockRange(PTR_ADDR Address, size_t Size) {
+  if ((Address == 0u) || ((Address & (PTR_ADDR)(SEGGER_RTT_SPINLOCK_SW_WORD_SIZE - 1u)) != 0u)) {
     return -1;
   }
   if (Size < SEGGER_RTT_SPINLOCK_SW_SIZE) {
@@ -240,7 +240,7 @@ static int _SpinLockWaitStep(uint32_t* pRemainingSpins) {
 *  Function description
 *    Withdraw the current core from the software spinlock algorithm.
 */
-static void _SpinLockCancel(uintptr_t Address, unsigned Id) {
+static void _SpinLockCancel(PTR_ADDR Address, unsigned Id) {
   SEGGER_RTT__WR32(SEGGER_RTT_SPINLOCK_SW_ENTERING_ADDR(Address, Id), 0u);
   SEGGER_RTT__WR32(SEGGER_RTT_SPINLOCK_SW_NUMBER_ADDR(  Address, Id), 0u);
   RTT__DMB();
@@ -253,7 +253,7 @@ static void _SpinLockCancel(uintptr_t Address, unsigned Id) {
 *  Function description
 *    Acquires a software spinlock with optional bounded waiting.
 */
-static int _SpinLockAcquire(uintptr_t Address, unsigned Id, uint32_t* pRemainingSpins) {
+static int _SpinLockAcquire(PTR_ADDR Address, unsigned Id, uint32_t* pRemainingSpins) {
   uint32_t max;
   uint32_t current;
   uint32_t j;
@@ -327,7 +327,7 @@ static int _SpinLockAcquire(uintptr_t Address, unsigned Id, uint32_t* pRemaining
 *    != 0  Complete RTT ID is present.
 *    == 0  RTT ID is missing or address is invalid.
 */
-static int _IsRTTId(uintptr_t Address) {
+static int _IsRTTId(PTR_ADDR Address) {
   unsigned i;
 
   if ((Address == 0u) || ((Address & SEGGER_RTT__CB_ALIGNMENT_MASK) != 0u)) {
@@ -358,10 +358,10 @@ static int _IsRTTId(uintptr_t Address) {
 *    != 0  Pointer is NULL or valid.
 *    == 0  Pointer cannot be encoded as a shared-memory offset.
 */
-static int _IsValidSharedName(uintptr_t Address, const void* Ptr) {
-  uintptr_t Addr;
+static int _IsValidSharedName(PTR_ADDR Address, const void* Ptr) {
+  PTR_ADDR Addr;
 
-  Addr = (uintptr_t)Ptr;
+  Addr = (PTR_ADDR)Ptr;
   if (Addr == 0u) {
     return 1;
   }
@@ -369,7 +369,7 @@ static int _IsValidSharedName(uintptr_t Address, const void* Ptr) {
     return 0;
   }
 #if UINTPTR_MAX > UINT64_MAX
-  if ((Addr - Address) > (uintptr_t)UINT64_MAX) {
+  if ((Addr - Address) > (PTR_ADDR)UINT64_MAX) {
     return 0;
   }
 #endif
@@ -393,25 +393,25 @@ static int _IsValidSharedName(uintptr_t Address, const void* Ptr) {
 *    != 0  Buffer pointer and size are valid.
 *    == 0  Buffer cannot be encoded or is too small.
 */
-static int _IsValidSharedBuffer(uintptr_t Address, const void* pBuffer, unsigned BufferSize) {
-  uintptr_t Addr;
+static int _IsValidSharedBuffer(PTR_ADDR Address, const void* pBuffer, unsigned BufferSize) {
+  PTR_ADDR Addr;
 #if UINTPTR_MAX > UINT64_MAX
-  uintptr_t Off;
+  PTR_ADDR Off;
 #endif
 
-  Addr = (uintptr_t)pBuffer;
+  Addr = (PTR_ADDR)pBuffer;
   if ((BufferSize < 2u) || (Addr <= Address)) {
     return 0;
   }
-  if ((uintptr_t)BufferSize > (UINTPTR_MAX - Addr)) {
+  if ((PTR_ADDR)BufferSize > (UINTPTR_MAX - Addr)) {
     return 0;
   }
 #if UINTPTR_MAX > UINT64_MAX
   Off = Addr - Address;
-  if (Off > (uintptr_t)UINT64_MAX) {
+  if (Off > (PTR_ADDR)UINT64_MAX) {
     return 0;
   }
-  if ((uintptr_t)BufferSize > ((uintptr_t)UINT64_MAX - Off)) {
+  if ((PTR_ADDR)BufferSize > ((PTR_ADDR)UINT64_MAX - Off)) {
     return 0;
   }
 #endif
@@ -466,7 +466,7 @@ static int _IsOffsetRangeInRegion(uint64_t Off, uint32_t NumBytes, size_t Size) 
 *    >= 0  Descriptor is valid.
 *     < 0  Descriptor is invalid.
 */
-static int _CheckRingInRegion(uintptr_t pRing, size_t Size) {
+static int _CheckRingInRegion(PTR_ADDR pRing, size_t Size) {
   uint64_t NameOff;
   uint64_t BufferOff;
   uint32_t SizeOfBuffer;
@@ -516,7 +516,7 @@ static int _CheckRingInRegion(uintptr_t pRing, size_t Size) {
 *    >= 0  Descriptor is configured.
 *     < 0  Descriptor is empty or invalid.
 */
-static int _CheckRingConfigured(uintptr_t pRing) {
+static int _CheckRingConfigured(PTR_ADDR pRing) {
   uint64_t BufferOff;
   uint32_t SizeOfBuffer;
 
@@ -545,13 +545,13 @@ static int _CheckRingConfigured(uintptr_t pRing) {
 *     0  Buffer pair is empty.
 *    <0  Buffer pair is invalid.
 */
-static int _IsExtraBufferPairConfigured(uintptr_t Address, unsigned BufferIndex) {
+static int _IsExtraBufferPairConfigured(PTR_ADDR Address, unsigned BufferIndex) {
   unsigned  MaxNumUpBuffers;
   unsigned  MaxNumDownBuffers;
   uint64_t  UpBufferOff;
   uint64_t  DownBufferOff;
-  uintptr_t pUp;
-  uintptr_t pDown;
+  PTR_ADDR pUp;
+  PTR_ADDR pDown;
 
   MaxNumUpBuffers   = SEGGER_RTT__RD32(SEGGER_RTT__ADDR(Address, SEGGER_RTT__CB_OFF_MAX_NUM_UP_BUFFERS));
   MaxNumDownBuffers = SEGGER_RTT__RD32(SEGGER_RTT__ADDR(Address, SEGGER_RTT__CB_OFF_MAX_NUM_DOWN_BUFFERS));
@@ -589,11 +589,11 @@ static int _IsExtraBufferPairConfigured(uintptr_t Address, unsigned BufferIndex)
 *      0  O.K.
 *    < 0  Error.
 */
-static int _ConfigureExtraBufferPair(uintptr_t Address, size_t Size, unsigned BufferIndex) {
+static int _ConfigureExtraBufferPair(PTR_ADDR Address, size_t Size, unsigned BufferIndex) {
   size_t    BufferOff;
   size_t    RequiredSize;
   size_t    i;
-  uintptr_t BufferBase;
+  PTR_ADDR BufferBase;
   char*     sName;
   void*     pUpBuffer;
   void*     pDownBuffer;
@@ -617,7 +617,7 @@ static int _ConfigureExtraBufferPair(uintptr_t Address, size_t Size, unsigned Bu
     SEGGER_RTT__WR8(SEGGER_RTT__ADDR(BufferBase, i), 0u);
   }
   for (i = 0u; i < sizeof(_aTerminalStr); i++) {
-    SEGGER_RTT__WR8(SEGGER_RTT__ADDR((uintptr_t)sName, i), (unsigned char)_aTerminalStr[i]);
+    SEGGER_RTT__WR8(SEGGER_RTT__ADDR((PTR_ADDR)sName, i), (unsigned char)_aTerminalStr[i]);
   }
   if (SEGGER_RTT_ConfigUpBuffer(Address, BufferIndex, sName, pUpBuffer, BUFFER_SIZE_UP, SEGGER_RTT_MODE_DEFAULT) < 0) {
     return -1;
@@ -644,7 +644,7 @@ static int _ConfigureExtraBufferPair(uintptr_t Address, size_t Size, unsigned Bu
 *      0  O.K.
 *    < 0  Error.
 */
-static int _EnsureExtraBufferPairs(uintptr_t Address, size_t Size, unsigned NumBuffers) {
+static int _EnsureExtraBufferPairs(PTR_ADDR Address, size_t Size, unsigned NumBuffers) {
   unsigned BufferIndex;
   int      Configured;
 
@@ -683,8 +683,8 @@ static int _EnsureExtraBufferPairs(uintptr_t Address, size_t Size, unsigned NumB
 */
 #define INIT(Address)                                                  \
   do {                                                                 \
-    uintptr_t _SEGGER_RTT__Address;                                    \
-    _SEGGER_RTT__Address = (uintptr_t)(Address);                       \
+    PTR_ADDR _SEGGER_RTT__Address;                                    \
+    _SEGGER_RTT__Address = (PTR_ADDR)(Address);                       \
     if (_SEGGER_RTT__Address != 0u) {                                  \
       if (_IsRTTId(_SEGGER_RTT__Address) == 0) {                       \
         _DoInit(_SEGGER_RTT__Address);                                 \
@@ -692,7 +692,7 @@ static int _EnsureExtraBufferPairs(uintptr_t Address, size_t Size, unsigned NumB
     }                                                                  \
   } while (0)
 
-static void _DoInit(uintptr_t Address) {
+static void _DoInit(PTR_ADDR Address) {
   unsigned i;
   static const char _aInitStr[] = "\0\0\0\0\0\0TTR REGGES";  // Init complete ID string to make sure that things also work if RTT is linked to a no-init memory area
 #if SEGGER_RTT_MEMCPY_USE_BYTELOOP
@@ -782,7 +782,7 @@ static void _DoInit(uintptr_t Address) {
 *  Return value
 *    >= 0 - Number of bytes written into buffer.
 */
-static unsigned _WriteBlocking(uintptr_t Address, uintptr_t pRing, const char* pBuffer, unsigned NumBytes) {
+static unsigned _WriteBlocking(PTR_ADDR Address, PTR_ADDR pRing, const char* pBuffer, unsigned NumBytes) {
   unsigned NumBytesToWrite;
   unsigned NumBytesWritten;
   unsigned RdOff;
@@ -845,7 +845,7 @@ static unsigned _WriteBlocking(uintptr_t Address, uintptr_t pRing, const char* p
 *  Notes
 *    (1) If there might not be enough space in the "Up"-buffer, call _WriteBlocking
 */
-static void _WriteNoCheck(uintptr_t Address, uintptr_t pRing, const char* pData, unsigned NumBytes) {
+static void _WriteNoCheck(PTR_ADDR Address, PTR_ADDR pRing, const char* pData, unsigned NumBytes) {
   unsigned NumBytesAtOnce;
   unsigned WrOff;
   unsigned Rem;
@@ -914,7 +914,7 @@ static void _WriteNoCheck(uintptr_t Address, uintptr_t pRing, const char* pData,
 *    pRing        Ring buffer to post to.
 *    TerminalId   Terminal ID to switch to.
 */
-static void _PostTerminalSwitch(uintptr_t Address, uintptr_t pRing, unsigned char TerminalId) {
+static void _PostTerminalSwitch(PTR_ADDR Address, PTR_ADDR pRing, unsigned char TerminalId) {
   unsigned char ac[2];
 
   ac[0] = 0xFFu;
@@ -936,7 +936,7 @@ static void _PostTerminalSwitch(uintptr_t Address, uintptr_t pRing, unsigned cha
 *  Return value
 *    Number of bytes that are free in the buffer.
 */
-static unsigned _GetAvailWriteSpace(uintptr_t pRing) {
+static unsigned _GetAvailWriteSpace(PTR_ADDR pRing) {
   unsigned RdOff;
   unsigned WrOff;
   unsigned SizeOfBuffer;
@@ -982,7 +982,7 @@ static unsigned _GetAvailWriteSpace(uintptr_t pRing) {
 *      0 - RTT control block is initialized.
 *    < 0 - RTT control block is not initialized.
 */
-int SEGGER_RTT_CheckInit(uintptr_t Address) {
+int SEGGER_RTT_CheckInit(PTR_ADDR Address) {
   return _IsRTTId(Address) ? 0 : -1;
 }
 
@@ -1004,12 +1004,12 @@ int SEGGER_RTT_CheckInit(uintptr_t Address) {
 *      0 - RTT control block and descriptors are valid for the region.
 *    < 0 - RTT control block or descriptors are invalid.
 */
-int SEGGER_RTT_CheckRegion(uintptr_t Address, size_t Size) {
+int SEGGER_RTT_CheckRegion(PTR_ADDR Address, size_t Size) {
   unsigned MaxNumUpBuffers;
   unsigned MaxNumDownBuffers;
   unsigned i;
-  uintptr_t DownOff;
-  uintptr_t pRing;
+  PTR_ADDR DownOff;
+  PTR_ADDR pRing;
 
   if ((Address == 0u) || ((Address & SEGGER_RTT__CB_ALIGNMENT_MASK) != 0u) || (Size < SEGGER_RTT__CB_OFF_A_UP)) {
     return -1;
@@ -1026,14 +1026,14 @@ int SEGGER_RTT_CheckRegion(uintptr_t Address, size_t Size) {
   if ((MaxNumUpBuffers == 0u) || (MaxNumDownBuffers == 0u)) {
     return -1;
   }
-  if ((uintptr_t)MaxNumUpBuffers > ((uintptr_t)(Size - SEGGER_RTT__CB_OFF_A_UP) / SEGGER_RTT__BUFFER_SIZE)) {
+  if ((PTR_ADDR)MaxNumUpBuffers > ((PTR_ADDR)(Size - SEGGER_RTT__CB_OFF_A_UP) / SEGGER_RTT__BUFFER_SIZE)) {
     return -1;
   }
   DownOff = SEGGER_RTT__CB_OFF_A_DOWN_RUNTIME(MaxNumUpBuffers);
-  if (DownOff > (uintptr_t)Size) {
+  if (DownOff > (PTR_ADDR)Size) {
     return -1;
   }
-  if ((uintptr_t)MaxNumDownBuffers > (((uintptr_t)Size - DownOff) / SEGGER_RTT__BUFFER_SIZE)) {
+  if ((PTR_ADDR)MaxNumDownBuffers > (((PTR_ADDR)Size - DownOff) / SEGGER_RTT__BUFFER_SIZE)) {
     return -1;
   }
   for (i = 0u; i < MaxNumUpBuffers; i++) {
@@ -1070,9 +1070,9 @@ int SEGGER_RTT_CheckRegion(uintptr_t Address, size_t Size) {
 *      0 - Up-buffer descriptor is valid and configured.
 *    < 0 - RTT control block or up-buffer descriptor is invalid.
 */
-int SEGGER_RTT_CheckUpBuffer(uintptr_t Address, size_t Size, unsigned BufferIndex) {
+int SEGGER_RTT_CheckUpBuffer(PTR_ADDR Address, size_t Size, unsigned BufferIndex) {
   unsigned  MaxNumUpBuffers;
-  uintptr_t pRing;
+  PTR_ADDR pRing;
 
   if (SEGGER_RTT_CheckRegion(Address, Size) != 0) {
     return -1;
@@ -1105,10 +1105,10 @@ int SEGGER_RTT_CheckUpBuffer(uintptr_t Address, size_t Size, unsigned BufferInde
 *      0 - Down-buffer descriptor is valid and configured.
 *    < 0 - RTT control block or down-buffer descriptor is invalid.
 */
-int SEGGER_RTT_CheckDownBuffer(uintptr_t Address, size_t Size, unsigned BufferIndex) {
+int SEGGER_RTT_CheckDownBuffer(PTR_ADDR Address, size_t Size, unsigned BufferIndex) {
   unsigned  MaxNumUpBuffers;
   unsigned  MaxNumDownBuffers;
-  uintptr_t pRing;
+  PTR_ADDR pRing;
 
   if (SEGGER_RTT_CheckRegion(Address, Size) != 0) {
     return -1;
@@ -1161,7 +1161,7 @@ size_t SEGGER_RTT_GetRequiredMemSize(unsigned NumBuffers) {
 *  Additional information
 *    After creation, the spinlock is not locked.
 */
-int SEGGER_RTT_SPINLOCK_SW_Create(uintptr_t Address, size_t Size) {
+int SEGGER_RTT_SPINLOCK_SW_Create(PTR_ADDR Address, size_t Size) {
   unsigned i;
 
   if (_CheckSpinLockRange(Address, Size) != 0) {
@@ -1197,7 +1197,7 @@ int SEGGER_RTT_SPINLOCK_SW_Create(uintptr_t Address, size_t Size) {
 *      0  O.K.
 *    < 0  Error.
 */
-int SEGGER_RTT_SPINLOCK_SW_Check(uintptr_t Address, size_t Size) {
+int SEGGER_RTT_SPINLOCK_SW_Check(PTR_ADDR Address, size_t Size) {
   if (_CheckSpinLockRange(Address, Size) != 0) {
     return -1;
   }
@@ -1231,7 +1231,7 @@ int SEGGER_RTT_SPINLOCK_SW_Check(uintptr_t Address, size_t Size) {
 *    the same spinlock again. The spinlock must first be released by
 *    SEGGER_RTT_SPINLOCK_SW_Unlock().
 */
-int SEGGER_RTT_SPINLOCK_SW_Lock(uintptr_t Address, unsigned Id) {
+int SEGGER_RTT_SPINLOCK_SW_Lock(PTR_ADDR Address, unsigned Id) {
   return _SpinLockAcquire(Address, Id, NULL);
 }
 
@@ -1255,7 +1255,7 @@ int SEGGER_RTT_SPINLOCK_SW_Lock(uintptr_t Address, unsigned Id) {
 *    MaxWaitSpins limits only waits for other participants. If no wait is
 *    needed, the lock can be acquired even when MaxWaitSpins is 0.
 */
-int SEGGER_RTT_SPINLOCK_SW_LockWithLimit(uintptr_t Address, unsigned Id, uint32_t MaxWaitSpins) {
+int SEGGER_RTT_SPINLOCK_SW_LockWithLimit(PTR_ADDR Address, unsigned Id, uint32_t MaxWaitSpins) {
   return _SpinLockAcquire(Address, Id, &MaxWaitSpins);
 }
 
@@ -1274,7 +1274,7 @@ int SEGGER_RTT_SPINLOCK_SW_LockWithLimit(uintptr_t Address, unsigned Id, uint32_
 *      0  O.K.
 *    < 0  Error.
 */
-int SEGGER_RTT_SPINLOCK_SW_Unlock(uintptr_t Address, unsigned Id) {
+int SEGGER_RTT_SPINLOCK_SW_Unlock(PTR_ADDR Address, unsigned Id) {
   if ((Address == 0u) || (Id >= SEGGER_RTT_SPINLOCK_MAX_CORES)) {
     return -1;
   }
@@ -1308,9 +1308,9 @@ int SEGGER_RTT_SPINLOCK_SW_Unlock(uintptr_t Address, unsigned Id) {
 *      0 - RTT control block found, pAddress updated.
 *    < 0 - RTT control block not found.
 */
-int SEGGER_RTT_FindControlBlock(uintptr_t* pAddress, size_t Size) {
-  uintptr_t Address;
-  uintptr_t Candidate;
+int SEGGER_RTT_FindControlBlock(PTR_ADDR* pAddress, size_t Size) {
+  PTR_ADDR Address;
+  PTR_ADDR Candidate;
   size_t    Off;
   unsigned  i;
 
@@ -1364,12 +1364,12 @@ int SEGGER_RTT_FindControlBlock(uintptr_t* pAddress, size_t Size) {
 *      0 - Valid RTT control block found, pAddress updated.
 *    < 0 - Valid RTT control block not found.
 */
-int SEGGER_RTT_FindValidControlBlock(uintptr_t* pAddress, size_t Size, size_t* pRegionSize) {
-  uintptr_t SearchBase;
-  uintptr_t SearchEnd;
-  uintptr_t RemainingBase;
-  uintptr_t Candidate;
-  uintptr_t NextBase;
+int SEGGER_RTT_FindValidControlBlock(PTR_ADDR* pAddress, size_t Size, size_t* pRegionSize) {
+  PTR_ADDR SearchBase;
+  PTR_ADDR SearchEnd;
+  PTR_ADDR RemainingBase;
+  PTR_ADDR Candidate;
+  PTR_ADDR NextBase;
   size_t    RemainingSize;
   size_t    CandidateRegionSize;
 
@@ -1435,7 +1435,7 @@ int SEGGER_RTT_FindValidControlBlock(uintptr_t* pAddress, size_t Size, size_t* p
 *  Additional information
 *    This function must not be called when J-Link might also do RTT.
 */
-unsigned SEGGER_RTT_ReadUpBufferNoLock(uintptr_t Address, unsigned BufferIndex, void* pData, unsigned BufferSize) {
+unsigned SEGGER_RTT_ReadUpBufferNoLock(PTR_ADDR Address, unsigned BufferIndex, void* pData, unsigned BufferSize) {
   unsigned                NumBytesRem;
   unsigned                NumBytesRead;
   unsigned                RdOff;
@@ -1445,7 +1445,7 @@ unsigned SEGGER_RTT_ReadUpBufferNoLock(uintptr_t Address, unsigned BufferIndex, 
   uint64_t                BufferOff;
   unsigned                SizeOfBuffer;
   unsigned char*          pBuffer;
-  uintptr_t               pRing;
+  PTR_ADDR               pRing;
   volatile char*          pSrc;
 
   if ((Address == 0u) || (pData == NULL) || (BufferSize == 0u)) {
@@ -1552,7 +1552,7 @@ unsigned SEGGER_RTT_ReadUpBufferNoLock(uintptr_t Address, unsigned BufferIndex, 
 *  Return value
 *    Number of bytes that have been read.
 */
-unsigned SEGGER_RTT_ReadNoLock(uintptr_t Address, unsigned BufferIndex, void* pData, unsigned BufferSize) {
+unsigned SEGGER_RTT_ReadNoLock(PTR_ADDR Address, unsigned BufferIndex, void* pData, unsigned BufferSize) {
   unsigned                NumBytesRem;
   unsigned                NumBytesRead;
   unsigned                RdOff;
@@ -1563,7 +1563,7 @@ unsigned SEGGER_RTT_ReadNoLock(uintptr_t Address, unsigned BufferIndex, void* pD
   uint64_t                BufferOff;
   unsigned                SizeOfBuffer;
   unsigned char*          pBuffer;
-  uintptr_t               pRing;
+  PTR_ADDR               pRing;
   volatile char*          pSrc;
   //
   if ((Address == 0u) || (pData == NULL) || (BufferSize == 0u)) {
@@ -1676,7 +1676,7 @@ unsigned SEGGER_RTT_ReadNoLock(uintptr_t Address, unsigned BufferIndex, void* pD
 *    If only one consumer reads from the up buffer,
 *    call sEGGER_RTT_ReadUpBufferNoLock() instead.
 */
-unsigned SEGGER_RTT_ReadUpBuffer(uintptr_t Address, unsigned BufferIndex, void* pBuffer, unsigned BufferSize) {
+unsigned SEGGER_RTT_ReadUpBuffer(PTR_ADDR Address, unsigned BufferIndex, void* pBuffer, unsigned BufferSize) {
   unsigned NumBytesRead;
 
   INIT(Address);
@@ -1710,7 +1710,7 @@ unsigned SEGGER_RTT_ReadUpBuffer(uintptr_t Address, unsigned BufferIndex, void* 
 *  Return value
 *    Number of bytes that have been read.
 */
-unsigned SEGGER_RTT_Read(uintptr_t Address, unsigned BufferIndex, void* pBuffer, unsigned BufferSize) {
+unsigned SEGGER_RTT_Read(PTR_ADDR Address, unsigned BufferIndex, void* pBuffer, unsigned BufferSize) {
   unsigned NumBytesRead;
 
   INIT(Address);
@@ -1753,9 +1753,9 @@ unsigned SEGGER_RTT_Read(uintptr_t Address, unsigned BufferIndex, void* pBuffer,
 *    (4) The shared-memory implementation validates Address and basic
 *        arguments before accessing shared memory.
 */
-void SEGGER_RTT_WriteWithOverwriteNoLock(uintptr_t Address, unsigned BufferIndex, const void* pBuffer, unsigned NumBytes) {
+void SEGGER_RTT_WriteWithOverwriteNoLock(PTR_ADDR Address, unsigned BufferIndex, const void* pBuffer, unsigned NumBytes) {
   const char*    pData;
-  uintptr_t      pRing;
+  PTR_ADDR      pRing;
   unsigned       Avail;
   unsigned       RdOff;
   unsigned       WrOff;
@@ -1886,10 +1886,9 @@ void SEGGER_RTT_WriteWithOverwriteNoLock(uintptr_t Address, unsigned BufferIndex
 *    (3) The shared-memory implementation validates Address and basic
 *        arguments before accessing shared memory.
 */
-#if (RTT_USE_ASM == 0)
-unsigned SEGGER_RTT_WriteSkipNoLock(uintptr_t Address, unsigned BufferIndex, const void* pBuffer, unsigned NumBytes) {
+unsigned SEGGER_RTT_WriteSkipNoLock(PTR_ADDR Address, unsigned BufferIndex, const void* pBuffer, unsigned NumBytes) {
   const char*    pData;
-  uintptr_t      pRing;
+  PTR_ADDR      pRing;
   unsigned       Avail;
   unsigned       RdOff;
   unsigned       WrOff;
@@ -2001,7 +2000,6 @@ unsigned SEGGER_RTT_WriteSkipNoLock(uintptr_t Address, unsigned BufferIndex, con
   }
   return 0;     // No space in buffer
 }
-#endif
 
 /*********************************************************************
 *
@@ -2034,7 +2032,7 @@ unsigned SEGGER_RTT_WriteSkipNoLock(uintptr_t Address, unsigned BufferIndex, con
 *  Additional information
 *    This function must not be called when J-Link might also do RTT.
 */
-unsigned SEGGER_RTT_WriteDownBufferNoLock(uintptr_t Address, unsigned BufferIndex, const void* pBuffer, unsigned NumBytes) {
+unsigned SEGGER_RTT_WriteDownBufferNoLock(PTR_ADDR Address, unsigned BufferIndex, const void* pBuffer, unsigned NumBytes) {
   unsigned                Status;
   unsigned                Avail;
   unsigned                i;
@@ -2045,7 +2043,7 @@ unsigned SEGGER_RTT_WriteDownBufferNoLock(uintptr_t Address, unsigned BufferInde
   unsigned                RdOff;
   unsigned                WrOff;
   const char*             pData;
-  uintptr_t               pRing;
+  PTR_ADDR               pRing;
   //
   // Get "to-target" ring buffer.
   // It is save to cast that to a "to-host" buffer. Up and Down buffer differ in volatility of offsets that might be modified by J-Link.
@@ -2142,7 +2140,7 @@ unsigned SEGGER_RTT_WriteDownBufferNoLock(uintptr_t Address, unsigned BufferInde
 *    (3) The shared-memory implementation validates Address and basic
 *        arguments before accessing shared memory.
 */
-unsigned SEGGER_RTT_WriteNoLock(uintptr_t Address, unsigned BufferIndex, const void* pBuffer, unsigned NumBytes) {
+unsigned SEGGER_RTT_WriteNoLock(PTR_ADDR Address, unsigned BufferIndex, const void* pBuffer, unsigned NumBytes) {
   unsigned              Status;
   unsigned              Avail;
   unsigned              i;
@@ -2152,7 +2150,7 @@ unsigned SEGGER_RTT_WriteNoLock(uintptr_t Address, unsigned BufferIndex, const v
   unsigned              RdOff;
   unsigned              WrOff;
   const char*           pData;
-  uintptr_t             pRing;
+  PTR_ADDR             pRing;
   if ((Address == 0u) || (pBuffer == NULL) || (NumBytes == 0u)) {
     return 0u;
   }
@@ -2247,7 +2245,7 @@ unsigned SEGGER_RTT_WriteNoLock(uintptr_t Address, unsigned BufferIndex, const v
 *    If only one consumer writes to the down buffer,
 *    call SEGGER_RTT_WriteDownBufferNoLock() instead.
 */
-unsigned SEGGER_RTT_WriteDownBuffer(uintptr_t Address, unsigned BufferIndex, const void* pBuffer, unsigned NumBytes) {
+unsigned SEGGER_RTT_WriteDownBuffer(PTR_ADDR Address, unsigned BufferIndex, const void* pBuffer, unsigned NumBytes) {
   unsigned Status;
 
   INIT(Address);
@@ -2277,7 +2275,7 @@ unsigned SEGGER_RTT_WriteDownBuffer(uintptr_t Address, unsigned BufferIndex, con
 *  Notes
 *    (1) Data is stored according to buffer flags.
 */
-unsigned SEGGER_RTT_Write(uintptr_t Address, unsigned BufferIndex, const void* pBuffer, unsigned NumBytes) {
+unsigned SEGGER_RTT_Write(PTR_ADDR Address, unsigned BufferIndex, const void* pBuffer, unsigned NumBytes) {
   unsigned Status;
 
   INIT(Address);
@@ -2308,7 +2306,7 @@ unsigned SEGGER_RTT_Write(uintptr_t Address, unsigned BufferIndex, const void* p
 *    (2) String passed to this function has to be \0 terminated
 *    (3) \0 termination character is *not* stored in RTT buffer
 */
-unsigned SEGGER_RTT_WriteString(uintptr_t Address, unsigned BufferIndex, const char* s) {
+unsigned SEGGER_RTT_WriteString(PTR_ADDR Address, unsigned BufferIndex, const char* s) {
   unsigned Len;
 
   if (s == NULL) {
@@ -2344,8 +2342,8 @@ unsigned SEGGER_RTT_WriteString(uintptr_t Address, unsigned BufferIndex, const c
 *        accessing shared memory.
 */
 
-unsigned SEGGER_RTT_PutCharSkipNoLock(uintptr_t Address, unsigned BufferIndex, char c) {
-  uintptr_t      pRing;
+unsigned SEGGER_RTT_PutCharSkipNoLock(PTR_ADDR Address, unsigned BufferIndex, char c) {
+  PTR_ADDR      pRing;
   unsigned       WrOff;
   unsigned       WrOffNext;
   unsigned       RdOff;
@@ -2424,8 +2422,8 @@ unsigned SEGGER_RTT_PutCharSkipNoLock(uintptr_t Address, unsigned BufferIndex, c
 *    (1) If there is not enough space in the "Up"-buffer, the character is dropped.
 */
 
-unsigned SEGGER_RTT_PutCharSkip(uintptr_t Address, unsigned BufferIndex, char c) {
-  uintptr_t      pRing;
+unsigned SEGGER_RTT_PutCharSkip(PTR_ADDR Address, unsigned BufferIndex, char c) {
+  PTR_ADDR      pRing;
   unsigned       WrOff;
   unsigned       WrOffNext;
   unsigned       RdOff;
@@ -2501,8 +2499,8 @@ unsigned SEGGER_RTT_PutCharSkip(uintptr_t Address, unsigned BufferIndex, char c)
 *    (1) Data is stored according to buffer flags.
 */
 
-unsigned SEGGER_RTT_PutChar(uintptr_t Address, unsigned BufferIndex, char c) {
-  uintptr_t      pRing;
+unsigned SEGGER_RTT_PutChar(PTR_ADDR Address, unsigned BufferIndex, char c) {
+  PTR_ADDR      pRing;
   unsigned       WrOff;
   unsigned       WrOffNext;
   unsigned       RdOff;
@@ -2587,7 +2585,7 @@ unsigned SEGGER_RTT_PutChar(uintptr_t Address, unsigned BufferIndex, char c) {
 *  Notes
 *    (1) This function is only specified for accesses to RTT buffer 0.
 */
-int SEGGER_RTT_GetKey(uintptr_t Address) {
+int SEGGER_RTT_GetKey(PTR_ADDR Address) {
   char c;
   int r;
 
@@ -2618,7 +2616,7 @@ int SEGGER_RTT_GetKey(uintptr_t Address) {
 *    (1) This function is only specified for accesses to RTT buffer 0
 *    (2) This function is blocking if no character is present in RTT buffer
 */
-int SEGGER_RTT_WaitKey(uintptr_t Address) {
+int SEGGER_RTT_WaitKey(PTR_ADDR Address) {
   int r;
 
   do {
@@ -2644,7 +2642,7 @@ int SEGGER_RTT_WaitKey(uintptr_t Address) {
 *  Notes
 *    (1) This function is only specified for accesses to RTT buffer 0
 */
-int SEGGER_RTT_HasKey(uintptr_t Address) {
+int SEGGER_RTT_HasKey(PTR_ADDR Address) {
   unsigned RdOff;
   unsigned WrOff;
   unsigned i;
@@ -2652,7 +2650,7 @@ int SEGGER_RTT_HasKey(uintptr_t Address) {
   unsigned MaxNumDownBuffers;
   uint64_t BufferOff;
   unsigned SizeOfBuffer;
-  uintptr_t pRing;
+  PTR_ADDR pRing;
 
   if (Address == 0u) {
     return 0;
@@ -2697,7 +2695,7 @@ int SEGGER_RTT_HasKey(uintptr_t Address) {
 *  !=0:  Data in buffer
 *
 */
-unsigned SEGGER_RTT_HasData(uintptr_t Address, unsigned BufferIndex) {
+unsigned SEGGER_RTT_HasData(PTR_ADDR Address, unsigned BufferIndex) {
   unsigned RdOff;
   unsigned WrOff;
   unsigned i;
@@ -2705,7 +2703,7 @@ unsigned SEGGER_RTT_HasData(uintptr_t Address, unsigned BufferIndex) {
   unsigned MaxNumDownBuffers;
   uint64_t BufferOff;
   unsigned SizeOfBuffer;
-  uintptr_t pRing;
+  PTR_ADDR pRing;
 
   if (Address == 0u) {
     return 0u;
@@ -2753,14 +2751,14 @@ unsigned SEGGER_RTT_HasData(uintptr_t Address, unsigned BufferIndex) {
 *  !=0:  Data in buffer
 *
 */
-unsigned SEGGER_RTT_HasDataUp(uintptr_t Address, unsigned BufferIndex) {
+unsigned SEGGER_RTT_HasDataUp(PTR_ADDR Address, unsigned BufferIndex) {
   unsigned RdOff;
   unsigned WrOff;
   unsigned i;
   unsigned MaxNumUpBuffers;
   uint64_t BufferOff;
   unsigned SizeOfBuffer;
-  uintptr_t pRing;
+  PTR_ADDR pRing;
 
   if (Address == 0u) {
     return 0u;
@@ -2812,12 +2810,12 @@ unsigned SEGGER_RTT_HasDataUp(uintptr_t Address, unsigned BufferIndex) {
 *    >= 0 - O.K. Buffer Index
 *     < 0 - Error
 */
-int SEGGER_RTT_AllocDownBuffer(uintptr_t Address, const char* sName, void* pBuffer, unsigned BufferSize, unsigned Flags) {
+int SEGGER_RTT_AllocDownBuffer(PTR_ADDR Address, const char* sName, void* pBuffer, unsigned BufferSize, unsigned Flags) {
   int       BufferIndex;
   unsigned  MaxNumUpBuffers;
   unsigned  MaxNumDownBuffers;
-  uintptr_t Addr;
-  uintptr_t pRing;
+  PTR_ADDR Addr;
+  PTR_ADDR pRing;
 
   if ((Address == 0u) || !_IsValidFlags(Flags) || !_IsValidSharedName(Address, sName) || !_IsValidSharedBuffer(Address, pBuffer, BufferSize)) {
     return -1;
@@ -2839,9 +2837,9 @@ int SEGGER_RTT_AllocDownBuffer(uintptr_t Address, const char* sName, void* pBuff
       BufferIndex++;
     } while ((unsigned)BufferIndex < MaxNumDownBuffers);
     if ((unsigned)BufferIndex < MaxNumDownBuffers) {
-      Addr = (uintptr_t)sName;
+      Addr = (PTR_ADDR)sName;
       SEGGER_RTT__WR64(SEGGER_RTT__FIELD(pRing, SEGGER_RTT__BUFFER_OFF_NAME),           Addr ? (uint64_t)(Addr - Address) : 0u);
-      Addr = (uintptr_t)pBuffer;
+      Addr = (PTR_ADDR)pBuffer;
       SEGGER_RTT__WR64(SEGGER_RTT__FIELD(pRing, SEGGER_RTT__BUFFER_OFF_P_BUFFER),       Addr ? (uint64_t)(Addr - Address) : 0u);
       SEGGER_RTT__WR32(SEGGER_RTT__FIELD(pRing, SEGGER_RTT__BUFFER_OFF_SIZE_OF_BUFFER), BufferSize);
       SEGGER_RTT__WR32(SEGGER_RTT__FIELD(pRing, SEGGER_RTT__BUFFER_OFF_RD_OFF),         0u);
@@ -2877,11 +2875,11 @@ int SEGGER_RTT_AllocDownBuffer(uintptr_t Address, const char* sName, void* pBuff
 *    >= 0 - O.K. Buffer Index
 *     < 0 - Error
 */
-int SEGGER_RTT_AllocUpBuffer(uintptr_t Address, const char* sName, void* pBuffer, unsigned BufferSize, unsigned Flags) {
+int SEGGER_RTT_AllocUpBuffer(PTR_ADDR Address, const char* sName, void* pBuffer, unsigned BufferSize, unsigned Flags) {
   int       BufferIndex;
   unsigned  MaxNumUpBuffers;
-  uintptr_t Addr;
-  uintptr_t pRing;
+  PTR_ADDR Addr;
+  PTR_ADDR pRing;
 
   if ((Address == 0u) || !_IsValidFlags(Flags) || !_IsValidSharedName(Address, sName) || !_IsValidSharedBuffer(Address, pBuffer, BufferSize)) {
     return -1;
@@ -2902,9 +2900,9 @@ int SEGGER_RTT_AllocUpBuffer(uintptr_t Address, const char* sName, void* pBuffer
       BufferIndex++;
     } while ((unsigned)BufferIndex < MaxNumUpBuffers);
     if ((unsigned)BufferIndex < MaxNumUpBuffers) {
-      Addr = (uintptr_t)sName;
+      Addr = (PTR_ADDR)sName;
       SEGGER_RTT__WR64(SEGGER_RTT__FIELD(pRing, SEGGER_RTT__BUFFER_OFF_NAME),           Addr ? (uint64_t)(Addr - Address) : 0u);
-      Addr = (uintptr_t)pBuffer;
+      Addr = (PTR_ADDR)pBuffer;
       SEGGER_RTT__WR64(SEGGER_RTT__FIELD(pRing, SEGGER_RTT__BUFFER_OFF_P_BUFFER),       Addr ? (uint64_t)(Addr - Address) : 0u);
       SEGGER_RTT__WR32(SEGGER_RTT__FIELD(pRing, SEGGER_RTT__BUFFER_OFF_SIZE_OF_BUFFER), BufferSize);
       SEGGER_RTT__WR32(SEGGER_RTT__FIELD(pRing, SEGGER_RTT__BUFFER_OFF_RD_OFF),         0u);
@@ -2946,11 +2944,11 @@ int SEGGER_RTT_AllocUpBuffer(uintptr_t Address, const char* sName, void* pBuffer
 *    May only be called once per buffer.
 *    Buffer name and flags can be reconfigured using the appropriate functions.
 */
-int SEGGER_RTT_ConfigUpBuffer(uintptr_t Address, unsigned BufferIndex, const char* sName, void* pBuffer, unsigned BufferSize, unsigned Flags) {
+int SEGGER_RTT_ConfigUpBuffer(PTR_ADDR Address, unsigned BufferIndex, const char* sName, void* pBuffer, unsigned BufferSize, unsigned Flags) {
   int r;
   unsigned MaxNumUpBuffers;
-  uintptr_t Addr;
-  uintptr_t pUp;
+  PTR_ADDR Addr;
+  PTR_ADDR pUp;
 
   if (Address != 0u) {
     r = _IsValidFlags(Flags) ? 0 : -1;
@@ -2972,9 +2970,9 @@ int SEGGER_RTT_ConfigUpBuffer(uintptr_t Address, unsigned BufferIndex, const cha
       } else {
         pUp = SEGGER_RTT__ADDR(Address, SEGGER_RTT__CB_OFF_A_UP_INDEX(BufferIndex));
         if (BufferIndex) {
-          Addr = (uintptr_t)sName;
+          Addr = (PTR_ADDR)sName;
           SEGGER_RTT__WR64(SEGGER_RTT__FIELD(pUp, SEGGER_RTT__BUFFER_OFF_NAME),           Addr ? (uint64_t)(Addr - Address) : 0u);
-          Addr = (uintptr_t)pBuffer;
+          Addr = (PTR_ADDR)pBuffer;
           SEGGER_RTT__WR64(SEGGER_RTT__FIELD(pUp, SEGGER_RTT__BUFFER_OFF_P_BUFFER),       Addr ? (uint64_t)(Addr - Address) : 0u);
           SEGGER_RTT__WR32(SEGGER_RTT__FIELD(pUp, SEGGER_RTT__BUFFER_OFF_SIZE_OF_BUFFER), BufferSize);
           SEGGER_RTT__WR32(SEGGER_RTT__FIELD(pUp, SEGGER_RTT__BUFFER_OFF_RD_OFF),         0u);
@@ -3018,12 +3016,12 @@ int SEGGER_RTT_ConfigUpBuffer(uintptr_t Address, unsigned BufferIndex, const cha
 *    May only be called once per buffer.
 *    Buffer name and flags can be reconfigured using the appropriate functions.
 */
-int SEGGER_RTT_ConfigDownBuffer(uintptr_t Address, unsigned BufferIndex, const char* sName, void* pBuffer, unsigned BufferSize, unsigned Flags) {
+int SEGGER_RTT_ConfigDownBuffer(PTR_ADDR Address, unsigned BufferIndex, const char* sName, void* pBuffer, unsigned BufferSize, unsigned Flags) {
   int r;
   unsigned MaxNumUpBuffers;
   unsigned MaxNumDownBuffers;
-  uintptr_t Addr;
-  uintptr_t pDown;
+  PTR_ADDR Addr;
+  PTR_ADDR pDown;
 
   if (Address != 0u) {
     r = _IsValidFlags(Flags) ? 0 : -1;
@@ -3046,9 +3044,9 @@ int SEGGER_RTT_ConfigDownBuffer(uintptr_t Address, unsigned BufferIndex, const c
       } else {
         pDown = SEGGER_RTT__ADDR(Address, SEGGER_RTT__CB_OFF_A_DOWN_RUNTIME_INDEX(MaxNumUpBuffers, BufferIndex));
         if (BufferIndex) {
-          Addr = (uintptr_t)sName;
+          Addr = (PTR_ADDR)sName;
           SEGGER_RTT__WR64(SEGGER_RTT__FIELD(pDown, SEGGER_RTT__BUFFER_OFF_NAME),           Addr ? (uint64_t)(Addr - Address) : 0u);
-          Addr = (uintptr_t)pBuffer;
+          Addr = (PTR_ADDR)pBuffer;
           SEGGER_RTT__WR64(SEGGER_RTT__FIELD(pDown, SEGGER_RTT__BUFFER_OFF_P_BUFFER),       Addr ? (uint64_t)(Addr - Address) : 0u);
           SEGGER_RTT__WR32(SEGGER_RTT__FIELD(pDown, SEGGER_RTT__BUFFER_OFF_SIZE_OF_BUFFER), BufferSize);
           SEGGER_RTT__WR32(SEGGER_RTT__FIELD(pDown, SEGGER_RTT__BUFFER_OFF_RD_OFF),         0u);
@@ -3082,14 +3080,14 @@ int SEGGER_RTT_ConfigDownBuffer(uintptr_t Address, unsigned BufferIndex, const c
 *    >= 0  O.K.
 *     < 0  Error
 */
-int SEGGER_RTT_SetNameUpBuffer(uintptr_t Address, unsigned BufferIndex, const char* sName) {
-  uintptr_t Addr;
+int SEGGER_RTT_SetNameUpBuffer(PTR_ADDR Address, unsigned BufferIndex, const char* sName) {
+  PTR_ADDR Addr;
   unsigned MaxNumUpBuffers;
   int r;
-  uintptr_t pUp;
+  PTR_ADDR pUp;
 
   if (Address != 0u) {
-    Addr = (uintptr_t)sName;
+    Addr = (PTR_ADDR)sName;
     if (!_IsValidSharedName(Address, sName)) {
       r = -1;
     } else {
@@ -3129,15 +3127,15 @@ int SEGGER_RTT_SetNameUpBuffer(uintptr_t Address, unsigned BufferIndex, const ch
 *    >= 0  O.K.
 *     < 0  Error
 */
-int SEGGER_RTT_SetNameDownBuffer(uintptr_t Address, unsigned BufferIndex, const char* sName) {
-  uintptr_t Addr;
+int SEGGER_RTT_SetNameDownBuffer(PTR_ADDR Address, unsigned BufferIndex, const char* sName) {
+  PTR_ADDR Addr;
   unsigned MaxNumUpBuffers;
   unsigned MaxNumDownBuffers;
   int r;
-  uintptr_t pDown;
+  PTR_ADDR pDown;
 
   if (Address != 0u) {
-    Addr = (uintptr_t)sName;
+    Addr = (PTR_ADDR)sName;
     if (!_IsValidSharedName(Address, sName)) {
       r = -1;
     } else {
@@ -3179,10 +3177,10 @@ int SEGGER_RTT_SetNameDownBuffer(uintptr_t Address, unsigned BufferIndex, const 
 *    >= 0  O.K.
 *     < 0  Error
 */
-int SEGGER_RTT_SetFlagsUpBuffer(uintptr_t Address, unsigned BufferIndex, unsigned Flags) {
+int SEGGER_RTT_SetFlagsUpBuffer(PTR_ADDR Address, unsigned BufferIndex, unsigned Flags) {
   int r;
   unsigned MaxNumUpBuffers;
-  uintptr_t pUp;
+  PTR_ADDR pUp;
 
   if (Address != 0u) {
     if (!_IsValidFlags(Flags)) {
@@ -3225,11 +3223,11 @@ int SEGGER_RTT_SetFlagsUpBuffer(uintptr_t Address, unsigned BufferIndex, unsigne
 *    >= 0  O.K.
 *     < 0  Error
 */
-int SEGGER_RTT_SetFlagsDownBuffer(uintptr_t Address, unsigned BufferIndex, unsigned Flags) {
+int SEGGER_RTT_SetFlagsDownBuffer(PTR_ADDR Address, unsigned BufferIndex, unsigned Flags) {
   int r;
   unsigned MaxNumUpBuffers;
   unsigned MaxNumDownBuffers;
-  uintptr_t pDown;
+  PTR_ADDR pDown;
 
   if (Address != 0u) {
     if (!_IsValidFlags(Flags)) {
@@ -3266,7 +3264,7 @@ int SEGGER_RTT_SetFlagsDownBuffer(uintptr_t Address, unsigned BufferIndex, unsig
 *  Parameters
 *    Address     Base address of the RTT control block.
 */
-void SEGGER_RTT_Init (uintptr_t Address) {
+void SEGGER_RTT_Init (PTR_ADDR Address) {
   _DoInit(Address);
 }
 
@@ -3287,7 +3285,7 @@ void SEGGER_RTT_Init (uintptr_t Address) {
 *      0 - O.K.
 *    < 0 - Error
 */
-int SEGGER_RTT_InitEx (uintptr_t Address, size_t Size) {
+int SEGGER_RTT_InitEx (PTR_ADDR Address, size_t Size) {
   if ((Address == 0u) || ((Address & SEGGER_RTT__CB_ALIGNMENT_MASK) != 0u) || (Size < SEGGER_RTT__REQUIRED_MEM_SIZE)) {
     return -1;
   }
@@ -3316,7 +3314,7 @@ int SEGGER_RTT_InitEx (uintptr_t Address, size_t Size) {
 *      0 - O.K.
 *    < 0 - Error
 */
-int SEGGER_RTT_EnsureInitEx (uintptr_t Address, size_t Size, unsigned NumBuffers) {
+int SEGGER_RTT_EnsureInitEx (PTR_ADDR Address, size_t Size, unsigned NumBuffers) {
   if ((Address == 0u) || (Size == 0u)) {
     return -1;
   }
@@ -3356,9 +3354,9 @@ int SEGGER_RTT_EnsureInitEx (uintptr_t Address, size_t Size, unsigned NumBuffers
 *  Notes
 *    (1) Buffer 0 is always reserved for terminal I/O, so we can use index 0 here, fixed
 */
-int SEGGER_RTT_SetTerminal (uintptr_t Address, unsigned char TerminalId) {
+int SEGGER_RTT_SetTerminal (PTR_ADDR Address, unsigned char TerminalId) {
   unsigned char         ac[2];
-  uintptr_t             pRing;
+  PTR_ADDR             pRing;
   unsigned Avail;
   int r;
 
@@ -3405,11 +3403,11 @@ int SEGGER_RTT_SetTerminal (uintptr_t Address, unsigned char TerminalId) {
 *     < 0 - Error.
 *
 */
-int SEGGER_RTT_TerminalOut (uintptr_t Address, unsigned char TerminalId, const char* s) {
+int SEGGER_RTT_TerminalOut (PTR_ADDR Address, unsigned char TerminalId, const char* s) {
   int                   Status;
   unsigned              FragLen;
   unsigned              Avail;
-  uintptr_t             pRing;
+  PTR_ADDR             pRing;
   unsigned char         ActiveTerminal;
   //
   if ((Address == 0u) || (s == NULL) || (TerminalId >= sizeof(_aTerminalId))) {
@@ -3492,14 +3490,14 @@ int SEGGER_RTT_TerminalOut (uintptr_t Address, unsigned char TerminalId, const c
 *  Return value
 *    Number of bytes that are free in the selected up buffer.
 */
-unsigned SEGGER_RTT_GetAvailWriteSpace (uintptr_t Address, unsigned BufferIndex) {
+unsigned SEGGER_RTT_GetAvailWriteSpace (PTR_ADDR Address, unsigned BufferIndex) {
   unsigned RdOff;
   unsigned WrOff;
   unsigned i;
   unsigned MaxNumUpBuffers;
   uint64_t BufferOff;
   unsigned SizeOfBuffer;
-  uintptr_t pRing;
+  PTR_ADDR pRing;
 
   if (Address == 0u) {
     return 0u;
@@ -3545,14 +3543,14 @@ unsigned SEGGER_RTT_GetAvailWriteSpace (uintptr_t Address, unsigned BufferIndex)
 *  Return value
 *    Number of bytes that are used in the buffer.
 */
-unsigned SEGGER_RTT_GetBytesInBuffer(uintptr_t Address, unsigned BufferIndex) {
+unsigned SEGGER_RTT_GetBytesInBuffer(PTR_ADDR Address, unsigned BufferIndex) {
   unsigned RdOff;
   unsigned WrOff;
   unsigned i;
   unsigned MaxNumUpBuffers;
   uint64_t BufferOff;
   unsigned SizeOfBuffer;
-  uintptr_t pRing;
+  PTR_ADDR pRing;
 
   if (Address == 0u) {
     return 0u;
@@ -3598,7 +3596,7 @@ unsigned SEGGER_RTT_GetBytesInBuffer(uintptr_t Address, unsigned BufferIndex) {
 *  Return value
 *    Number of bytes that are used in the buffer.
 */
-unsigned SEGGER_RTT_GetBytesDownInBuffer(uintptr_t Address, unsigned BufferIndex) {
+unsigned SEGGER_RTT_GetBytesDownInBuffer(PTR_ADDR Address, unsigned BufferIndex) {
   unsigned RdOff;
   unsigned WrOff;
   unsigned i;
@@ -3606,7 +3604,7 @@ unsigned SEGGER_RTT_GetBytesDownInBuffer(uintptr_t Address, unsigned BufferIndex
   unsigned MaxNumDownBuffers;
   uint64_t BufferOff;
   unsigned SizeOfBuffer;
-  uintptr_t pRing;
+  PTR_ADDR pRing;
 
   if (Address == 0u) {
     return 0u;

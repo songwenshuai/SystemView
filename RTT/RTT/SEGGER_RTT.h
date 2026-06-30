@@ -24,6 +24,7 @@ Purpose : Implementation of SEGGER real-time transfer which allows
 #ifndef SEGGER_RTT_H
 #define SEGGER_RTT_H
 
+#include "SEGGER.h"
 #include "SEGGER_RTT_ConfDefaults.h"
 
 /*********************************************************************
@@ -33,198 +34,31 @@ Purpose : Implementation of SEGGER real-time transfer which allows
 **********************************************************************
 */
 
-#ifndef RTT_USE_ASM
-  //
-  // Some cores support out-of-order memory accesses (reordering of memory accesses in the core)
-  // For such cores, we need to define a memory barrier to guarantee the order of certain accesses to the RTT ring buffers.
-  // Needed for:
-  //   Cortex-M7 (ARMv7-M)
-  //   Cortex-M23 (ARM-v8M)
-  //   Cortex-M33 (ARM-v8M)
-  //   Cortex-A/R (ARM-v7A/R)
-  //
-  // We do not explicitly check for "Embedded Studio" as the compiler in use determines what we support.
-  // You can use an external toolchain like IAR inside ES. So there is no point in checking for "Embedded Studio"
-  //
-  #if (defined __CROSSWORKS_ARM)                  // Rowley Crossworks
-    #define _CC_HAS_RTT_ASM_SUPPORT 1
-    #if (defined __ARM_ARCH_7M__)                 // Cortex-M3
-      #define _CORE_HAS_RTT_ASM_SUPPORT 1
-    #elif (defined __ARM_ARCH_7EM__)              // Cortex-M4/M7
-      #define _CORE_HAS_RTT_ASM_SUPPORT 1
-      #define _CORE_NEEDS_DMB           1
-      #define RTT__DMB() __asm volatile ("dmb\n" : : :);
-    #elif (defined __ARM_ARCH_8M_BASE__)          // Cortex-M23
-      #define _CORE_HAS_RTT_ASM_SUPPORT 0
-      #define _CORE_NEEDS_DMB           1
-      #define RTT__DMB() __asm volatile ("dmb\n" : : :);
-    #elif (defined __ARM_ARCH_8M_MAIN__)          // Cortex-M33
-      #define _CORE_HAS_RTT_ASM_SUPPORT 1
-      #define _CORE_NEEDS_DMB           1
-      #define RTT__DMB() __asm volatile ("dmb\n" : : :);
-    #elif (defined(__ARM_ARCH_8_1M_MAIN__))       // Cortex-M85
-      #define _CORE_HAS_RTT_ASM_SUPPORT 1
-      #define _CORE_NEEDS_DMB           1
-      #define RTT__DMB() __asm volatile ("dmb\n" : : :);
-    #else
-      #define _CORE_HAS_RTT_ASM_SUPPORT 0
-    #endif
-  #elif (defined __ARMCC_VERSION)
-    //
-    // ARM compiler
-    // ARM compiler V6.0 and later is clang based.
-    // Our ASM part is compatible to clang.
-    //
-    #if (__ARMCC_VERSION >= 6000000)
-      #define _CC_HAS_RTT_ASM_SUPPORT 1
-    #else
-      #define _CC_HAS_RTT_ASM_SUPPORT 0
-    #endif
-    #if (defined __ARM_ARCH_6M__)                 // Cortex-M0 / M1
-      #define _CORE_HAS_RTT_ASM_SUPPORT 0         // No ASM support for this architecture
-    #elif (defined __ARM_ARCH_7M__)               // Cortex-M3
-      #define _CORE_HAS_RTT_ASM_SUPPORT 1
-    #elif (defined __ARM_ARCH_7EM__)              // Cortex-M4/M7
-      #define _CORE_HAS_RTT_ASM_SUPPORT 1
-      #define _CORE_NEEDS_DMB           1
-      #define RTT__DMB() __asm volatile ("dmb\n" : : :);
-    #elif (defined __ARM_ARCH_8M_BASE__)          // Cortex-M23
-      #define _CORE_HAS_RTT_ASM_SUPPORT 0
-      #define _CORE_NEEDS_DMB           1
-      #define RTT__DMB() __asm volatile ("dmb\n" : : :);
-    #elif (defined __ARM_ARCH_8M_MAIN__)          // Cortex-M33
-      #define _CORE_HAS_RTT_ASM_SUPPORT 1
-      #define _CORE_NEEDS_DMB           1
-      #define RTT__DMB() __asm volatile ("dmb\n" : : :);
-    #elif (defined __ARM_ARCH_8_1M_MAIN__)        // Cortex-M85
-      #define _CORE_HAS_RTT_ASM_SUPPORT 1
-      #define _CORE_NEEDS_DMB           1
-      #define RTT__DMB() __asm volatile ("dmb\n" : : :);
-    #elif \
-    ((defined __ARM_ARCH_7A__) || (defined __ARM_ARCH_7R__)) || \
-    ((defined __ARM_ARCH_8A__) || (defined __ARM_ARCH_8R__))
-      //
-      // Cortex-A/R ARMv7-A/R & ARMv8-A/R
-      //
-      #define _CORE_NEEDS_DMB           1
-      #define RTT__DMB() __asm volatile ("dmb\n" : : :);
-    #else
-      #define _CORE_HAS_RTT_ASM_SUPPORT 0
-    #endif
-  #elif ((defined __GNUC__) || (defined __clang__))
-    //
-    // GCC / Clang
-    //
-    #define _CC_HAS_RTT_ASM_SUPPORT 1
-    // ARM 7/9: __ARM_ARCH_5__ / __ARM_ARCH_5E__ / __ARM_ARCH_5T__ / __ARM_ARCH_5T__ / __ARM_ARCH_5TE__
-    #if (defined __ARM_ARCH_7M__)                 // Cortex-M3
-      #define _CORE_HAS_RTT_ASM_SUPPORT 1
-    #elif (defined __ARM_ARCH_7EM__)              // Cortex-M4/M7
-      #define _CORE_HAS_RTT_ASM_SUPPORT 1
-      #define _CORE_NEEDS_DMB           1         // Only Cortex-M7 needs a DMB but we cannot distinguish M4 and M7 here...
-      #define RTT__DMB() __asm volatile ("dmb\n" : : :);
-    #elif (defined __ARM_ARCH_8M_BASE__)          // Cortex-M23
-      #define _CORE_HAS_RTT_ASM_SUPPORT 0
-      #define _CORE_NEEDS_DMB           1
-      #define RTT__DMB() __asm volatile ("dmb\n" : : :);
-    #elif (defined __ARM_ARCH_8M_MAIN__)          // Cortex-M33
-      #define _CORE_HAS_RTT_ASM_SUPPORT 1
-      #define _CORE_NEEDS_DMB           1
-      #define RTT__DMB() __asm volatile ("dmb\n" : : :);
-    #elif (defined __ARM_ARCH_8_1M_MAIN__)        // Cortex-M85
-      #define _CORE_HAS_RTT_ASM_SUPPORT 1
-      #define _CORE_NEEDS_DMB           1
-      #define RTT__DMB() __asm volatile ("dmb\n" : : :);
-    #elif \
-    (defined __ARM_ARCH_7A__) || (defined __ARM_ARCH_7R__) || \
-    (defined __ARM_ARCH_8A__) || (defined __ARM_ARCH_8R__)
-      //
-      // Cortex-A/R ARMv7-A/R & ARMv8-A/R
-      //
-      #define _CORE_NEEDS_DMB           1
-      #define RTT__DMB() __asm volatile ("dmb\n" : : :);
-    #else
-      #define _CORE_HAS_RTT_ASM_SUPPORT 0
-    #endif
-  #elif ((defined __IASMARM__) || (defined __ICCARM__))
-    //
-    // IAR assembler/compiler
-    //
-    #define _CC_HAS_RTT_ASM_SUPPORT 1
-    #if (__VER__ < 6300000)
-      #define VOLATILE
-    #else
-      #define VOLATILE volatile
-    #endif
-    #if (defined __ARM7M__)                            // Needed for old versions that do not know the define yet
-      #if (__CORE__ == __ARM7M__)                      // Cortex-M3
-        #define _CORE_HAS_RTT_ASM_SUPPORT 1
-      #endif
-    #endif
-    #if (defined __ARM7EM__)
-      #if (__CORE__ == __ARM7EM__)                     // Cortex-M4/M7
-        #define _CORE_HAS_RTT_ASM_SUPPORT 1
-        #define _CORE_NEEDS_DMB 1
-        #define RTT__DMB() asm VOLATILE ("DMB");
-      #endif
-    #endif
-    #if (defined __ARM8M_BASELINE__)
-      #if (__CORE__ == __ARM8M_BASELINE__)             // Cortex-M23
-        #define _CORE_HAS_RTT_ASM_SUPPORT 0
-        #define _CORE_NEEDS_DMB 1
-        #define RTT__DMB() asm VOLATILE ("DMB");
-      #endif
-    #endif
-    #if (defined __ARM8M_MAINLINE__)
-      #if (__CORE__ == __ARM8M_MAINLINE__)             // Cortex-M33
-        #define _CORE_HAS_RTT_ASM_SUPPORT 1
-        #define _CORE_NEEDS_DMB 1
-        #define RTT__DMB() asm VOLATILE ("DMB");
-      #endif
-    #endif
-    #if (defined __ARM8EM_MAINLINE__)
-      #if (__CORE__ == __ARM8EM_MAINLINE__)            // Cortex-???
-        #define _CORE_HAS_RTT_ASM_SUPPORT 1
-        #define _CORE_NEEDS_DMB 1
-        #define RTT__DMB() asm VOLATILE ("DMB");
-      #endif
-    #endif
-    #if\
-    ((defined __ARM7A__) && (__CORE__ == __ARM7A__)) || \
-    ((defined __ARM7R__) && (__CORE__ == __ARM7R__)) || \
-    ((defined __ARM8A__) && (__CORE__ == __ARM8A__)) || \
-    ((defined __ARM8R__) && (__CORE__ == __ARM8R__))
-      //
-      // Cortex-A/R ARMv7-A/R & ARMv8-A/R
-      //
-       #define _CORE_NEEDS_DMB 1
-      #define RTT__DMB() asm VOLATILE ("DMB");
-    #endif
+#if (defined __CROSSWORKS_ARM)
+  #if (defined __ARM_ARCH_7EM__) || (defined __ARM_ARCH_8M_BASE__) || (defined __ARM_ARCH_8M_MAIN__) || (defined __ARM_ARCH_8_1M_MAIN__)
+    #define _CORE_NEEDS_DMB 1
+    #define RTT__DMB() __asm volatile ("dmb\n" : : :);
+  #endif
+#elif (defined __ARMCC_VERSION)
+  #if (defined __ARM_ARCH_7EM__) || (defined __ARM_ARCH_8M_BASE__) || (defined __ARM_ARCH_8M_MAIN__) || (defined __ARM_ARCH_8_1M_MAIN__) || defined(__ARM_ARCH_7A__) || defined(__ARM_ARCH_7R__) || defined(__ARM_ARCH_8A__) || defined(__ARM_ARCH_8R__)
+    #define _CORE_NEEDS_DMB 1
+    #define RTT__DMB() __asm volatile ("dmb\n" : : :);
+  #endif
+#elif ((defined __GNUC__) || (defined __clang__))
+  #if (defined __ARM_ARCH_7EM__) || (defined __ARM_ARCH_8M_BASE__) || (defined __ARM_ARCH_8M_MAIN__) || (defined __ARM_ARCH_8_1M_MAIN__) || defined(__ARM_ARCH_7A__) || defined(__ARM_ARCH_7R__) || defined(__ARM_ARCH_8A__) || defined(__ARM_ARCH_8R__)
+    #define _CORE_NEEDS_DMB 1
+    #define RTT__DMB() __asm volatile ("dmb\n" : : :);
+  #endif
+#elif ((defined __IASMARM__) || (defined __ICCARM__))
+  #if (__VER__ < 6300000)
+    #define VOLATILE
   #else
-    //
-    // Other compilers
-    //
-    #define _CC_HAS_RTT_ASM_SUPPORT   0
-    #define _CORE_HAS_RTT_ASM_SUPPORT 0
+    #define VOLATILE volatile
   #endif
-  //
-  // If IDE and core support the ASM version, enable ASM version by default
-  //
-  #ifndef _CORE_HAS_RTT_ASM_SUPPORT
-    #define _CORE_HAS_RTT_ASM_SUPPORT 0              // Default for unknown cores
+  #if ((defined __ARM7EM__) && (__CORE__ == __ARM7EM__)) || ((defined __ARM8M_BASELINE__) && (__CORE__ == __ARM8M_BASELINE__)) || ((defined __ARM8M_MAINLINE__) && (__CORE__ == __ARM8M_MAINLINE__)) || ((defined __ARM8EM_MAINLINE__) && (__CORE__ == __ARM8EM_MAINLINE__)) || ((defined __ARM7A__) && (__CORE__ == __ARM7A__)) || ((defined __ARM7R__) && (__CORE__ == __ARM7R__)) || ((defined __ARM8A__) && (__CORE__ == __ARM8A__)) || ((defined __ARM8R__) && (__CORE__ == __ARM8R__))
+    #define _CORE_NEEDS_DMB 1
+    #define RTT__DMB() asm VOLATILE ("DMB");
   #endif
-  #if SEGGER_RTT_USE_SHARED_MEMORY
-    #define RTT_USE_ASM                           (0)
-  #elif (_CC_HAS_RTT_ASM_SUPPORT && _CORE_HAS_RTT_ASM_SUPPORT)
-    #define RTT_USE_ASM                           (1)
-  #else
-    #define RTT_USE_ASM                           (0)
-  #endif
-#endif
-
-#if SEGGER_RTT_USE_SHARED_MEMORY && RTT_USE_ASM
-  #undef  RTT_USE_ASM
-  #define RTT_USE_ASM                           (0)
 #endif
 
 #ifndef _CORE_NEEDS_DMB
@@ -263,13 +97,6 @@ Purpose : Implementation of SEGGER real-time transfer which allows
     #define SEGGER_RTT_UNCACHED_OFF (0)
   #endif
 #endif
-#if RTT_USE_ASM
-  #if SEGGER_RTT_CPU_CACHE_LINE_SIZE
-    #error "RTT_USE_ASM is not available if SEGGER_RTT_CPU_CACHE_LINE_SIZE != 0"
-  #endif
-#endif
-
-#ifndef SEGGER_RTT_ASM  // defined when SEGGER_RTT.h is included from assembly file
 #include <stdlib.h>
 #include <stdarg.h>
 #include <stddef.h>
@@ -332,14 +159,14 @@ Purpose : Implementation of SEGGER real-time transfer which allows
 #define SEGGER_RTT_SPINLOCK_SW_WORD_SIZE                 (4u)
 #define SEGGER_RTT_SPINLOCK_SW_HEADER_SIZE               (8u)
 #define SEGGER_RTT_SPINLOCK_SW_SIZE                      (SEGGER_RTT_SPINLOCK_SW_HEADER_SIZE + (SEGGER_RTT_SPINLOCK_MAX_CORES * SEGGER_RTT_SPINLOCK_SW_WORD_SIZE * 2u))
-#define SEGGER_RTT__RD8(Address)                         (*(volatile unsigned char*)(uintptr_t)(Address))
-#define SEGGER_RTT__WR8(Address, Data)                   (*(volatile unsigned char*)(uintptr_t)(Address) = (unsigned char)(Data))
-#define SEGGER_RTT__RD32(Address)                        (*(volatile uint32_t*)(uintptr_t)(Address))
-#define SEGGER_RTT__WR32(Address, Data)                  (*(volatile uint32_t*)(uintptr_t)(Address) = (uint32_t)(Data))
-#define SEGGER_RTT__RD64(Address)                        (*(volatile uint64_t*)(uintptr_t)(Address))
-#define SEGGER_RTT__WR64(Address, Data)                  (*(volatile uint64_t*)(uintptr_t)(Address) = (uint64_t)(Data))
-#define SEGGER_RTT__ADDR(Address, Off)                   ((uintptr_t)(Address) + (uintptr_t)(Off))
-#define SEGGER_RTT__FIELD(pRing, Off)                    ((uintptr_t)(pRing) + (uintptr_t)(Off))
+#define SEGGER_RTT__RD8(Address)                         (*(volatile unsigned char*)(PTR_ADDR)(Address))
+#define SEGGER_RTT__WR8(Address, Data)                   (*(volatile unsigned char*)(PTR_ADDR)(Address) = (unsigned char)(Data))
+#define SEGGER_RTT__RD32(Address)                        (*(volatile uint32_t*)(PTR_ADDR)(Address))
+#define SEGGER_RTT__WR32(Address, Data)                  (*(volatile uint32_t*)(PTR_ADDR)(Address) = (uint32_t)(Data))
+#define SEGGER_RTT__RD64(Address)                        (*(volatile uint64_t*)(PTR_ADDR)(Address))
+#define SEGGER_RTT__WR64(Address, Data)                  (*(volatile uint64_t*)(PTR_ADDR)(Address) = (uint64_t)(Data))
+#define SEGGER_RTT__ADDR(Address, Off)                   ((PTR_ADDR)(Address) + (PTR_ADDR)(Off))
+#define SEGGER_RTT__FIELD(pRing, Off)                    ((PTR_ADDR)(pRing) + (PTR_ADDR)(Off))
 #define SEGGER_RTT__STATIC_ASSERT(Name, Condition)       typedef char SEGGER_RTT__static_assert_##Name[(Condition) ? 1 : -1]
 
 /*********************************************************************
@@ -437,47 +264,47 @@ SEGGER_RTT__STATIC_ASSERT(spinlock_max_cores,      SEGGER_RTT_SPINLOCK_MAX_CORES
 #ifdef __cplusplus
   extern "C" {
 #endif
-int          SEGGER_RTT_AllocDownBuffer         (uintptr_t Address, const char* sName, void* pBuffer, unsigned BufferSize, unsigned Flags);
-int          SEGGER_RTT_AllocUpBuffer           (uintptr_t Address, const char* sName, void* pBuffer, unsigned BufferSize, unsigned Flags);
-int          SEGGER_RTT_CheckInit               (uintptr_t Address);
-int          SEGGER_RTT_CheckRegion             (uintptr_t Address, size_t Size);
-int          SEGGER_RTT_CheckUpBuffer           (uintptr_t Address, size_t Size, unsigned BufferIndex);
-int          SEGGER_RTT_CheckDownBuffer         (uintptr_t Address, size_t Size, unsigned BufferIndex);
-int          SEGGER_RTT_FindControlBlock        (uintptr_t* pAddress, size_t Size);
-int          SEGGER_RTT_FindValidControlBlock   (uintptr_t* pAddress, size_t Size, size_t* pRegionSize);
-int          SEGGER_RTT_ConfigUpBuffer          (uintptr_t Address, unsigned BufferIndex, const char* sName, void* pBuffer, unsigned BufferSize, unsigned Flags);
-int          SEGGER_RTT_ConfigDownBuffer        (uintptr_t Address, unsigned BufferIndex, const char* sName, void* pBuffer, unsigned BufferSize, unsigned Flags);
-size_t       SEGGER_RTT_GetRequiredMemSize      (unsigned NumBuffers);
-int          SEGGER_RTT_GetKey                  (uintptr_t Address);
-unsigned     SEGGER_RTT_HasData                 (uintptr_t Address, unsigned BufferIndex);
-int          SEGGER_RTT_HasKey                  (uintptr_t Address);
-unsigned     SEGGER_RTT_HasDataUp               (uintptr_t Address, unsigned BufferIndex);
-void         SEGGER_RTT_Init                    (uintptr_t Address);
-int          SEGGER_RTT_InitEx                  (uintptr_t Address, size_t Size);
-int          SEGGER_RTT_EnsureInitEx            (uintptr_t Address, size_t Size, unsigned NumBuffers);
-unsigned     SEGGER_RTT_Read                    (uintptr_t Address, unsigned BufferIndex,       void* pBuffer, unsigned BufferSize);
-unsigned     SEGGER_RTT_ReadNoLock              (uintptr_t Address, unsigned BufferIndex,       void* pData,   unsigned BufferSize);
-int          SEGGER_RTT_SetNameDownBuffer       (uintptr_t Address, unsigned BufferIndex, const char* sName);
-int          SEGGER_RTT_SetNameUpBuffer         (uintptr_t Address, unsigned BufferIndex, const char* sName);
-int          SEGGER_RTT_SetFlagsDownBuffer      (uintptr_t Address, unsigned BufferIndex, unsigned Flags);
-int          SEGGER_RTT_SetFlagsUpBuffer        (uintptr_t Address, unsigned BufferIndex, unsigned Flags);
-int          SEGGER_RTT_WaitKey                 (uintptr_t Address);
-unsigned     SEGGER_RTT_Write                   (uintptr_t Address, unsigned BufferIndex, const void* pBuffer, unsigned NumBytes);
-unsigned     SEGGER_RTT_WriteNoLock             (uintptr_t Address, unsigned BufferIndex, const void* pBuffer, unsigned NumBytes);
-unsigned     SEGGER_RTT_WriteSkipNoLock         (uintptr_t Address, unsigned BufferIndex, const void* pBuffer, unsigned NumBytes);
-unsigned     SEGGER_RTT_WriteString             (uintptr_t Address, unsigned BufferIndex, const char* s);
-void         SEGGER_RTT_WriteWithOverwriteNoLock(uintptr_t Address, unsigned BufferIndex, const void* pBuffer, unsigned NumBytes);
-unsigned     SEGGER_RTT_PutChar                 (uintptr_t Address, unsigned BufferIndex, char c);
-unsigned     SEGGER_RTT_PutCharSkip             (uintptr_t Address, unsigned BufferIndex, char c);
-unsigned     SEGGER_RTT_PutCharSkipNoLock       (uintptr_t Address, unsigned BufferIndex, char c);
-unsigned     SEGGER_RTT_GetAvailWriteSpace      (uintptr_t Address, unsigned BufferIndex);
-unsigned     SEGGER_RTT_GetBytesInBuffer        (uintptr_t Address, unsigned BufferIndex);
-unsigned     SEGGER_RTT_GetBytesDownInBuffer    (uintptr_t Address, unsigned BufferIndex);
-int          SEGGER_RTT_SPINLOCK_SW_Create      (uintptr_t Address, size_t Size);
-int          SEGGER_RTT_SPINLOCK_SW_Check       (uintptr_t Address, size_t Size);
-int          SEGGER_RTT_SPINLOCK_SW_Lock        (uintptr_t Address, unsigned Id);
-int          SEGGER_RTT_SPINLOCK_SW_LockWithLimit(uintptr_t Address, unsigned Id, uint32_t MaxWaitSpins);
-int          SEGGER_RTT_SPINLOCK_SW_Unlock      (uintptr_t Address, unsigned Id);
+int          SEGGER_RTT_AllocDownBuffer           (PTR_ADDR Address, const char* sName, void* pBuffer, unsigned BufferSize, unsigned Flags);
+int          SEGGER_RTT_AllocUpBuffer             (PTR_ADDR Address, const char* sName, void* pBuffer, unsigned BufferSize, unsigned Flags);
+int          SEGGER_RTT_CheckInit                 (PTR_ADDR Address);
+int          SEGGER_RTT_CheckRegion               (PTR_ADDR Address, size_t Size);
+int          SEGGER_RTT_CheckUpBuffer             (PTR_ADDR Address, size_t Size, unsigned BufferIndex);
+int          SEGGER_RTT_CheckDownBuffer           (PTR_ADDR Address, size_t Size, unsigned BufferIndex);
+int          SEGGER_RTT_FindControlBlock          (PTR_ADDR* pAddress, size_t Size);
+int          SEGGER_RTT_FindValidControlBlock     (PTR_ADDR* pAddress, size_t Size, size_t* pRegionSize);
+int          SEGGER_RTT_ConfigUpBuffer             (PTR_ADDR Address, unsigned BufferIndex, const char* sName, void* pBuffer, unsigned BufferSize, unsigned Flags);
+int          SEGGER_RTT_ConfigDownBuffer           (PTR_ADDR Address, unsigned BufferIndex, const char* sName, void* pBuffer, unsigned BufferSize, unsigned Flags);
+size_t       SEGGER_RTT_GetRequiredMemSize        (unsigned NumBuffers);
+int          SEGGER_RTT_GetKey                    (PTR_ADDR Address);
+unsigned     SEGGER_RTT_HasData                   (PTR_ADDR Address, unsigned BufferIndex);
+int          SEGGER_RTT_HasKey                    (PTR_ADDR Address);
+unsigned     SEGGER_RTT_HasDataUp                 (PTR_ADDR Address, unsigned BufferIndex);
+void         SEGGER_RTT_Init                      (PTR_ADDR Address);
+int          SEGGER_RTT_InitEx                    (PTR_ADDR Address, size_t Size);
+int          SEGGER_RTT_EnsureInitEx              (PTR_ADDR Address, size_t Size, unsigned NumBuffers);
+unsigned     SEGGER_RTT_Read                      (PTR_ADDR Address, unsigned BufferIndex,       void* pBuffer, unsigned BufferSize);
+unsigned     SEGGER_RTT_ReadNoLock                (PTR_ADDR Address, unsigned BufferIndex,       void* pData,   unsigned BufferSize);
+int          SEGGER_RTT_SetNameDownBuffer         (PTR_ADDR Address, unsigned BufferIndex, const char* sName);
+int          SEGGER_RTT_SetNameUpBuffer           (PTR_ADDR Address, unsigned BufferIndex, const char* sName);
+int          SEGGER_RTT_SetFlagsDownBuffer        (PTR_ADDR Address, unsigned BufferIndex, unsigned Flags);
+int          SEGGER_RTT_SetFlagsUpBuffer          (PTR_ADDR Address, unsigned BufferIndex, unsigned Flags);
+int          SEGGER_RTT_WaitKey                   (PTR_ADDR Address);
+unsigned     SEGGER_RTT_Write                     (PTR_ADDR Address, unsigned BufferIndex, const void* pBuffer, unsigned NumBytes);
+unsigned     SEGGER_RTT_WriteNoLock               (PTR_ADDR Address, unsigned BufferIndex, const void* pBuffer, unsigned NumBytes);
+unsigned     SEGGER_RTT_WriteSkipNoLock           (PTR_ADDR Address, unsigned BufferIndex, const void* pBuffer, unsigned NumBytes);
+unsigned     SEGGER_RTT_WriteString               (PTR_ADDR Address, unsigned BufferIndex, const char* s);
+void         SEGGER_RTT_WriteWithOverwriteNoLock  (PTR_ADDR Address, unsigned BufferIndex, const void* pBuffer, unsigned NumBytes);
+unsigned     SEGGER_RTT_PutChar                   (PTR_ADDR Address, unsigned BufferIndex, char c);
+unsigned     SEGGER_RTT_PutCharSkip               (PTR_ADDR Address, unsigned BufferIndex, char c);
+unsigned     SEGGER_RTT_PutCharSkipNoLock         (PTR_ADDR Address, unsigned BufferIndex, char c);
+unsigned     SEGGER_RTT_GetAvailWriteSpace        (PTR_ADDR Address, unsigned BufferIndex);
+unsigned     SEGGER_RTT_GetBytesInBuffer          (PTR_ADDR Address, unsigned BufferIndex);
+unsigned     SEGGER_RTT_GetBytesDownInBuffer      (PTR_ADDR Address, unsigned BufferIndex);
+int          SEGGER_RTT_SPINLOCK_SW_Create        (PTR_ADDR Address, size_t Size);
+int          SEGGER_RTT_SPINLOCK_SW_Check         (PTR_ADDR Address, size_t Size);
+int          SEGGER_RTT_SPINLOCK_SW_Lock          (PTR_ADDR Address, unsigned Id);
+int          SEGGER_RTT_SPINLOCK_SW_LockWithLimit (PTR_ADDR Address, unsigned Id, uint32_t MaxWaitSpins);
+int          SEGGER_RTT_SPINLOCK_SW_Unlock        (PTR_ADDR Address, unsigned Id);
 //
 // Function macro for performance optimization
 //
@@ -489,10 +316,10 @@ int          SEGGER_RTT_SPINLOCK_SW_Unlock      (uintptr_t Address, unsigned Id)
 *
 **********************************************************************
 */
-unsigned     SEGGER_RTT_ReadUpBuffer            (uintptr_t Address, unsigned BufferIndex, void* pBuffer, unsigned BufferSize);
-unsigned     SEGGER_RTT_ReadUpBufferNoLock      (uintptr_t Address, unsigned BufferIndex, void* pData, unsigned BufferSize);
-unsigned     SEGGER_RTT_WriteDownBuffer         (uintptr_t Address, unsigned BufferIndex, const void* pBuffer, unsigned NumBytes);
-unsigned     SEGGER_RTT_WriteDownBufferNoLock   (uintptr_t Address, unsigned BufferIndex, const void* pBuffer, unsigned NumBytes);
+unsigned     SEGGER_RTT_ReadUpBuffer             (PTR_ADDR Address, unsigned BufferIndex, void* pBuffer, unsigned BufferSize);
+unsigned     SEGGER_RTT_ReadUpBufferNoLock       (PTR_ADDR Address, unsigned BufferIndex, void* pData, unsigned BufferSize);
+unsigned     SEGGER_RTT_WriteDownBuffer          (PTR_ADDR Address, unsigned BufferIndex, const void* pBuffer, unsigned NumBytes);
+unsigned     SEGGER_RTT_WriteDownBufferNoLock    (PTR_ADDR Address, unsigned BufferIndex, const void* pBuffer, unsigned NumBytes);
 
 #define      SEGGER_RTT_HASDATA_UP(Address, n)    (SEGGER_RTT_HasDataUp((Address), (n)))
 
@@ -502,8 +329,8 @@ unsigned     SEGGER_RTT_WriteDownBufferNoLock   (uintptr_t Address, unsigned Buf
 *
 **********************************************************************
 */
-int     SEGGER_RTT_SetTerminal        (uintptr_t Address, unsigned char TerminalId);
-int     SEGGER_RTT_TerminalOut        (uintptr_t Address, unsigned char TerminalId, const char* s);
+int          SEGGER_RTT_SetTerminal              (PTR_ADDR Address, unsigned char TerminalId);
+int          SEGGER_RTT_TerminalOut              (PTR_ADDR Address, unsigned char TerminalId, const char* s);
 
 /*********************************************************************
 *
@@ -511,14 +338,12 @@ int     SEGGER_RTT_TerminalOut        (uintptr_t Address, unsigned char Terminal
 *
 **********************************************************************
 */
-int SEGGER_RTT_printf(uintptr_t Address, unsigned BufferIndex, const char * sFormat, ...);
-int SEGGER_RTT_vprintf(uintptr_t Address, unsigned BufferIndex, const char * sFormat, va_list * pParamList);
+int          SEGGER_RTT_printf                   (PTR_ADDR Address, unsigned BufferIndex, const char * sFormat, ...);
+int          SEGGER_RTT_vprintf                  (PTR_ADDR Address, unsigned BufferIndex, const char * sFormat, va_list * pParamList);
 
 #ifdef __cplusplus
   }
 #endif
-
-#endif // ifndef(SEGGER_RTT_ASM)
 
 //
 // For some environments, NULL may not be defined until certain headers are included

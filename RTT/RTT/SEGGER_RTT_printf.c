@@ -50,7 +50,7 @@ typedef struct {
 
   int   ReturnValue;
 
-  uintptr_t Address;
+  PTR_ADDR Address;
   unsigned RTTBufferIndex;
 } SEGGER_RTT_PRINTF_DESC;
 
@@ -282,7 +282,7 @@ static void _PrintInt(SEGGER_RTT_PRINTF_DESC * pBufferDesc, int v, unsigned Base
 *    >= 0:  Number of bytes which have been stored in the "Up"-buffer.
 *     < 0:  Error
 */
-int SEGGER_RTT_vprintf(uintptr_t Address, unsigned BufferIndex, const char * sFormat, va_list * pParamList) {
+int SEGGER_RTT_vprintf(PTR_ADDR Address, unsigned BufferIndex, const char * sFormat, va_list * pParamList) {
   char c;
   SEGGER_RTT_PRINTF_DESC BufferDesc;
   int v;
@@ -475,7 +475,7 @@ int SEGGER_RTT_vprintf(uintptr_t Address, unsigned BufferIndex, const char * sFo
 *          s: Print the string pointed to by the argument
 *          p: Print the argument as an 8-digit hexadecimal integer. (Argument shall be a pointer to void.)
 */
-int SEGGER_RTT_printf(uintptr_t Address, unsigned BufferIndex, const char * sFormat, ...) {
+int SEGGER_RTT_printf(PTR_ADDR Address, unsigned BufferIndex, const char * sFormat, ...) {
   int r;
   va_list ParamList;
 

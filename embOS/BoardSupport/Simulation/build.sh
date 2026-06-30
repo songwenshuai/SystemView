@@ -4,7 +4,7 @@
 # ==============================================================================
 #
 # CMake wrapper script for convenient building of the SEGGER embOS simulation
-# start project against prebuilt embOS static libraries.
+# start project against local stripped embOS static libraries.
 #
 # Usage:
 #   ./build.sh              # 64-bit Debug build

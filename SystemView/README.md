@@ -34,9 +34,9 @@ This package uses the shared-memory RTT address API only.  The project configura
 `SEGGER_SYSVIEW_RTT_DOWN_BUFFER_ADDRESS` so the RTT control block and SystemView transport buffers are all
 inside the same mapped shared-memory region.  `SEGGER_SYSVIEW_RTT_NAME_ADDRESS` is optional and must also point
 inside that region when a channel name is required.
-SystemView IDs that carry target addresses, such as task IDs, resource IDs, heap pointers, RAM base addresses,
-and static string addresses for `SEGGER_SYSVIEW_PRINT_ELF*`, use `uintptr_t` and are encoded with address-sized
-variable-length fields.
+The shared-memory transport addresses and the address-aware public SystemView APIs use `PTR_ADDR` and are encoded
+with address-sized variable-length fields.  RTOS sample ports that still encode their RTOS-specific event payloads
+through U32 records keep their upstream 32-bit event layout until that port is migrated explicitly.
 It is recommended to copy `SEGGER_SYSVIEW_Conf.h` to the project's configuration directory and make changes to
 the copy.  That way, configuration does not get overwritten by an update of the package.  In that case, do not add
 `Config` as include directory.

@@ -1,5 +1,5 @@
 # ==============================================================================
-# embOS Simulation - SEGGER embOS Desktop Prebuilt Library Build
+# embOS Simulation - SEGGER embOS Desktop Static Library Build
 # ==============================================================================
 #
 # Build:
@@ -8,9 +8,9 @@
 #   ./build.sh --x86 --debug
 #
 # Target width selection:
-#   -DEMBOS_SIM_ARCH=native   Use the compiler default target width
-#   -DEMBOS_SIM_ARCH=x86      Build the 32-bit simulation profile
 #   -DEMBOS_SIM_ARCH=x86_64   Build the 64-bit simulation profile
+#   -DEMBOS_SIM_ARCH=x86      Build the 32-bit simulation profile
+#   -DEMBOS_SIM_ARCH=native   Use the compiler default target width
 #
 # Application selection:
 #   -DEMBOS_SIM_APPLICATION_SOURCE=Application/OS_StartLEDBlink.c
@@ -30,7 +30,7 @@ endif()
 
 project(embOSSimulationStart
     VERSION     1.0.0
-    DESCRIPTION "SEGGER embOS desktop simulation prebuilt library build"
+    DESCRIPTION "SEGGER embOS desktop simulation static library build"
     LANGUAGES   C
 )
 
@@ -40,7 +40,7 @@ project(embOSSimulationStart
 
 set(EMBOS_SIM_DEFAULT_APPLICATION_SOURCE "Application/OS_StartLEDBlink.c")
 
-set(EMBOS_SIM_ARCH "native" CACHE STRING "Simulation target width")
+set(EMBOS_SIM_ARCH "x86_64" CACHE STRING "Simulation target width")
 set_property(CACHE EMBOS_SIM_ARCH PROPERTY STRINGS
     "native" "x86" "x86_64"
 )
@@ -225,18 +225,16 @@ if(APPLE AND EMBOS_SIM_TARGET_BITS EQUAL 32)
     message(FATAL_ERROR "macOS embOS simulation supports 64-bit builds only")
 endif()
 
-if(NOT EMBOS_SIM_IS_64_BIT)
-    set(RTT_BUILD_LIBRARY        ON  CACHE BOOL "Build RTT library for embOS simulation" FORCE)
-    set(RTT_BUILD_TESTS          OFF CACHE BOOL "Do not build RTT tests from embOS simulation" FORCE)
-    set(RTT_BUILD_EXAMPLES       OFF CACHE BOOL "Do not build RTT examples from embOS simulation" FORCE)
-    set(RTT_CONFIG_DIR           "${EMBOS_SIM_SEGGER_DIR}" CACHE PATH "embOS simulation RTT configuration directory" FORCE)
-    set(SYSTEMVIEW_BUILD_LIBRARY ON  CACHE BOOL "Build SystemView library for embOS simulation" FORCE)
-    set(SYSTEMVIEW_BUILD_TESTS   OFF CACHE BOOL "Do not build SystemView tests from embOS simulation" FORCE)
-    set(SYSTEMVIEW_CONFIG_DIR    "${EMBOS_SIM_SEGGER_DIR}" CACHE PATH "embOS simulation SystemView configuration directory" FORCE)
+set(RTT_BUILD_LIBRARY        ON  CACHE BOOL "Build RTT library for embOS simulation" FORCE)
+set(RTT_BUILD_TESTS          OFF CACHE BOOL "Do not build RTT tests from embOS simulation" FORCE)
+set(RTT_BUILD_EXAMPLES       OFF CACHE BOOL "Do not build RTT examples from embOS simulation" FORCE)
+set(RTT_CONFIG_DIR           "${EMBOS_SIM_SEGGER_DIR}" CACHE PATH "embOS simulation RTT configuration directory" FORCE)
+set(SYSTEMVIEW_BUILD_LIBRARY ON  CACHE BOOL "Build SystemView library for embOS simulation" FORCE)
+set(SYSTEMVIEW_BUILD_TESTS   OFF CACHE BOOL "Do not build SystemView tests from embOS simulation" FORCE)
+set(SYSTEMVIEW_CONFIG_DIR    "${EMBOS_SIM_SEGGER_DIR}" CACHE PATH "embOS simulation SystemView configuration directory" FORCE)
 
-    add_subdirectory("${EMBOS_RTT_ROOT}" "${CMAKE_CURRENT_BINARY_DIR}/RTT")
-    add_subdirectory("${EMBOS_SYSVIEW_ROOT}" "${CMAKE_CURRENT_BINARY_DIR}/SystemView")
-endif()
+add_subdirectory("${EMBOS_RTT_ROOT}" "${CMAKE_CURRENT_BINARY_DIR}/RTT")
+add_subdirectory("${EMBOS_SYSVIEW_ROOT}" "${CMAKE_CURRENT_BINARY_DIR}/SystemView")
 
 if(MSVC AND NOT EMBOS_SIM_ARCH STREQUAL "native")
     if((EMBOS_SIM_TARGET_BITS EQUAL 64 AND NOT CMAKE_SIZEOF_VOID_P EQUAL 8)
@@ -257,14 +255,6 @@ if(NOT EMBOS_SIM_ARCH STREQUAL "native" AND NOT APPLE)
 endif()
 
 set(EMBOS_SIM_APPLE_ARCH_FLAGS)
-if(APPLE)
-    if(EMBOS_SIM_TARGET_BITS EQUAL 64)
-        list(APPEND EMBOS_SIM_APPLE_ARCH_FLAGS
-            -arch
-            x86_64
-        )
-    endif()
-endif()
 
 set(EMBOS_SIM_LIBRARY_MODES "xr" "r" "s" "sp" "d" "dp" "dt")
 if(EMBOS_SIM_LIBRARY_MODE STREQUAL "")
@@ -644,21 +634,19 @@ elseif(EMBOS_SIM_HOST_POSIX)
     )
 endif()
 
-if(NOT EMBOS_SIM_IS_64_BIT)
+list(APPEND EMBOS_SIM_SEGGER_SOURCES
+    "${EMBOS_SIM_SYSVIEW_EMBOS_SOURCE}"
+)
+if(EMBOS_SIM_HOST_WINDOWS)
     list(APPEND EMBOS_SIM_SEGGER_SOURCES
-        "${EMBOS_SIM_SYSVIEW_EMBOS_SOURCE}"
+        "${EMBOS_SIM_RTT_MEMORY_WIN32_SOURCE}"
+        "${EMBOS_SIM_SYSVIEW_WIN32_CONFIG_SOURCE}"
     )
-    if(EMBOS_SIM_HOST_WINDOWS)
-        list(APPEND EMBOS_SIM_SEGGER_SOURCES
-            "${EMBOS_SIM_RTT_MEMORY_WIN32_SOURCE}"
-            "${EMBOS_SIM_SYSVIEW_WIN32_CONFIG_SOURCE}"
-        )
-    elseif(EMBOS_SIM_HOST_POSIX)
-        list(APPEND EMBOS_SIM_SEGGER_SOURCES
-            "${EMBOS_SIM_RTT_MEMORY_POSIX_SOURCE}"
-            "${EMBOS_SIM_SYSVIEW_POSIX_CONFIG_SOURCE}"
-        )
-    endif()
+elseif(EMBOS_SIM_HOST_POSIX)
+    list(APPEND EMBOS_SIM_SEGGER_SOURCES
+        "${EMBOS_SIM_RTT_MEMORY_POSIX_SOURCE}"
+        "${EMBOS_SIM_SYSVIEW_POSIX_CONFIG_SOURCE}"
+    )
 endif()
 
 set(EMBOS_SIM_TARGET_SOURCES
@@ -788,10 +776,8 @@ target_include_directories(Start PRIVATE
 target_link_libraries(Start PRIVATE
     embos_kernel
     embos_sim_start_options
+    SEGGER_SYSVIEW
 )
-if(NOT EMBOS_SIM_IS_64_BIT)
-    target_link_libraries(Start PRIVATE SEGGER_SYSVIEW)
-endif()
 
 if(EMBOS_SIM_ALLOCATOR_INTERPOSITION_LINK_OPTIONS)
     target_link_options(Start PRIVATE
@@ -892,18 +878,14 @@ list(LENGTH EMBOS_SIM_POSIX_SOURCES EMBOS_SIM_POSIX_SOURCE_COUNT)
 list(LENGTH EMBOS_SIM_SEGGER_SOURCES EMBOS_SIM_SEGGER_SOURCE_COUNT)
 
 message(STATUS "Sources:")
-message(STATUS "  Kernel:       prebuilt static library")
+message(STATUS "  Kernel:       stripped static library")
 message(STATUS "  Setup:        ${EMBOS_SIM_SETUP_SOURCE_COUNT} files")
 if(EMBOS_SIM_HOST_WINDOWS)
     message(STATUS "  Windows:      ${EMBOS_SIM_WINDOWS_SOURCE_COUNT} files")
 elseif(EMBOS_SIM_HOST_POSIX)
     message(STATUS "  ${EMBOS_SIM_POSIX_SOURCE_LABEL}:        ${EMBOS_SIM_POSIX_SOURCE_COUNT} files")
 endif()
-if(EMBOS_SIM_SEGGER_SOURCES)
-    message(STATUS "  SEGGER:       ${EMBOS_SIM_SEGGER_SOURCE_COUNT} files")
-else()
-    message(STATUS "  SEGGER:       disabled for 64-bit simulation")
-endif()
+message(STATUS "  SEGGER:       ${EMBOS_SIM_SEGGER_SOURCE_COUNT} files")
 message(STATUS "")
 message(STATUS "Output:")
 message(STATUS "  Debug:        ${EMBOS_SIM_DEBUG_OUTPUT_DIR}")

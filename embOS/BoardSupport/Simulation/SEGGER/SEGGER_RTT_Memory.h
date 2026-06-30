@@ -27,6 +27,8 @@ Purpose : MEMSHM RTT memory ownership for embOS simulation.
 #include <stddef.h>
 #include <stdint.h>
 
+#include "SEGGER.h"
+
 #ifdef __cplusplus
   extern "C" {
 #endif
@@ -56,10 +58,10 @@ int       SEGGER_SIM_RTT_EnsureMemory                   (void);
 void      SEGGER_SIM_RTT_CleanupMemory                  (void);
 void      SEGGER_SIM_RTT_Lock                           (void);
 void      SEGGER_SIM_RTT_Unlock                         (void);
-uintptr_t SEGGER_SIM_RTT_GetMemoryAddress               (void);
+PTR_ADDR  SEGGER_SIM_RTT_GetMemoryAddress               (void);
 size_t    SEGGER_SIM_RTT_GetMemorySize                  (void);
-uintptr_t SEGGER_SIM_RTT_GetSystemViewUpBufferAddress   (void);
-uintptr_t SEGGER_SIM_RTT_GetSystemViewDownBufferAddress (void);
+PTR_ADDR  SEGGER_SIM_RTT_GetSystemViewUpBufferAddress   (void);
+PTR_ADDR  SEGGER_SIM_RTT_GetSystemViewDownBufferAddress (void);
 
 #ifdef __cplusplus
   }

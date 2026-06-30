@@ -941,6 +941,10 @@ file for embOS.
   #define OS_STACK_ADR  OS_U32
 #endif
 
+#ifndef   OS_TRACE_ID_TYPE
+  #define OS_TRACE_ID_TYPE OS_STACK_ADR
+#endif
+
 //
 // The width of OS_TASKEVENT (task events) and OS_TASK_PRIO (task priority) can be modified as user configurable compile time switches.
 // Per default the width is 32 bit with 32-bit CPUs (sizeof(int) >= 4) and 8 bit on 8/16-bit CPUs (sizeof(int) == 2)
@@ -1510,31 +1514,33 @@ typedef enum {
   #define TRACE_RECORD_API_U32X2(Id, Para0, Para1)                           if (OS_Global.pTraceAPI != NULL) { OS_Global.pTraceAPI->pfRecordU32x2((Id) + OS_TRACE_API_OFFSET, (OS_U32)(Para0), (OS_U32)(Para1));}                                                                                                      if ((Id) <= 255u) { OS_TRACE_Data  ((OS_U8)(Id), (int)(Para0));             }
   #define TRACE_RECORD_API_U32X3(Id, Para0, Para1, Para2)                    if (OS_Global.pTraceAPI != NULL) { OS_Global.pTraceAPI->pfRecordU32x3((Id) + OS_TRACE_API_OFFSET, (OS_U32)(Para0), (OS_U32)(Para1), (OS_U32)(Para2));}                                                                                     if ((Id) <= 255u) { OS_TRACE_Data  ((OS_U8)(Id), (int)(Para0));             }
   #define TRACE_RECORD_API_U32X4(Id, Para0, Para1, Para2, Para3)             if (OS_Global.pTraceAPI != NULL) { OS_Global.pTraceAPI->pfRecordU32x4((Id) + OS_TRACE_API_OFFSET, (OS_U32)(Para0), (OS_U32)(Para1), (OS_U32)(Para2), (OS_U32)(Para3));}                                                                    if ((Id) <= 255u) { OS_TRACE_Data  ((OS_U8)(Id), (int)(Para0));             }
-  #define TRACE_RECORD_API_PTR(Id, Para0)                                    if (OS_Global.pTraceAPI != NULL) { OS_Global.pTraceAPI->pfRecordU32  ((Id) + OS_TRACE_API_OFFSET, OS_Global.pTraceAPI->pfPtrToId((OS_U32)(OS_PTR_TO_VALUE(Para0))));}                                                                      if ((Id) <= 255u) { OS_TRACE_Ptr   ((OS_U8)(Id), (Para0));                  }
-  #define TRACE_RECORD_API_PTR_U32(Id, Para0, Para1)                         if (OS_Global.pTraceAPI != NULL) { OS_Global.pTraceAPI->pfRecordU32x2((Id) + OS_TRACE_API_OFFSET, OS_Global.pTraceAPI->pfPtrToId((OS_U32)(OS_PTR_TO_VALUE(Para0))), (OS_U32)(Para1));}                                                     if ((Id) <= 255u) { OS_TRACE_PtrU32((OS_U8)(Id), (Para0), (OS_U32)(Para1)); }
-  #define TRACE_RECORD_API_PTR_U32X2(Id, Para0, Para1, Para2)                if (OS_Global.pTraceAPI != NULL) { OS_Global.pTraceAPI->pfRecordU32x3((Id) + OS_TRACE_API_OFFSET, OS_Global.pTraceAPI->pfPtrToId((OS_U32)(OS_PTR_TO_VALUE(Para0))), (OS_U32)(Para1), (OS_U32)(Para2));}                                    if ((Id) <= 255u) { OS_TRACE_PtrU32((OS_U8)(Id), (Para0), (OS_U32)(Para1)); }
-  #define TRACE_RECORD_API_PTR_U32X3(Id, Para0, Para1, Para2, Para3)         if (OS_Global.pTraceAPI != NULL) { OS_Global.pTraceAPI->pfRecordU32x4((Id) + OS_TRACE_API_OFFSET, OS_Global.pTraceAPI->pfPtrToId((OS_U32)(OS_PTR_TO_VALUE(Para0))), (OS_U32)(Para1), (OS_U32)(Para2), (OS_U32)(Para3)); }                  if ((Id) <= 255u) { OS_TRACE_PtrU32((OS_U8)(Id), (Para0), (OS_U32)(Para1)); }
-  #define TRACE_RECORD_API_PTR_U32X4(Id, Para0, Para1, Para2, Para3, Para4)  if (OS_Global.pTraceAPI != NULL) { OS_Global.pTraceAPI->pfRecordU32x5((Id) + OS_TRACE_API_OFFSET, OS_Global.pTraceAPI->pfPtrToId((OS_U32)(OS_PTR_TO_VALUE(Para0))), (OS_U32)(Para1), (OS_U32)(Para2), (OS_U32)(Para3), (OS_U32)(Para4)); } if ((Id) <= 255u) { OS_TRACE_PtrU32((OS_U8)(Id), (Para0), (OS_U32)(Para1)); }
+  #define TRACE_RECORD_API_PTR(Id, Para0)                                    if (OS_Global.pTraceAPI != NULL) { OS_Global.pTraceAPI->pfRecordId     ((Id) + OS_TRACE_API_OFFSET, OS_Global.pTraceAPI->pfPtrToId((OS_TRACE_ID_TYPE)(OS_PTR_TO_VALUE(Para0))));}                                                                 if ((Id) <= 255u) { OS_TRACE_Ptr   ((OS_U8)(Id), (Para0));                  }
+  #define TRACE_RECORD_API_PTR_U32(Id, Para0, Para1)                         if (OS_Global.pTraceAPI != NULL) { OS_Global.pTraceAPI->pfRecordIdxU32 ((Id) + OS_TRACE_API_OFFSET, OS_Global.pTraceAPI->pfPtrToId((OS_TRACE_ID_TYPE)(OS_PTR_TO_VALUE(Para0))), (OS_U32)(Para1));}                                            if ((Id) <= 255u) { OS_TRACE_PtrU32((OS_U8)(Id), (Para0), (OS_U32)(Para1)); }
+  #define TRACE_RECORD_API_PTR_U32X2(Id, Para0, Para1, Para2)                if (OS_Global.pTraceAPI != NULL) { OS_Global.pTraceAPI->pfRecordIdxU32x2((Id) + OS_TRACE_API_OFFSET, OS_Global.pTraceAPI->pfPtrToId((OS_TRACE_ID_TYPE)(OS_PTR_TO_VALUE(Para0))), (OS_U32)(Para1), (OS_U32)(Para2));}                           if ((Id) <= 255u) { OS_TRACE_PtrU32((OS_U8)(Id), (Para0), (OS_U32)(Para1)); }
+  #define TRACE_RECORD_API_PTR_U32X3(Id, Para0, Para1, Para2, Para3)         if (OS_Global.pTraceAPI != NULL) { OS_Global.pTraceAPI->pfRecordIdxU32x3((Id) + OS_TRACE_API_OFFSET, OS_Global.pTraceAPI->pfPtrToId((OS_TRACE_ID_TYPE)(OS_PTR_TO_VALUE(Para0))), (OS_U32)(Para1), (OS_U32)(Para2), (OS_U32)(Para3)); }        if ((Id) <= 255u) { OS_TRACE_PtrU32((OS_U8)(Id), (Para0), (OS_U32)(Para1)); }
+  #define TRACE_RECORD_API_PTR_U32X4(Id, Para0, Para1, Para2, Para3, Para4)  if (OS_Global.pTraceAPI != NULL) { OS_Global.pTraceAPI->pfRecordIdxU32x4((Id) + OS_TRACE_API_OFFSET, OS_Global.pTraceAPI->pfPtrToId((OS_TRACE_ID_TYPE)(OS_PTR_TO_VALUE(Para0))), (OS_U32)(Para1), (OS_U32)(Para2), (OS_U32)(Para3), (OS_U32)(Para4)); } if ((Id) <= 255u) { OS_TRACE_PtrU32((OS_U8)(Id), (Para0), (OS_U32)(Para1)); }
   #define TRACE_ON_ISR_ENTER()                                               if (OS_Global.pTraceAPI != NULL) { OS_Global.pTraceAPI->pfRecordEnterISR(); }
   #define TRACE_ON_ISR_EXIT()                                                if (OS_Global.pTraceAPI != NULL) { OS_Global.pTraceAPI->pfRecordExitISR(); }
   #define TRACE_ON_ISR_EXIT_TO_SCHEDULER()                                   if (OS_Global.pTraceAPI != NULL) { OS_Global.pTraceAPI->pfRecordExitISRToScheduler(); }
-  #define TRACE_ON_TASK_START_EXEC(TaskId)                                   if (OS_Global.pTraceAPI != NULL) { OS_Global.pTraceAPI->pfRecordTaskStartExec((OS_U32)OS_PTR_TO_VALUE((TaskId))); }; OS_TRACE_Void(OS_TRACE_ID_ACTIVATE)
+  #define TRACE_ON_TASK_START_EXEC(TaskId)                                   if (OS_Global.pTraceAPI != NULL) { OS_Global.pTraceAPI->pfRecordTaskStartExec((OS_TRACE_ID_TYPE)OS_PTR_TO_VALUE((TaskId))); }; OS_TRACE_Void(OS_TRACE_ID_ACTIVATE)
   #define TRACE_ON_TASK_STOP_EXEC()                                          if (OS_Global.pTraceAPI != NULL) { OS_Global.pTraceAPI->pfRecordTaskStopExec(); }
-  #define TRACE_ON_TASK_START_READY(TaskId)                                  if (OS_Global.pTraceAPI != NULL) { OS_Global.pTraceAPI->pfRecordTaskStartReady((OS_U32)OS_PTR_TO_VALUE((TaskId))); }
-  #define TRACE_ON_TASK_STOP_READY(TaskId, Para0)                            if (OS_Global.pTraceAPI != NULL) { OS_Global.pTraceAPI->pfRecordTaskStopReady((OS_U32)(OS_PTR_TO_VALUE(TaskId)), (unsigned int)(Para0)); }
-  #define TRACE_ON_TASK_CREATE(TaskId)                                       if (OS_Global.pTraceAPI != NULL) { OS_Global.pTraceAPI->pfRecordTaskCreate((OS_U32)(OS_PTR_TO_VALUE(TaskId))); }
+  #define TRACE_ON_TASK_START_READY(TaskId)                                  if (OS_Global.pTraceAPI != NULL) { OS_Global.pTraceAPI->pfRecordTaskStartReady((OS_TRACE_ID_TYPE)OS_PTR_TO_VALUE((TaskId))); }
+  #define TRACE_ON_TASK_STOP_READY(TaskId, Para0)                            if (OS_Global.pTraceAPI != NULL) { OS_Global.pTraceAPI->pfRecordTaskStopReady((OS_TRACE_ID_TYPE)(OS_PTR_TO_VALUE(TaskId)), (unsigned int)(Para0)); }
+  #define TRACE_ON_TASK_CREATE(TaskId)                                       if (OS_Global.pTraceAPI != NULL) { OS_Global.pTraceAPI->pfRecordTaskCreate((OS_TRACE_ID_TYPE)(OS_PTR_TO_VALUE(TaskId))); }
   #define TRACE_ON_IDLE()                                                    if (OS_Global.pTraceAPI != NULL) { OS_Global.pTraceAPI->pfRecordIdle(); }
-  #define TRACE_ON_TIMER_ENTER(TimerId)                                      if (OS_Global.pTraceAPI != NULL) { OS_Global.pTraceAPI->pfRecordEnterTimer((OS_U32)(OS_PTR_TO_VALUE(TimerId))); }; OS_TRACE_Ptr(OS_TRACE_ID_TIMERCALLBACK, TimerId)
+  #define TRACE_ON_TIMER_ENTER(TimerId)                                      if (OS_Global.pTraceAPI != NULL) { OS_Global.pTraceAPI->pfRecordEnterTimer((OS_TRACE_ID_TYPE)(OS_PTR_TO_VALUE(TimerId))); }; OS_TRACE_Ptr(OS_TRACE_ID_TIMERCALLBACK, TimerId)
   #define TRACE_ON_TIMER_EXIT()                                              if (OS_Global.pTraceAPI != NULL) { OS_Global.pTraceAPI->pfRecordExitTimer(); }
 #if (OS_SUPPORT_TRACE_API_END != 0)
   #define TRACE_RECORD_API_END(Id)                                           if (OS_Global.pTraceAPI != NULL) { OS_Global.pTraceAPI->pfRecordEndCall((Id) + OS_TRACE_API_OFFSET); }
   #define TRACE_RECORD_API_END_U32(Id, Para0)                                if (OS_Global.pTraceAPI != NULL) { OS_Global.pTraceAPI->pfRecordEndCallU32((Id) + OS_TRACE_API_OFFSET, (OS_U32)(Para0)); }
+  #define TRACE_RECORD_API_END_ID(Id, Para0)                                 if (OS_Global.pTraceAPI != NULL) { OS_Global.pTraceAPI->pfRecordEndCallId((Id) + OS_TRACE_API_OFFSET, (OS_TRACE_ID_TYPE)(Para0)); }
 #else
   #define TRACE_RECORD_API_END(Id)
   #define TRACE_RECORD_API_END_U32(Id, Para0)
+  #define TRACE_RECORD_API_END_ID(Id, Para0)
 #endif
-  #define TRACE_ON_TASK_TERMINATED(TaskId)                                   if (OS_Global.pTraceAPI != NULL) {OS_Global.pTraceAPI->pfRecordTaskTerminate((OS_U32)(TaskId)); }
-  #define TRACE_RECORD_OBJNAME(Id, Para0)                                    if (OS_Global.pTraceAPI != NULL) {OS_Global.pTraceAPI->pfRecordObjName((OS_U32)(Id), (Para0)); }
+  #define TRACE_ON_TASK_TERMINATED(TaskId)                                   if (OS_Global.pTraceAPI != NULL) {OS_Global.pTraceAPI->pfRecordTaskTerminate((OS_TRACE_ID_TYPE)(TaskId)); }
+  #define TRACE_RECORD_OBJNAME(Id, Para0)                                    if (OS_Global.pTraceAPI != NULL) {OS_Global.pTraceAPI->pfRecordObjName((OS_TRACE_ID_TYPE)(Id), (Para0)); }
 #else  // OS_SUPPORT_TRACE_API
   #define TRACE_RECORD_TASK_INFO(pTask)
   #define TRACE_RECORD_API_VOID(Id)                                          if ((Id) <= 255u) { OS_TRACE_Void((OS_U8)(Id));                             }
@@ -1560,6 +1566,7 @@ typedef enum {
   #define TRACE_ON_TIMER_EXIT()
   #define TRACE_RECORD_API_END(Id)
   #define TRACE_RECORD_API_END_U32(Id, Para0)
+  #define TRACE_RECORD_API_END_ID(Id, Para0)
   #define TRACE_ON_TASK_TERMINATED(TaskId)
   #define TRACE_RECORD_OBJNAME(Id, Para0)
 #endif  // OS_SUPPORT_TRACE_API
@@ -2234,11 +2241,11 @@ typedef struct {
   void  (*pfRecordExitISR)           (void);
   void  (*pfRecordExitISRToScheduler)(void);
   void  (*pfRecordTaskInfo)          (const OS_TASK* pTask);
-  void  (*pfRecordTaskCreate)        (OS_U32 TaskId);
-  void  (*pfRecordTaskStartExec)     (OS_U32 TaskId);
+  void  (*pfRecordTaskCreate)        (OS_TRACE_ID_TYPE TaskId);
+  void  (*pfRecordTaskStartExec)     (OS_TRACE_ID_TYPE TaskId);
   void  (*pfRecordTaskStopExec)      (void);
-  void  (*pfRecordTaskStartReady)    (OS_U32 TaskId);
-  void  (*pfRecordTaskStopReady)     (OS_U32 TaskId, unsigned int Reason);
+  void  (*pfRecordTaskStartReady)    (OS_TRACE_ID_TYPE TaskId);
+  void  (*pfRecordTaskStopReady)     (OS_TRACE_ID_TYPE TaskId, unsigned int Reason);
   void  (*pfRecordIdle)              (void);
   //
   // Generic Trace Event logging (used by OS API)
@@ -2248,17 +2255,23 @@ typedef struct {
   void  (*pfRecordU32x2)             (unsigned int Id, OS_U32 Para0, OS_U32 Para1);
   void  (*pfRecordU32x3)             (unsigned int Id, OS_U32 Para0, OS_U32 Para1, OS_U32 Para2);
   void  (*pfRecordU32x4)             (unsigned int Id, OS_U32 Para0, OS_U32 Para1, OS_U32 Para2, OS_U32 Para3);
-  OS_U32(*pfPtrToId)                 (OS_U32 Ptr);
+  void  (*pfRecordId)                (unsigned int Id, OS_TRACE_ID_TYPE Para0);
+  void  (*pfRecordIdxU32)            (unsigned int Id, OS_TRACE_ID_TYPE Para0, OS_U32 Para1);
+  void  (*pfRecordIdxU32x2)          (unsigned int Id, OS_TRACE_ID_TYPE Para0, OS_U32 Para1, OS_U32 Para2);
+  void  (*pfRecordIdxU32x3)          (unsigned int Id, OS_TRACE_ID_TYPE Para0, OS_U32 Para1, OS_U32 Para2, OS_U32 Para3);
+  void  (*pfRecordIdxU32x4)          (unsigned int Id, OS_TRACE_ID_TYPE Para0, OS_U32 Para1, OS_U32 Para2, OS_U32 Para3, OS_U32 Para4);
+  OS_TRACE_ID_TYPE(*pfPtrToId)       (OS_TRACE_ID_TYPE Ptr);
   //
   // Additional Trace Event logging
   //
-  void  (*pfRecordEnterTimer)        (OS_U32 TimerID);
+  void  (*pfRecordEnterTimer)        (OS_TRACE_ID_TYPE TimerID);
   void  (*pfRecordExitTimer)         (void);
   void  (*pfRecordEndCall)           (unsigned int Id);
   void  (*pfRecordEndCallU32)        (unsigned int Id, OS_U32 Para0);
-  void  (*pfRecordTaskTerminate)     (OS_U32 TaskId);
+  void  (*pfRecordEndCallId)         (unsigned int Id, OS_TRACE_ID_TYPE Para0);
+  void  (*pfRecordTaskTerminate)     (OS_TRACE_ID_TYPE TaskId);
   void  (*pfRecordU32x5)             (unsigned int Id, OS_U32 Para0, OS_U32 Para1, OS_U32 Para2, OS_U32 Para3, OS_U32 Para4);
-  void  (*pfRecordObjName)           (OS_U32 Id, OS_CONST_PTR char* Para0);
+  void  (*pfRecordObjName)           (OS_TRACE_ID_TYPE Id, OS_CONST_PTR char* Para0);
 } OS_TRACE_API;
 
 /*********************************************************************
@@ -2534,26 +2547,26 @@ void                    OS_TASK_SetContextExtension       (OS_CONST_PTR OS_EXTEN
 void                    OS_TASK_SetDefaultContextExtension(OS_CONST_PTR OS_EXTEND_TASK_CONTEXT* pExtendContext)                                                                                                                                  OS_TEXT_SECTION_ATTRIBUTE(OS_TASK_SetDefaultContextExtension);
 #endif
 
-  #define OS_TASK_CREATE(pTask, sName, Priority, pfRoutine, pStack)             \
-    OS_TASK_Create ((pTask),                                                    \
-                    (sName),                                                    \
-                    (OS_TASK_PRIO)(Priority),                                   \
-                    (pfRoutine),                                                \
-                    (void OS_STACKPTR*)(pStack),                                \
-                    sizeof(pStack),                                             \
-                    2u                                                          \
-                   )
+#define OS_TASK_CREATE(pTask, sName, Priority, pfRoutine, pStack)             \
+  OS_TASK_Create ((pTask),                                                    \
+                  (sName),                                                    \
+                  (OS_TASK_PRIO)(Priority),                                   \
+                  (pfRoutine),                                                \
+                  (void OS_STACKPTR*)(pStack),                                \
+                  sizeof(pStack),                                             \
+                  2u                                                          \
+                 )
 
-  #define OS_TASK_CREATEEX(pTask, sName, Priority, pfRoutine, pStack, pContext) \
-    OS_TASK_CreateEx ((pTask),                                                  \
-                      (sName),                                                  \
-                      (OS_TASK_PRIO)(Priority),                                 \
-                      (pfRoutine),                                              \
-                      (void OS_STACKPTR*)(pStack),                              \
-                      sizeof(pStack),                                           \
-                      2u,                                                       \
-                      (pContext)                                                \
-                     )
+#define OS_TASK_CREATEEX(pTask, sName, Priority, pfRoutine, pStack, pContext) \
+  OS_TASK_CreateEx ((pTask),                                                  \
+                    (sName),                                                  \
+                    (OS_TASK_PRIO)(Priority),                                 \
+                    (pfRoutine),                                              \
+                    (void OS_STACKPTR*)(pStack),                              \
+                    sizeof(pStack),                                           \
+                    2u,                                                       \
+                    (pContext)                                                \
+                   )
 
 /*********************************************************************
 *

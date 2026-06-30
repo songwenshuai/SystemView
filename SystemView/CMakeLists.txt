@@ -34,6 +34,8 @@ set(SYSTEMVIEW_CONFIG_DIR      "${CMAKE_CURRENT_SOURCE_DIR}/Config" CACHE PATH
     "Directory containing SEGGER_SYSVIEW_Conf.h for the reusable SystemView library target.")
 set(SYSTEMVIEW_RTT_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../RTT/RTT" CACHE PATH
     "RTT include directory used when the SEGGER_RTT target is not available.")
+set(SYSTEMVIEW_RTT_SEGGER_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../RTT/SEGGER" CACHE PATH
+    "RTT SEGGER include directory used when the SEGGER_RTT target is not available.")
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
@@ -71,6 +73,7 @@ if(SYSTEMVIEW_BUILD_LIBRARY AND NOT TARGET SEGGER_SYSVIEW)
     target_include_directories(SEGGER_SYSVIEW
       PUBLIC
         "${SYSTEMVIEW_RTT_INCLUDE_DIR}"
+        "${SYSTEMVIEW_RTT_SEGGER_INCLUDE_DIR}"
     )
   endif()
 
@@ -117,6 +120,7 @@ if(SYSTEMVIEW_BUILD_TESTS)
       SEGGER
       SYSVIEW
       ../RTT/RTT
+      ../RTT/SEGGER
   )
 
   target_compile_features(SEGGER_SYSVIEW_PublicAPI_Test PRIVATE c_std_99)

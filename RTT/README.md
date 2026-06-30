@@ -5,7 +5,7 @@
 This repository carries a shared-memory RTT fork for heterogeneous systems.
 It is intentionally not binary-compatible with standard SEGGER RTT / J-Link RTT readers:
 
-- Public RTT APIs take an explicit `uintptr_t Address` control-block base.
+- Public RTT APIs take an explicit `PTR_ADDR Address` control-block base.
 - The RTT module does not allocate the default global `_SEGGER_RTT` control block.
 - Descriptor `sName` and `pBuffer` fields contain fixed 64-bit offsets relative to the RTT control-block base, not absolute target pointers.
 - Callers must provide an 8-byte aligned shared-memory region of at least `SEGGER_RTT__REQUIRED_MEM_SIZE` bytes before calling `SEGGER_RTT_Init(Address)` or `SEGGER_RTT_InitEx(Address, Size)`.
@@ -37,11 +37,7 @@ development tools.
 
 ### General Usage and Configuration
 
-To include RTT into a project, add `RTT/SEGGER_RTT.c` to the project sources and `RTT` as include directory.
-
-`RTT/SEGGER_RTT_ASM_ARMv7M.S` is optional and can be added as additional source file for an assembly-optimized
-implementation of RTT functions.
-This file is compatible with ARMv7M and ARMv8M processors and most toolchains.
+To include RTT into a project, add `RTT/SEGGER_RTT.c` to the project sources and `RTT` and `SEGGER` as include directories.
 
 RTT can be configured through `SEGGER_RTT_Conf.h`.
 In most cases the default configuration is sufficient and `SEGGER_RTT_Conf.h` can be left untouched.

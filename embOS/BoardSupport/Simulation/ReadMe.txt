@@ -47,7 +47,10 @@ SEGGER support layout:
 ======================
 The Simulation CMake project consumes the shared address-based RTT and
 SystemView implementations through ../../../RTT and ../../../SystemView CMake
-targets. It does not compile private SEGGER source copies from the embOS tree.
+targets. It links embOS from stripped static libraries in ../../Lib and does
+not compile embOS/Src into the simulation executable. The embOS static library
+rebuild strips debug symbols and removable local symbols while preserving the
+global symbols and relocation-required local labels needed for linking.
 
 Simulation-specific SEGGER configuration headers, the MEMSHM RTT memory owner
 API, the Win32/POSIX MEMSHM owner implementations, the generic embOS SystemView
@@ -55,12 +58,14 @@ configuration source, platform configuration sources and the embOS SystemView
 interface are stored in the local SEGGER directory so this board support package
 owns its target configuration.
 
-The 32-bit simulation target maps host shared memory object /rtt_sim and uses
-the local SEGGER_RTT_Conf.h and SEGGER_SYSVIEW_Conf.h for both shared targets.
+The simulation target maps host shared memory object /rtt_sim and uses the
+local SEGGER_RTT_Conf.h and SEGGER_SYSVIEW_Conf.h for both shared targets.
 The host-specific SystemView configuration source for the selected platform is
 linked by the Start target, so SEGGER_SYSVIEW_Config_embOS.c remains a local
 board-support configuration file and is not linked beside the Win32 or POSIX
 configuration source.
+The default build.sh and CMake configuration select the 64-bit simulation
+profile. SystemView is always built and linked for simulation.
 
 Simulation RTT does not start a TCP/IP forwarding thread. The simulation process
 owns and updates the /rtt_sim MEMSHM object, while TraceHub attaches to the same

@@ -84,7 +84,7 @@ static void _cbSendTaskInfo(const OS_TASK* pTask) {
 
   OS_EnterRegion();                // No scheduling to make sure the task list does not change while we are transmitting it
   memset(&Info, 0, sizeof(Info));  // Fill all elements with 0 to allow extending the structure in future version without breaking the code
-  Info.TaskID = (U32)pTask;
+  Info.TaskID = SEGGER_PTR2ADDR(pTask);
 #if (OS_TRACKNAME != 0)
 #if (OS_VERSION >= 51600)
   Info.sName = pTask->sName;
@@ -97,7 +97,7 @@ static void _cbSendTaskInfo(const OS_TASK* pTask) {
   }
   Info.Prio = pTask->Priority;
 #if (OS_CHECKSTACK != 0)
-  Info.StackBase = (U32)pTask->pStackBase;
+  Info.StackBase = SEGGER_PTR2ADDR(pTask->pStackBase);
   Info.StackSize = pTask->StackSize;
 #endif
   SEGGER_SYSVIEW_SendTaskInfo(&Info);
@@ -128,7 +128,7 @@ static void _cbSendTaskList(void) {
 #else
     for (p = OS_pObjNameRoot; p != NULL; p = p->pNext) {
 #endif
-      SEGGER_SYSVIEW_NameResource((OS_U32)p->pOSObjID, p->sName);
+      SEGGER_SYSVIEW_NameResource(SEGGER_PTR2ADDR(p->pOSObjID), p->sName);
     }
   }
 #endif
@@ -140,75 +140,45 @@ static void _cbSendTaskList(void) {
 *       _cbOnTaskCreate()
 *
 *  Function description
-*    For embOS prior to V4.32 the cast to OS_U32 is necessary
+*    Binds the embOS task-create trace callback.
 */
-#if (OS_VERSION < 43200)  // Work around different embOS Trace API function types prior to V4.32
-static void _cbOnTaskCreate(unsigned int TaskId) {
-  SEGGER_SYSVIEW_OnTaskCreate((OS_U32)TaskId);
-}
-#else
 #define _cbOnTaskCreate   SEGGER_SYSVIEW_OnTaskCreate
-#endif
 
 /*********************************************************************
 *
 *       _cbOnTaskStartExec()
 *
 *  Function description
-*    For embOS prior to V4.32 the cast to OS_U32 is necessary
+*    Binds the embOS task-start-exec trace callback.
 */
-#if (OS_VERSION < 43200)  // Work around different embOS Trace API function types prior to V4.32
-static void _cbOnTaskStartExec(unsigned int TaskId) {
-  SEGGER_SYSVIEW_OnTaskStartExec((OS_U32)TaskId);
-}
-#else
 #define _cbOnTaskStartExec  SEGGER_SYSVIEW_OnTaskStartExec
-#endif
 
 /*********************************************************************
 *
 *       _cbOnTaskStartReady()
 *
 *  Function description
-*    For embOS prior to V4.32 the cast to OS_U32 is necessary
+*    Binds the embOS task-start-ready trace callback.
 */
-#if (OS_VERSION < 43200)  // Work around different embOS Trace API function types prior to V4.32
-static void _cbOnTaskStartReady(unsigned int TaskId) {
-  SEGGER_SYSVIEW_OnTaskStartReady((OS_U32)TaskId);
-}
-#else
 #define _cbOnTaskStartReady SEGGER_SYSVIEW_OnTaskStartReady
-#endif
 
 /*********************************************************************
 *
 *       _cbOnTaskStopReady()
 *
 *  Function description
-*    For embOS prior to V4.32 the cast to OS_U32 is necessary
+*    Binds the embOS task-stop-ready trace callback.
 */
-#if (OS_VERSION < 43200)  // Work around different embOS Trace API function types prior to V4.32
-static void _cbOnTaskStopReady(unsigned int TaskId, unsigned int Reason) {
-  SEGGER_SYSVIEW_OnTaskStopReady((OS_U32)TaskId, Reason);
-}
-#else
 #define _cbOnTaskStopReady  SEGGER_SYSVIEW_OnTaskStopReady
-#endif
 
 /*********************************************************************
 *
 *       _cbOnTaskTerminate()
 *
 *  Function description
-*    For embOS prior to V4.32 the cast to OS_U32 is necessary
+*    Binds the embOS task-terminate trace callback.
 */
-#if (OS_VERSION < 43200)  // Work around different embOS Trace API function types prior to V4.32
-static void _cbOnTaskTerminate(unsigned int TaskId) {
-  SEGGER_SYSVIEW_OnTaskTerminate((OS_U32)TaskId);
-}
-#else
 #define _cbOnTaskTerminate  SEGGER_SYSVIEW_OnTaskTerminate
-#endif
 
 /*********************************************************************
 *
@@ -282,6 +252,81 @@ static void _RecordU32x4(unsigned Id, OS_U32 Para0, OS_U32 Para1, OS_U32 Para2, 
 
 /*********************************************************************
 *
+*       _RecordId()
+*
+*  Function description
+*    Empty function to avoid that SystemView events are generated for
+*    embOS API
+*/
+static void _RecordId(unsigned Id, OS_TRACE_ID_TYPE Para0) {
+  OS_USE_PARA(Id);
+  OS_USE_PARA(Para0);
+}
+
+/*********************************************************************
+*
+*       _RecordIdxU32()
+*
+*  Function description
+*    Empty function to avoid that SystemView events are generated for
+*    embOS API
+*/
+static void _RecordIdxU32(unsigned Id, OS_TRACE_ID_TYPE Para0, OS_U32 Para1) {
+  OS_USE_PARA(Id);
+  OS_USE_PARA(Para0);
+  OS_USE_PARA(Para1);
+}
+
+/*********************************************************************
+*
+*       _RecordIdxU32x2()
+*
+*  Function description
+*    Empty function to avoid that SystemView events are generated for
+*    embOS API
+*/
+static void _RecordIdxU32x2(unsigned Id, OS_TRACE_ID_TYPE Para0, OS_U32 Para1, OS_U32 Para2) {
+  OS_USE_PARA(Id);
+  OS_USE_PARA(Para0);
+  OS_USE_PARA(Para1);
+  OS_USE_PARA(Para2);
+}
+
+/*********************************************************************
+*
+*       _RecordIdxU32x3()
+*
+*  Function description
+*    Empty function to avoid that SystemView events are generated for
+*    embOS API
+*/
+static void _RecordIdxU32x3(unsigned Id, OS_TRACE_ID_TYPE Para0, OS_U32 Para1, OS_U32 Para2, OS_U32 Para3) {
+  OS_USE_PARA(Id);
+  OS_USE_PARA(Para0);
+  OS_USE_PARA(Para1);
+  OS_USE_PARA(Para2);
+  OS_USE_PARA(Para3);
+}
+
+/*********************************************************************
+*
+*       _RecordIdxU32x4()
+*
+*  Function description
+*    Empty function to avoid that SystemView events are generated for
+*    embOS API
+*/
+static void _RecordIdxU32x4(unsigned Id, OS_TRACE_ID_TYPE Para0, OS_U32 Para1, OS_U32 Para2, OS_U32 Para3, OS_U32 Para4) {
+  OS_USE_PARA(Id);
+  OS_USE_PARA(Para0);
+  OS_USE_PARA(Para1);
+  OS_USE_PARA(Para2);
+  OS_USE_PARA(Para3);
+  OS_USE_PARA(Para4);
+}
+
+/*********************************************************************
+*
 *       _RecordEndCall()
 *
 *  Function description
@@ -305,6 +350,19 @@ static void _RecordEndCallU32(unsigned int Id, OS_U32 ReturnValue) {
   OS_USE_PARA(ReturnValue);
 }
 
+/*********************************************************************
+*
+*       _RecordEndCallId()
+*
+*  Function description
+*    Empty function to avoid that SystemView events are generated for
+*    embOS API
+*/
+static void _RecordEndCallId(unsigned int Id, OS_TRACE_ID_TYPE ReturnValue) {
+  OS_USE_PARA(Id);
+  OS_USE_PARA(ReturnValue);
+}
+
 //
 // embOS trace API that targets SYSVIEW
 //
@@ -316,11 +374,11 @@ const OS_TRACE_API embOS_TraceAPI_SYSVIEW = {
   SEGGER_SYSVIEW_RecordExitISR,                 //  void (*pfRecordExitISR)               (void);
   SEGGER_SYSVIEW_RecordExitISRToScheduler,      //  void (*pfRecordExitISRToScheduler)    (void);
   _cbSendTaskInfo,                              //  void (*pfRecordTaskInfo)              (const OS_TASK* pTask);
-  _cbOnTaskCreate,                              //  void (*pfRecordTaskCreate)            (OS_U32 TaskId);
-  _cbOnTaskStartExec,                           //  void (*pfRecordTaskStartExec)         (OS_U32 TaskId);
+  _cbOnTaskCreate,                              //  void (*pfRecordTaskCreate)            (OS_TRACE_ID_TYPE TaskId);
+  _cbOnTaskStartExec,                           //  void (*pfRecordTaskStartExec)         (OS_TRACE_ID_TYPE TaskId);
   SEGGER_SYSVIEW_OnTaskStopExec,                //  void (*pfRecordTaskStopExec)          (void);
-  _cbOnTaskStartReady,                          //  void (*pfRecordTaskStartReady)        (OS_U32 TaskId);
-  _cbOnTaskStopReady,                           //  void (*pfRecordTaskStopReady)         (OS_U32 TaskId, unsigned Reason);
+  _cbOnTaskStartReady,                          //  void (*pfRecordTaskStartReady)        (OS_TRACE_ID_TYPE TaskId);
+  _cbOnTaskStopReady,                           //  void (*pfRecordTaskStopReady)         (OS_TRACE_ID_TYPE TaskId, unsigned Reason);
   SEGGER_SYSVIEW_OnIdle,                        //  void (*pfRecordIdle)                  (void);
   //
   // Generic Trace Event logging
@@ -330,19 +388,25 @@ const OS_TRACE_API embOS_TraceAPI_SYSVIEW = {
   SEGGER_SYSVIEW_RecordU32x2,                   //  void    (*pfRecordU32x2)              (unsigned Id, OS_U32 Para0, OS_U32 Para1);
   SEGGER_SYSVIEW_RecordU32x3,                   //  void    (*pfRecordU32x3)              (unsigned Id, OS_U32 Para0, OS_U32 Para1, OS_U32 Para2);
   SEGGER_SYSVIEW_RecordU32x4,                   //  void    (*pfRecordU32x4)              (unsigned Id, OS_U32 Para0, OS_U32 Para1, OS_U32 Para2, OS_U32 Para3);
-  SEGGER_SYSVIEW_ShrinkId,                      //  OS_U32  (*pfPtrToId)                  (OS_U32 Ptr);
+  SEGGER_SYSVIEW_RecordId,                      //  void    (*pfRecordId)                 (unsigned Id, OS_TRACE_ID_TYPE Para0);
+  SEGGER_SYSVIEW_RecordIdxU32,                  //  void    (*pfRecordIdxU32)             (unsigned Id, OS_TRACE_ID_TYPE Para0, OS_U32 Para1);
+  SEGGER_SYSVIEW_RecordIdxU32x2,                //  void    (*pfRecordIdxU32x2)           (unsigned Id, OS_TRACE_ID_TYPE Para0, OS_U32 Para1, OS_U32 Para2);
+  SEGGER_SYSVIEW_RecordIdxU32x3,                //  void    (*pfRecordIdxU32x3)           (unsigned Id, OS_TRACE_ID_TYPE Para0, OS_U32 Para1, OS_U32 Para2, OS_U32 Para3);
+  SEGGER_SYSVIEW_RecordIdxU32x4,                //  void    (*pfRecordIdxU32x4)           (unsigned Id, OS_TRACE_ID_TYPE Para0, OS_U32 Para1, OS_U32 Para2, OS_U32 Para3, OS_U32 Para4);
+  SEGGER_SYSVIEW_ShrinkId,                      //  OS_TRACE_ID_TYPE (*pfPtrToId)         (OS_TRACE_ID_TYPE Ptr);
 #if (OS_VERSION >= 41400)  // Tracing timer is supported since embOS V4.14
-  SEGGER_SYSVIEW_RecordEnterTimer,              //  void    (*pfRecordEnterTimer)         (OS_U32 TimerID);
+  SEGGER_SYSVIEW_RecordEnterTimer,              //  void    (*pfRecordEnterTimer)         (OS_TRACE_ID_TYPE TimerID);
   SEGGER_SYSVIEW_RecordExitTimer,               //  void    (*pfRecordExitTimer)          (void);
 #endif
 #if (OS_VERSION >= 42400)   // Tracing end of call supported since embOS V4.24
   SEGGER_SYSVIEW_RecordEndCall,                 //  void    (*pfRecordEndCall)            (unsigned int Id);
   SEGGER_SYSVIEW_RecordEndCallU32,              //  void    (*pfRecordEndCallReturnValue) (unsigned int Id, OS_U32 ReturnValue);
-  _cbOnTaskTerminate,                           //  void    (*pfRecordTaskTerminate)      (OS_U32 TaskId);
+  SEGGER_SYSVIEW_RecordEndCallId,               //  void    (*pfRecordEndCallId)          (unsigned int Id, OS_TRACE_ID_TYPE ReturnValue);
+  _cbOnTaskTerminate,                           //  void    (*pfRecordTaskTerminate)      (OS_TRACE_ID_TYPE TaskId);
   SEGGER_SYSVIEW_RecordU32x5,                   //  void    (*pfRecordU32x5)              (unsigned Id, OS_U32 Para0, OS_U32 Para1, OS_U32 Para2, OS_U32 Para3, OS_U32 Para4);
 #endif
 #if (OS_VERSION >= 43800)  // Human readable object identifiers supported since embOS V4.38
-  SEGGER_SYSVIEW_NameResource,                  // void  (*pfRecordObjName)               (OS_U32 Id, OS_CONST_PTR char* Para0);
+  SEGGER_SYSVIEW_NameResource,                  // void  (*pfRecordObjName)               (OS_TRACE_ID_TYPE Id, OS_CONST_PTR char* Para0);
 #endif
 };
 
@@ -357,11 +421,11 @@ const OS_TRACE_API embOS_TraceAPI_SYSVIEW_NoAPIInstrumentation = {
   SEGGER_SYSVIEW_RecordExitISR,                 //  void (*pfRecordExitISR)               (void);
   SEGGER_SYSVIEW_RecordExitISRToScheduler,      //  void (*pfRecordExitISRToScheduler)    (void);
   _cbSendTaskInfo,                              //  void (*pfRecordTaskInfo)              (const OS_TASK* pTask);
-  _cbOnTaskCreate,                              //  void (*pfRecordTaskCreate)            (OS_U32 TaskId);
-  _cbOnTaskStartExec,                           //  void (*pfRecordTaskStartExec)         (OS_U32 TaskId);
+  _cbOnTaskCreate,                              //  void (*pfRecordTaskCreate)            (OS_TRACE_ID_TYPE TaskId);
+  _cbOnTaskStartExec,                           //  void (*pfRecordTaskStartExec)         (OS_TRACE_ID_TYPE TaskId);
   SEGGER_SYSVIEW_OnTaskStopExec,                //  void (*pfRecordTaskStopExec)          (void);
-  _cbOnTaskStartReady,                          //  void (*pfRecordTaskStartReady)        (OS_U32 TaskId);
-  _cbOnTaskStopReady,                           //  void (*pfRecordTaskStopReady)         (OS_U32 TaskId, unsigned Reason);
+  _cbOnTaskStartReady,                          //  void (*pfRecordTaskStartReady)        (OS_TRACE_ID_TYPE TaskId);
+  _cbOnTaskStopReady,                           //  void (*pfRecordTaskStopReady)         (OS_TRACE_ID_TYPE TaskId, unsigned Reason);
   SEGGER_SYSVIEW_OnIdle,                        //  void (*pfRecordIdle)                  (void);
   //
   // Generic Trace Event logging
@@ -371,19 +435,25 @@ const OS_TRACE_API embOS_TraceAPI_SYSVIEW_NoAPIInstrumentation = {
   _RecordU32x2,                                 //  void    (*pfRecordU32x2)              (unsigned Id, OS_U32 Para0, OS_U32 Para1);
   _RecordU32x3,                                 //  void    (*pfRecordU32x3)              (unsigned Id, OS_U32 Para0, OS_U32 Para1, OS_U32 Para2);
   _RecordU32x4,                                 //  void    (*pfRecordU32x4)              (unsigned Id, OS_U32 Para0, OS_U32 Para1, OS_U32 Para2, OS_U32 Para3);
-  SEGGER_SYSVIEW_ShrinkId,                      //  OS_U32  (*pfPtrToId)                  (OS_U32 Ptr);
+  _RecordId,                                    //  void    (*pfRecordId)                 (unsigned Id, OS_TRACE_ID_TYPE Para0);
+  _RecordIdxU32,                                //  void    (*pfRecordIdxU32)             (unsigned Id, OS_TRACE_ID_TYPE Para0, OS_U32 Para1);
+  _RecordIdxU32x2,                              //  void    (*pfRecordIdxU32x2)           (unsigned Id, OS_TRACE_ID_TYPE Para0, OS_U32 Para1, OS_U32 Para2);
+  _RecordIdxU32x3,                              //  void    (*pfRecordIdxU32x3)           (unsigned Id, OS_TRACE_ID_TYPE Para0, OS_U32 Para1, OS_U32 Para2, OS_U32 Para3);
+  _RecordIdxU32x4,                              //  void    (*pfRecordIdxU32x4)           (unsigned Id, OS_TRACE_ID_TYPE Para0, OS_U32 Para1, OS_U32 Para2, OS_U32 Para3, OS_U32 Para4);
+  SEGGER_SYSVIEW_ShrinkId,                      //  OS_TRACE_ID_TYPE (*pfPtrToId)         (OS_TRACE_ID_TYPE Ptr);
 #if (OS_VERSION >= 41400)  // Tracing timer is supported since embOS V4.14
-  SEGGER_SYSVIEW_RecordEnterTimer,              //  void    (*pfRecordEnterTimer)         (OS_U32 TimerID);
+  SEGGER_SYSVIEW_RecordEnterTimer,              //  void    (*pfRecordEnterTimer)         (OS_TRACE_ID_TYPE TimerID);
   SEGGER_SYSVIEW_RecordExitTimer,               //  void    (*pfRecordExitTimer)          (void);
 #endif
 #if (OS_VERSION >= 42400)   // Tracing end of call supported since embOS V4.24
   _RecordEndCall,                               //  void    (*pfRecordEndCall)            (unsigned int Id);
   _RecordEndCallU32,                            //  void    (*pfRecordEndCallReturnValue) (unsigned int Id, OS_U32 ReturnValue);
-  _cbOnTaskTerminate,                           //  void    (*pfRecordTaskTerminate)      (OS_U32 TaskId);
+  _RecordEndCallId,                             //  void    (*pfRecordEndCallId)          (unsigned int Id, OS_TRACE_ID_TYPE ReturnValue);
+  _cbOnTaskTerminate,                           //  void    (*pfRecordTaskTerminate)      (OS_TRACE_ID_TYPE TaskId);
   SEGGER_SYSVIEW_RecordU32x5,                   //  void    (*pfRecordU32x5)              (unsigned Id, OS_U32 Para0, OS_U32 Para1, OS_U32 Para2, OS_U32 Para3, OS_U32 Para4);
 #endif
 #if (OS_VERSION >= 43800)  // Human readable object identifiers supported since embOS V4.38
-  SEGGER_SYSVIEW_NameResource,                  // void  (*pfRecordObjName)               (OS_U32 Id, OS_CONST_PTR char* Para0);
+  SEGGER_SYSVIEW_NameResource,                  // void  (*pfRecordObjName)               (OS_TRACE_ID_TYPE Id, OS_CONST_PTR char* Para0);
 #endif
 };
 

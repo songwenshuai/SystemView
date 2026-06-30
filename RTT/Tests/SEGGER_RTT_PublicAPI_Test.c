@@ -41,8 +41,8 @@ Purpose : Unit tests for the shared-memory RTT public API.
 #define TEST_EXTRA_PRINTF_BUF_OFF             (TEST_EXTRA_OFF + 256u)
 #define TEST_EXTRA_PRINTF_BUF_SIZE            (384u)
 #define TEST_ENSURE_EXTRA_PAIR_SIZE           (SEGGER_RTT__TERMINAL_NAME_SIZE_ALIGNED + BUFFER_SIZE_UP + BUFFER_SIZE_DOWN)
-#define TEST_RUNTIME_DOWN_OFF(NumUp)          (SEGGER_RTT__CB_OFF_A_UP + ((uintptr_t)(NumUp) * SEGGER_RTT__BUFFER_SIZE))
-#define TEST_RUNTIME_DOWN_INDEX(NumUp, Index) (TEST_RUNTIME_DOWN_OFF(NumUp) + ((uintptr_t)(Index) * SEGGER_RTT__BUFFER_SIZE))
+#define TEST_RUNTIME_DOWN_OFF(NumUp)          (SEGGER_RTT__CB_OFF_A_UP + ((PTR_ADDR)(NumUp) * SEGGER_RTT__BUFFER_SIZE))
+#define TEST_RUNTIME_DOWN_INDEX(NumUp, Index) (TEST_RUNTIME_DOWN_OFF(NumUp) + ((PTR_ADDR)(Index) * SEGGER_RTT__BUFFER_SIZE))
 
 /*********************************************************************
 *
@@ -146,8 +146,8 @@ static void _Fail(const char* sFile, int Line, const char* sExpr) {
 *  Return value
 *    Base address of the simulated shared memory mapping.
 */
-static uintptr_t _Base(void) {
-  return (uintptr_t)&_TestMem.ac[0];
+static PTR_ADDR _Base(void) {
+  return (PTR_ADDR)&_TestMem.ac[0];
 }
 
 /*********************************************************************
@@ -165,8 +165,8 @@ static uintptr_t _Base(void) {
 *  Return value
 *    Base address of the initialized RTT control block.
 */
-static uintptr_t _Reset(void) {
-  uintptr_t Address;
+static PTR_ADDR _Reset(void) {
+  PTR_ADDR Address;
 
   memset(&_TestMem, 0, sizeof(_TestMem));
   Address = _Base();
@@ -189,7 +189,7 @@ static uintptr_t _Reset(void) {
 *  Return value
 *    Address of the selected up-buffer descriptor.
 */
-static uintptr_t _UpRing(uintptr_t Address, unsigned BufferIndex) {
+static PTR_ADDR _UpRing(PTR_ADDR Address, unsigned BufferIndex) {
   return SEGGER_RTT__ADDR(Address, SEGGER_RTT__CB_OFF_A_UP_INDEX(BufferIndex));
 }
 
@@ -210,7 +210,7 @@ static uintptr_t _UpRing(uintptr_t Address, unsigned BufferIndex) {
 *  Return value
 *    Address of the selected down-buffer descriptor.
 */
-static uintptr_t _DownRing(uintptr_t Address, unsigned BufferIndex) {
+static PTR_ADDR _DownRing(PTR_ADDR Address, unsigned BufferIndex) {
   unsigned MaxNumUpBuffers;
 
   MaxNumUpBuffers = SEGGER_RTT__RD32(SEGGER_RTT__ADDR(Address, SEGGER_RTT__CB_OFF_MAX_NUM_UP_BUFFERS));
@@ -251,7 +251,7 @@ static void _ExpectMem(const void* pData, const char* sExpected, unsigned NumByt
 *  Return value
 *    Pointer to the descriptor name string in the simulated mapping.
 */
-static const char* _RingName(uintptr_t Address, uintptr_t pRing) {
+static const char* _RingName(PTR_ADDR Address, PTR_ADDR pRing) {
   return (const char*)SEGGER_RTT__ADDR(Address, SEGGER_RTT__RD64(SEGGER_RTT__FIELD(pRing, SEGGER_RTT__BUFFER_OFF_NAME)));
 }
 
@@ -270,7 +270,7 @@ static const char* _RingName(uintptr_t Address, uintptr_t pRing) {
 *  Return value
 *    Pointer to the descriptor payload buffer in the simulated mapping.
 */
-static char* _RingBuffer(uintptr_t Address, uintptr_t pRing) {
+static char* _RingBuffer(PTR_ADDR Address, PTR_ADDR pRing) {
   return (char*)SEGGER_RTT__ADDR(Address, SEGGER_RTT__RD64(SEGGER_RTT__FIELD(pRing, SEGGER_RTT__BUFFER_OFF_P_BUFFER)));
 }
 
@@ -290,7 +290,7 @@ static char* _RingBuffer(uintptr_t Address, uintptr_t pRing) {
 *  Return value
 *    None.
 */
-static void _SetRingOffsets(uintptr_t pRing, unsigned RdOff, unsigned WrOff) {
+static void _SetRingOffsets(PTR_ADDR pRing, unsigned RdOff, unsigned WrOff) {
   SEGGER_RTT__WR32(SEGGER_RTT__FIELD(pRing, SEGGER_RTT__BUFFER_OFF_RD_OFF), RdOff);
   SEGGER_RTT__WR32(SEGGER_RTT__FIELD(pRing, SEGGER_RTT__BUFFER_OFF_WR_OFF), WrOff);
 }
@@ -309,7 +309,7 @@ static void _SetRingOffsets(uintptr_t pRing, unsigned RdOff, unsigned WrOff) {
 *  Return value
 *    None.
 */
-static void _SetRingFlags(uintptr_t pRing, unsigned Flags) {
+static void _SetRingFlags(PTR_ADDR pRing, unsigned Flags) {
   SEGGER_RTT__WR32(SEGGER_RTT__FIELD(pRing, SEGGER_RTT__BUFFER_OFF_FLAGS), Flags);
 }
 
@@ -328,7 +328,7 @@ static void _SetRingFlags(uintptr_t pRing, unsigned Flags) {
 *  Return value
 *    None.
 */
-static void _SetRingSize(uintptr_t pRing, unsigned SizeOfBuffer) {
+static void _SetRingSize(PTR_ADDR pRing, unsigned SizeOfBuffer) {
   SEGGER_RTT__WR32(SEGGER_RTT__FIELD(pRing, SEGGER_RTT__BUFFER_OFF_SIZE_OF_BUFFER), SizeOfBuffer);
 }
 
@@ -348,7 +348,7 @@ static void _SetRingSize(uintptr_t pRing, unsigned SizeOfBuffer) {
 *  Return value
 *    Pointer to the copied string in the simulated shared mapping.
 */
-static char* _SharedString(uintptr_t Address, unsigned Off, const char* s) {
+static char* _SharedString(PTR_ADDR Address, unsigned Off, const char* s) {
   char* p;
 
   p = (char*)SEGGER_RTT__ADDR(Address, Off);
@@ -372,7 +372,7 @@ static char* _SharedString(uintptr_t Address, unsigned Off, const char* s) {
 *  Return value
 *    Pointer to the cleared buffer in the simulated shared mapping.
 */
-static void* _SharedBuffer(uintptr_t Address, unsigned Off, unsigned NumBytes) {
+static void* _SharedBuffer(PTR_ADDR Address, unsigned Off, unsigned NumBytes) {
   void* p;
 
   p = (void*)SEGGER_RTT__ADDR(Address, Off);
@@ -396,7 +396,7 @@ static void* _SharedBuffer(uintptr_t Address, unsigned Off, unsigned NumBytes) {
 *  Return value
 *    Return value from SEGGER_RTT_vprintf().
 */
-static int _CallVPrintf(uintptr_t Address, const char* sFormat, ...) {
+static int _CallVPrintf(PTR_ADDR Address, const char* sFormat, ...) {
   int r;
   va_list ParamList;
 
@@ -429,8 +429,8 @@ static int _CallVPrintf(uintptr_t Address, const char* sFormat, ...) {
 *    None.
 */
 static void _TestInitAndFind(void) {
-  uintptr_t Address;
-  uintptr_t Search;
+  PTR_ADDR Address;
+  PTR_ADDR Search;
   size_t DescriptorRegionSize;
   size_t RegionSize;
   size_t TruncatedRegionSize;
@@ -523,10 +523,10 @@ static void _TestInitAndFind(void) {
 *    None.
 */
 static void _TestEnsureInitExAPI(void) {
-  uintptr_t Address;
-  uintptr_t ExpectedPairBase;
-  uintptr_t Search;
-  uintptr_t pRing;
+  PTR_ADDR Address;
+  PTR_ADDR ExpectedPairBase;
+  PTR_ADDR Search;
+  PTR_ADDR pRing;
   size_t RegionSize;
   size_t FoundRegionSize;
   char ac[64];
@@ -607,7 +607,7 @@ static void _TestEnsureInitExAPI(void) {
 *    None.
 */
 static void _TestUpBufferAPI(void) {
-  uintptr_t Address;
+  PTR_ADDR Address;
   char ac[64];
   unsigned r;
 
@@ -678,7 +678,7 @@ static void _TestUpBufferAPI(void) {
 *    None.
 */
 static void _TestDownBufferAPI(void) {
-  uintptr_t Address;
+  PTR_ADDR Address;
   char ac[64];
   unsigned r;
 
@@ -731,8 +731,8 @@ static void _TestDownBufferAPI(void) {
 *    None.
 */
 static void _TestConfigAndAllocAPI(void) {
-  uintptr_t Address;
-  uintptr_t pRing;
+  PTR_ADDR Address;
+  PTR_ADDR pRing;
   char* sName;
   void* pBuffer;
   char ac[64];
@@ -804,9 +804,9 @@ static void _TestConfigAndAllocAPI(void) {
 *    None.
 */
 static void _TestInvalidDescriptorAPI(void) {
-  uintptr_t Address;
-  uintptr_t Search;
-  uintptr_t pRing;
+  PTR_ADDR Address;
+  PTR_ADDR Search;
+  PTR_ADDR pRing;
   char ac[8];
 
   memset(&_TestMem, 0, sizeof(_TestMem));
@@ -918,8 +918,8 @@ static void _TestInvalidDescriptorAPI(void) {
 *    None.
 */
 static void _TestRingBoundaryAPI(void) {
-  uintptr_t Address;
-  uintptr_t pRing;
+  PTR_ADDR Address;
+  PTR_ADDR pRing;
   char* pBuffer;
   char ac[32];
 
@@ -1046,7 +1046,7 @@ static void _TestRingBoundaryAPI(void) {
 *    None.
 */
 static void _TestConfigErrorAPI(void) {
-  uintptr_t Address;
+  PTR_ADDR Address;
   char* sName;
   void* pBuffer;
 
@@ -1119,8 +1119,8 @@ static void _TestConfigErrorAPI(void) {
 *    None.
 */
 static void _TestTerminalAndPrintfAPI(void) {
-  uintptr_t Address;
-  uintptr_t pRing;
+  PTR_ADDR Address;
+  PTR_ADDR pRing;
   char ac[512];
   char acLong[180];
   unsigned NumBytesRead;

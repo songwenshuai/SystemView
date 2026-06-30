@@ -126,6 +126,17 @@ static void _cbSendSystemDesc(void) {
 
 /*********************************************************************
 *
+*       _GetCurrentThreadId()
+*
+*  Function description
+*    Returns the current Windows thread ID for SystemView ISR events.
+*/
+static U32 _GetCurrentThreadId(void) {
+  return (U32)GetCurrentThreadId();
+}
+
+/*********************************************************************
+*
 *       Global functions
 *
 **********************************************************************
@@ -189,7 +200,7 @@ U32 SEGGER_SYSVIEW_X_GetTimestamp(void) {
 *    Get the "dummy" interrupt ID.
 */
 U32 SEGGER_SYSVIEW_X_GetInterruptId(void) {
-  return GetCurrentThreadId();
+  return _GetCurrentThreadId();
 }
 
 /*********************************************************************
@@ -220,15 +231,15 @@ void SEGGER_SYSVIEW_X_SetISRName(const char* sName) {
   //
   // Check whether the string fits in the string buffer.
   //
-  if (strlen(sName) < (sizeof(s) - 10)) {
+  if (strlen(sName) < (sizeof(s) - 15u)) {
     //
     // If this is the first entry we don't need the comma.
     //
     EnterCriticalSection(&_csLockString);
     if (strlen(_sISRNames) == 0) {
-      sprintf(s, "I#%u=%s", (unsigned int)GetCurrentThreadId(), sName);
+      sprintf(s, "I#%u=%s", _GetCurrentThreadId(), sName);
     } else {
-      sprintf(s, ",I#%u=%s", (unsigned int)GetCurrentThreadId(), sName);
+      sprintf(s, ",I#%u=%s", _GetCurrentThreadId(), sName);
     }
     //
     // Add new ISR name to the ISR name string and inform SystemView (if enough space is left in the string buffer).

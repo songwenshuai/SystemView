@@ -203,7 +203,7 @@ static void _Delay(int Ticks) {
 static void _WaitPolling(int Timeout) {
   int BytesInBuffer;
   do {
-    BytesInBuffer = SEGGER_RTT_GetBytesInBuffer(_ChannelID);
+    BytesInBuffer = SEGGER_RTT_GetBytesInBuffer((PTR_ADDR)SEGGER_SYSVIEW_RTT_CB_ADDRESS, _ChannelID);
     if (BytesInBuffer >= SYSVIEW_COMM_SEND_THRESHOLD) {
       break;
     }
@@ -392,12 +392,12 @@ static void _SysViewCommTask(void) {
         if (r != v) {                             // Failed to receive data? => Connection lost
           break;
         }
-        NumBytes = SEGGER_RTT_WriteDownBufferNoLock(_ChannelID, &acRecv[0], r);  // Write data into corresponding RTT buffer for application to read and handle accordingly
+        NumBytes = SEGGER_RTT_WriteDownBufferNoLock((PTR_ADDR)SEGGER_SYSVIEW_RTT_CB_ADDRESS, _ChannelID, &acRecv[0], r);  // Write data into corresponding RTT buffer for application to read and handle accordingly
       }
       //
       // Read available RTT data into send bufer and send it.
       //
-      NumBytes = SEGGER_RTT_ReadUpBufferNoLock(_ChannelID, &_acBuf[0], sizeof(_acBuf));
+      NumBytes = SEGGER_RTT_ReadUpBufferNoLock((PTR_ADDR)SEGGER_SYSVIEW_RTT_CB_ADDRESS, _ChannelID, &_acBuf[0], sizeof(_acBuf));
       if (NumBytes > 0) {
         //
         // Send data to SystemView App

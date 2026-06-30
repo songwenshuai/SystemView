@@ -90,6 +90,7 @@ if(RTT_BUILD_LIBRARY AND NOT TARGET SEGGER_RTT)
   target_include_directories(SEGGER_RTT
     PUBLIC
       "${RTT_CONFIG_DIR}"
+      "${CMAKE_CURRENT_SOURCE_DIR}/SEGGER"
       "${CMAKE_CURRENT_SOURCE_DIR}/RTT"
   )
 
@@ -182,6 +183,7 @@ function(_AddRTTPublicAPITest TargetName PrintfBufferSize)
   #
   target_include_directories(${TargetName}
     PRIVATE
+      SEGGER
       RTT
   )
 
@@ -250,6 +252,7 @@ function(_AddRTTExample TargetName SourceFile)
 
   target_include_directories(${TargetName}
     PRIVATE
+      SEGGER
       RTT
   )
 

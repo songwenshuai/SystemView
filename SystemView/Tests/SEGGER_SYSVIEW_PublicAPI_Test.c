@@ -45,8 +45,8 @@ Purpose : Unit tests for the SEGGER SystemView public API.
 #define TEST_MAX_WRITES             512u
 #define TEST_MAX_WRITE_SIZE         512u
 #define TEST_DOWN_BUFFER_SIZE       64u
-#define TEST_EXPECTED_RTT_ADDRESS   ((uintptr_t)SEGGER_SYSVIEW_RTT_CB_ADDRESS)
-#define TEST_EXPECTED_RTT_NAME      ((const char*)(uintptr_t)SEGGER_SYSVIEW_RTT_NAME_ADDRESS)
+#define TEST_EXPECTED_RTT_ADDRESS   ((PTR_ADDR)SEGGER_SYSVIEW_RTT_CB_ADDRESS)
+#define TEST_EXPECTED_RTT_NAME      ((const char*)(PTR_ADDR)SEGGER_SYSVIEW_RTT_NAME_ADDRESS)
 
 /*********************************************************************
 *
@@ -56,7 +56,7 @@ Purpose : Unit tests for the SEGGER SystemView public API.
 */
 
 typedef struct {
-  uintptr_t Address;
+  PTR_ADDR Address;
   unsigned  Channel;
   unsigned  NumBytes;
   U8        Data[TEST_MAX_WRITE_SIZE];
@@ -80,8 +80,8 @@ static unsigned       _RTTConfigUpCount;
 static unsigned       _RTTConfigDownCount;
 static unsigned       _RTTWriteSkipFailCount;
 static unsigned       _NextRTTChannel;
-static uintptr_t      _ExpectedUpBufferAddress;
-static uintptr_t      _ExpectedDownBufferAddress;
+static PTR_ADDR      _ExpectedUpBufferAddress;
+static PTR_ADDR      _ExpectedDownBufferAddress;
 static unsigned       _ExpectedUpBufferSize;
 static unsigned       _ExpectedDownBufferSize;
 static U8             _DownBytes[TEST_DOWN_BUFFER_SIZE];
@@ -158,6 +158,21 @@ static void _Fail(const char* sFile, int Line, const char* sExpr) {
     }                                             \
   } while (0)
 
+#define TEST_ASSERT_EQ_ADDR(Expected, Actual)     \
+  do {                                            \
+    PTR_ADDR _Expected;                           \
+    PTR_ADDR _Actual;                             \
+    _Expected = (PTR_ADDR)(Expected);             \
+    _Actual   = (PTR_ADDR)(Actual);               \
+    if (_Expected != _Actual) {                   \
+      _NumFailures++;                             \
+      printf("%s:%d: expected 0x%llx, got 0x%llx\n", \
+             __FILE__, __LINE__,                  \
+             (unsigned long long)_Expected,       \
+             (unsigned long long)_Actual);        \
+    }                                             \
+  } while (0)
+
 #define TEST_EXPECT_EVENT(ExpectedEvent, ...)     \
   do {                                            \
     unsigned _BeforeWrites;                       \
@@ -192,7 +207,7 @@ static void _Fail(const char* sFile, int Line, const char* sExpr) {
 *  Parameters
 *    Address  RTT control-block base address supplied by SystemView.
 */
-static void _CheckRTTAddress(uintptr_t Address) {
+static void _CheckRTTAddress(PTR_ADDR Address) {
   if (Address != TEST_EXPECTED_RTT_ADDRESS) {
     _BadRTTAddressCount++;
   }
@@ -229,8 +244,8 @@ static void _CheckRTTName(const char* sName) {
 *    ExpectedAddress  Expected RTT buffer address.
 *    ExpectedSize     Expected RTT buffer size.
 */
-static void _CheckRTTBuffer(void* pBuffer, unsigned BufferSize, uintptr_t ExpectedAddress, unsigned ExpectedSize) {
-  if (((uintptr_t)pBuffer != ExpectedAddress) || (BufferSize != ExpectedSize)) {
+static void _CheckRTTBuffer(void* pBuffer, unsigned BufferSize, PTR_ADDR ExpectedAddress, unsigned ExpectedSize) {
+  if (((PTR_ADDR)pBuffer != ExpectedAddress) || (BufferSize != ExpectedSize)) {
     _BadRTTBufferCount++;
   }
 }
@@ -249,7 +264,7 @@ static void _CheckRTTBuffer(void* pBuffer, unsigned BufferSize, uintptr_t Expect
 *    pBuffer   Pointer to the packet data to capture.
 *    NumBytes  Number of packet bytes to capture.
 */
-static void _CaptureWrite(uintptr_t Address, unsigned Channel, const void* pBuffer, unsigned NumBytes) {
+static void _CaptureWrite(PTR_ADDR Address, unsigned Channel, const void* pBuffer, unsigned NumBytes) {
   TEST_ASSERT(_NumWrites < TEST_MAX_WRITES);
   TEST_ASSERT(NumBytes <= TEST_MAX_WRITE_SIZE);
   if ((_NumWrites < TEST_MAX_WRITES) && (NumBytes <= TEST_MAX_WRITE_SIZE)) {
@@ -272,7 +287,7 @@ static void _CaptureWrite(uintptr_t Address, unsigned Channel, const void* pBuff
 *  Return value
 *    Allocated channel id.
 */
-int SEGGER_RTT_AllocUpBuffer(uintptr_t Address, const char* sName, void* pBuffer, unsigned BufferSize, unsigned Flags) {
+int SEGGER_RTT_AllocUpBuffer(PTR_ADDR Address, const char* sName, void* pBuffer, unsigned BufferSize, unsigned Flags) {
   TEST_ASSERT_EQ_U(SEGGER_RTT_MODE_NO_BLOCK_SKIP, Flags);
   _CheckRTTAddress(Address);
   _CheckRTTName(sName);
@@ -292,7 +307,7 @@ int SEGGER_RTT_AllocUpBuffer(uintptr_t Address, const char* sName, void* pBuffer
 *  Return value
 *    0 on success.
 */
-int SEGGER_RTT_ConfigUpBuffer(uintptr_t Address, unsigned BufferIndex, const char* sName, void* pBuffer, unsigned BufferSize, unsigned Flags) {
+int SEGGER_RTT_ConfigUpBuffer(PTR_ADDR Address, unsigned BufferIndex, const char* sName, void* pBuffer, unsigned BufferSize, unsigned Flags) {
   (void)BufferIndex;
   TEST_ASSERT_EQ_U(SEGGER_RTT_MODE_NO_BLOCK_SKIP, Flags);
   _CheckRTTAddress(Address);
@@ -313,7 +328,7 @@ int SEGGER_RTT_ConfigUpBuffer(uintptr_t Address, unsigned BufferIndex, const cha
 *  Return value
 *    0 on success.
 */
-int SEGGER_RTT_ConfigDownBuffer(uintptr_t Address, unsigned BufferIndex, const char* sName, void* pBuffer, unsigned BufferSize, unsigned Flags) {
+int SEGGER_RTT_ConfigDownBuffer(PTR_ADDR Address, unsigned BufferIndex, const char* sName, void* pBuffer, unsigned BufferSize, unsigned Flags) {
   (void)BufferIndex;
   TEST_ASSERT_EQ_U(SEGGER_RTT_MODE_NO_BLOCK_SKIP, Flags);
   _CheckRTTAddress(Address);
@@ -334,7 +349,7 @@ int SEGGER_RTT_ConfigDownBuffer(uintptr_t Address, unsigned BufferIndex, const c
 *  Return value
 *    Number of queued bytes.
 */
-unsigned SEGGER_RTT_HasData(uintptr_t Address, unsigned BufferIndex) {
+unsigned SEGGER_RTT_HasData(PTR_ADDR Address, unsigned BufferIndex) {
   (void)BufferIndex;
   _CheckRTTAddress(Address);
   return _DownWrOff - _DownRdOff;
@@ -350,7 +365,7 @@ unsigned SEGGER_RTT_HasData(uintptr_t Address, unsigned BufferIndex) {
 *  Return value
 *    Number of bytes copied to pData.
 */
-unsigned SEGGER_RTT_ReadNoLock(uintptr_t Address, unsigned BufferIndex, void* pData, unsigned BufferSize) {
+unsigned SEGGER_RTT_ReadNoLock(PTR_ADDR Address, unsigned BufferIndex, void* pData, unsigned BufferSize) {
   unsigned NumBytes;
 
   (void)BufferIndex;
@@ -378,7 +393,7 @@ unsigned SEGGER_RTT_ReadNoLock(uintptr_t Address, unsigned BufferIndex, void* pD
 *  Return value
 *    Number of bytes accepted by the stub.
 */
-unsigned SEGGER_RTT_WriteSkipNoLock(uintptr_t Address, unsigned BufferIndex, const void* pBuffer, unsigned NumBytes) {
+unsigned SEGGER_RTT_WriteSkipNoLock(PTR_ADDR Address, unsigned BufferIndex, const void* pBuffer, unsigned NumBytes) {
   _CheckRTTAddress(Address);
   if (_RTTWriteSkipFailCount > 0u) {
     _RTTWriteSkipFailCount--;
@@ -396,7 +411,7 @@ unsigned SEGGER_RTT_WriteSkipNoLock(uintptr_t Address, unsigned BufferIndex, con
 *    Captures a packet that SystemView attempted to send in overwrite
 *    mode.
 */
-void SEGGER_RTT_WriteWithOverwriteNoLock(uintptr_t Address, unsigned BufferIndex, const void* pBuffer, unsigned NumBytes) {
+void SEGGER_RTT_WriteWithOverwriteNoLock(PTR_ADDR Address, unsigned BufferIndex, const void* pBuffer, unsigned NumBytes) {
   _CheckRTTAddress(Address);
   _CaptureWrite(Address, BufferIndex, pBuffer, NumBytes);
 }
@@ -581,8 +596,8 @@ static void _ResetRTTStub(void) {
   _RTTConfigDownCount = 0u;
   _RTTWriteSkipFailCount = 0u;
   _NextRTTChannel     = 1u;
-  _ExpectedUpBufferAddress   = (uintptr_t)SEGGER_SYSVIEW_RTT_UP_BUFFER_ADDRESS;
-  _ExpectedDownBufferAddress = (uintptr_t)SEGGER_SYSVIEW_RTT_DOWN_BUFFER_ADDRESS;
+  _ExpectedUpBufferAddress   = (PTR_ADDR)SEGGER_SYSVIEW_RTT_UP_BUFFER_ADDRESS;
+  _ExpectedDownBufferAddress = (PTR_ADDR)SEGGER_SYSVIEW_RTT_DOWN_BUFFER_ADDRESS;
   _ExpectedUpBufferSize      = SEGGER_SYSVIEW_RTT_BUFFER_SIZE;
   _ExpectedDownBufferSize    = SEGGER_SYSVIEW_RTT_DOWN_BUFFER_SIZE;
   _DownRdOff          = 0u;
@@ -657,6 +672,43 @@ static U32 _DecodeU32(const U8* pData, unsigned NumBytes, unsigned* pNumUsed) {
     }
     Data = pData[NumUsed++];
     Value |= ((U32)(Data & 0x7Fu) << Shift);
+    Shift += 7u;
+  } while ((Data & 0x80u) != 0u);
+  *pNumUsed = NumUsed;
+  return Value;
+}
+
+/*********************************************************************
+*
+*       _DecodeAddr()
+*
+*  Function description
+*    Decodes a SystemView variable-length address-sized value.
+*
+*  Parameters
+*    pData     Pointer to encoded data.
+*    NumBytes  Number of available encoded bytes.
+*    pNumUsed  Receives the number of consumed bytes.
+*
+*  Return value
+*    Decoded value.
+*/
+static PTR_ADDR _DecodeAddr(const U8* pData, unsigned NumBytes, unsigned* pNumUsed) {
+  PTR_ADDR Value;
+  unsigned Shift;
+  unsigned NumUsed;
+  U8 Data;
+
+  Value = 0u;
+  Shift = 0u;
+  NumUsed = 0u;
+  do {
+    TEST_ASSERT(NumUsed < NumBytes);
+    if (NumUsed >= NumBytes) {
+      break;
+    }
+    Data = pData[NumUsed++];
+    Value |= ((PTR_ADDR)(Data & 0x7Fu) << Shift);
     Shift += 7u;
   } while ((Data & 0x80u) != 0u);
   *pNumUsed = NumUsed;
@@ -812,6 +864,36 @@ static unsigned _ExpectLastExtEventFrom(unsigned StartIndex, unsigned ExpectedEx
   ExtEvent = _DecodeU32(pPayload, PayloadLen, &NumUsed);
   TEST_ASSERT_EQ_U(ExpectedExtEvent, ExtEvent);
   return WriteIndex;
+}
+
+/*********************************************************************
+*
+*       _ExpectRecordIdPayload()
+*
+*  Function description
+*    Verifies that a captured packet payload starts with an
+*    address-sized ID followed by the expected U32 values.
+*/
+static void _ExpectRecordIdPayload(unsigned WriteIndex, PTR_ADDR ExpectedId, const U32* pExpectedU32, unsigned NumExpectedU32) {
+  const U8* pPayload;
+  unsigned PayloadLen;
+  unsigned PayloadOff;
+  unsigned NumUsed;
+  unsigned i;
+  PTR_ADDR DecodedAddr;
+  U32 DecodedU32;
+
+  pPayload = _WritePayload(WriteIndex, &PayloadLen);
+  PayloadOff = 0u;
+  DecodedAddr = _DecodeAddr(pPayload + PayloadOff, PayloadLen - PayloadOff, &NumUsed);
+  PayloadOff += NumUsed;
+  TEST_ASSERT_EQ_ADDR(ExpectedId, DecodedAddr);
+  for (i = 0u; i < NumExpectedU32; i++) {
+    DecodedU32 = _DecodeU32(pPayload + PayloadOff, PayloadLen - PayloadOff, &NumUsed);
+    PayloadOff += NumUsed;
+    TEST_ASSERT_EQ_U(pExpectedU32[i], DecodedU32);
+  }
+  TEST_ASSERT_EQ_U(PayloadLen, PayloadOff);
 }
 
 /*********************************************************************
@@ -1124,8 +1206,8 @@ static void _TestEncodeAPI(void) {
 static void _TestInitAndControlAPI(void) {
   SEGGER_SYSVIEW_CORE_CONTEXT* pMainContext;
   SEGGER_SYSVIEW_CORE_CONTEXT ExtraContext;
-  uintptr_t ExtraUpBufferAddress;
-  uintptr_t ExtraDownBufferAddress;
+  PTR_ADDR ExtraUpBufferAddress;
+  PTR_ADDR ExtraDownBufferAddress;
 
   _ResetCallbacks();
   _ResetRTTStub();
@@ -1324,6 +1406,39 @@ static void _TestRecordAPI(void) {
   TEST_EXPECT_EVENT(49u, SEGGER_SYSVIEW_RecordU32x9(49u, 1u, 2u, 3u, 4u, 5u, 6u, 7u, 8u, 9u));
   TEST_EXPECT_EVENT(50u, SEGGER_SYSVIEW_RecordU32x10(50u, 1u, 2u, 3u, 4u, 5u, 6u, 7u, 8u, 9u, 10u));
   TEST_EXPECT_EVENT(51u, SEGGER_SYSVIEW_RecordString(51u, "payload"));
+  {
+    const U32 aRecordIdxU32Args[1]   = { 0xF0000077u };
+    const U32 aRecordIdxU32x2Args[2] = { 0xF0000088u, 0xF0000089u };
+    const U32 aRecordIdxU32x3Args[3] = { 0xF0000099u, 0xF000009Au, 0xF000009Bu };
+    const U32 aRecordIdxU32x4Args[4] = { 0xF00000AAu, 0xF00000ABu, 0xF00000ACu, 0xF00000ADu };
+    unsigned Before;
+    unsigned WriteIndex;
+
+    Before = _NumWrites;
+    SEGGER_SYSVIEW_RecordId(52u, (PTR_ADDR)0x100000055u);
+    WriteIndex = _ExpectLastEventFrom(Before, 52u);
+    _ExpectRecordIdPayload(WriteIndex, (PTR_ADDR)0x100000055u, NULL, 0u);
+
+    Before = _NumWrites;
+    SEGGER_SYSVIEW_RecordIdxU32(53u, (PTR_ADDR)0x100000066u, 0xF0000077u);
+    WriteIndex = _ExpectLastEventFrom(Before, 53u);
+    _ExpectRecordIdPayload(WriteIndex, (PTR_ADDR)0x100000066u, aRecordIdxU32Args, SEGGER_COUNTOF(aRecordIdxU32Args));
+
+    Before = _NumWrites;
+    SEGGER_SYSVIEW_RecordIdxU32x2(54u, (PTR_ADDR)0x100000088u, 0xF0000088u, 0xF0000089u);
+    WriteIndex = _ExpectLastEventFrom(Before, 54u);
+    _ExpectRecordIdPayload(WriteIndex, (PTR_ADDR)0x100000088u, aRecordIdxU32x2Args, SEGGER_COUNTOF(aRecordIdxU32x2Args));
+
+    Before = _NumWrites;
+    SEGGER_SYSVIEW_RecordIdxU32x3(55u, (PTR_ADDR)0x100000099u, 0xF0000099u, 0xF000009Au, 0xF000009Bu);
+    WriteIndex = _ExpectLastEventFrom(Before, 55u);
+    _ExpectRecordIdPayload(WriteIndex, (PTR_ADDR)0x100000099u, aRecordIdxU32x3Args, SEGGER_COUNTOF(aRecordIdxU32x3Args));
+
+    Before = _NumWrites;
+    SEGGER_SYSVIEW_RecordIdxU32x4(56u, (PTR_ADDR)0x1000000AAu, 0xF00000AAu, 0xF00000ABu, 0xF00000ACu, 0xF00000ADu);
+    WriteIndex = _ExpectLastEventFrom(Before, 56u);
+    _ExpectRecordIdPayload(WriteIndex, (PTR_ADDR)0x1000000AAu, aRecordIdxU32x4Args, SEGGER_COUNTOF(aRecordIdxU32x4Args));
+  }
   TEST_EXPECT_EVENT(SYSVIEW_EVTID_SYSTIME_US, SEGGER_SYSVIEW_RecordSystime());
   TEST_EXPECT_EVENT(SYSVIEW_EVTID_ISR_ENTER, SEGGER_SYSVIEW_RecordEnterISR());
   TEST_EXPECT_EVENT(SYSVIEW_EVTID_ISR_EXIT, SEGGER_SYSVIEW_RecordExitISR());
@@ -1332,6 +1447,29 @@ static void _TestRecordAPI(void) {
   TEST_EXPECT_EVENT(SYSVIEW_EVTID_TIMER_EXIT, SEGGER_SYSVIEW_RecordExitTimer());
   TEST_EXPECT_EVENT(SYSVIEW_EVTID_END_CALL, SEGGER_SYSVIEW_RecordEndCall(60u));
   TEST_EXPECT_EVENT(SYSVIEW_EVTID_END_CALL, SEGGER_SYSVIEW_RecordEndCallU32(60u, 0x77u));
+  {
+    const U8* pPayload;
+    unsigned Before;
+    unsigned NumUsed;
+    unsigned PayloadLen;
+    unsigned PayloadOff;
+    unsigned WriteIndex;
+    PTR_ADDR DecodedAddr;
+    U32 DecodedEventId;
+
+    Before = _NumWrites;
+    SEGGER_SYSVIEW_RecordEndCallId(60u, (PTR_ADDR)0x100000077u);
+    WriteIndex = _ExpectLastEventFrom(Before, SYSVIEW_EVTID_END_CALL);
+    pPayload = _WritePayload(WriteIndex, &PayloadLen);
+    PayloadOff = 0u;
+    DecodedEventId = _DecodeU32(pPayload + PayloadOff, PayloadLen - PayloadOff, &NumUsed);
+    PayloadOff += NumUsed;
+    DecodedAddr = _DecodeAddr(pPayload + PayloadOff, PayloadLen - PayloadOff, &NumUsed);
+    PayloadOff += NumUsed;
+    TEST_ASSERT_EQ_U(60u, DecodedEventId);
+    TEST_ASSERT_EQ_ADDR((PTR_ADDR)0x100000077u, DecodedAddr);
+    TEST_ASSERT_EQ_U(PayloadLen, PayloadOff);
+  }
 
   _InitAndStart(NULL);
   TEST_EXPECT_EVENT(SYSVIEW_EVTID_SYSTIME_CYCLES, SEGGER_SYSVIEW_RecordSystime());
@@ -1403,10 +1541,10 @@ static void _TestConvenienceEventAPI(void) {
   DataReg.DataType = SEGGER_SYSVIEW_TYPE_U32;
   TEST_EXPECT_EXT_EVENT(SYSVIEW_EVTID_EX_REGISTER_DATA, SEGGER_SYSVIEW_RegisterData(&DataReg));
 
-  TEST_EXPECT_EXT_EVENT(SYSVIEW_EVTID_EX_HEAP_DEFINE, SEGGER_SYSVIEW_HeapDefine((void*)(uintptr_t)0x100u, (void*)(uintptr_t)0x200u, 64u, 8u));
-  TEST_EXPECT_EXT_EVENT(SYSVIEW_EVTID_EX_HEAP_ALLOC, SEGGER_SYSVIEW_HeapAlloc((void*)(uintptr_t)0x100u, (void*)(uintptr_t)0x220u, 32u));
-  TEST_EXPECT_EXT_EVENT(SYSVIEW_EVTID_EX_HEAP_ALLOC_EX, SEGGER_SYSVIEW_HeapAllocEx((void*)(uintptr_t)0x100u, (void*)(uintptr_t)0x240u, 32u, 9u));
-  TEST_EXPECT_EXT_EVENT(SYSVIEW_EVTID_EX_HEAP_FREE, SEGGER_SYSVIEW_HeapFree((void*)(uintptr_t)0x100u, (void*)(uintptr_t)0x240u));
+  TEST_EXPECT_EXT_EVENT(SYSVIEW_EVTID_EX_HEAP_DEFINE, SEGGER_SYSVIEW_HeapDefine((void*)(PTR_ADDR)0x100u, (void*)(PTR_ADDR)0x200u, 64u, 8u));
+  TEST_EXPECT_EXT_EVENT(SYSVIEW_EVTID_EX_HEAP_ALLOC, SEGGER_SYSVIEW_HeapAlloc((void*)(PTR_ADDR)0x100u, (void*)(PTR_ADDR)0x220u, 32u));
+  TEST_EXPECT_EXT_EVENT(SYSVIEW_EVTID_EX_HEAP_ALLOC_EX, SEGGER_SYSVIEW_HeapAllocEx((void*)(PTR_ADDR)0x100u, (void*)(PTR_ADDR)0x240u, 32u, 9u));
+  TEST_EXPECT_EXT_EVENT(SYSVIEW_EVTID_EX_HEAP_FREE, SEGGER_SYSVIEW_HeapFree((void*)(PTR_ADDR)0x100u, (void*)(PTR_ADDR)0x240u));
 }
 
 /*********************************************************************

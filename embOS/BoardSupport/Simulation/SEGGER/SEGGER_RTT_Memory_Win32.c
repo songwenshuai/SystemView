@@ -238,7 +238,7 @@ int SEGGER_SIM_RTT_EnsureMemory(void) {
     }
     _IsAtexitRegistered = 1;
   }
-  if (SEGGER_RTT_EnsureInitEx((uintptr_t)_pMappedBase, _MappedSize, SEGGER_SIM_RTT_NUM_CHANNELS) != 0) {
+  if (SEGGER_RTT_EnsureInitEx((PTR_ADDR)_pMappedBase, _MappedSize, SEGGER_SIM_RTT_NUM_CHANNELS) != 0) {
     fprintf(stderr, "embOS MEMSHM: failed to initialize RTT control block\n");
     SEGGER_SIM_RTT_CleanupMemory();
     return -1;
@@ -304,11 +304,11 @@ void SEGGER_SIM_RTT_Unlock(void) {
 *    != 0  Local mapped RTT control block address.
 *    == 0  Error.
 */
-uintptr_t SEGGER_SIM_RTT_GetMemoryAddress(void) {
+PTR_ADDR SEGGER_SIM_RTT_GetMemoryAddress(void) {
   if (SEGGER_SIM_RTT_EnsureMemory() != 0) {
     return 0u;
   }
-  return (uintptr_t)_pMappedBase;
+  return (PTR_ADDR)_pMappedBase;
 }
 
 /*********************************************************************
@@ -340,11 +340,11 @@ size_t SEGGER_SIM_RTT_GetMemorySize(void) {
 *    != 0  Local mapped up-buffer address.
 *    == 0  Error.
 */
-uintptr_t SEGGER_SIM_RTT_GetSystemViewUpBufferAddress(void) {
+PTR_ADDR SEGGER_SIM_RTT_GetSystemViewUpBufferAddress(void) {
   if (SEGGER_SIM_RTT_EnsureMemory() != 0) {
     return 0u;
   }
-  return (uintptr_t)_pMappedBase + SEGGER_SIM_SYSVIEW_UP_BUFFER_OFF;
+  return (PTR_ADDR)_pMappedBase + SEGGER_SIM_SYSVIEW_UP_BUFFER_OFF;
 }
 
 /*********************************************************************
@@ -358,11 +358,11 @@ uintptr_t SEGGER_SIM_RTT_GetSystemViewUpBufferAddress(void) {
 *    != 0  Local mapped down-buffer address.
 *    == 0  Error.
 */
-uintptr_t SEGGER_SIM_RTT_GetSystemViewDownBufferAddress(void) {
+PTR_ADDR SEGGER_SIM_RTT_GetSystemViewDownBufferAddress(void) {
   if (SEGGER_SIM_RTT_EnsureMemory() != 0) {
     return 0u;
   }
-  return (uintptr_t)_pMappedBase + SEGGER_SIM_SYSVIEW_DOWN_BUFFER_OFF;
+  return (PTR_ADDR)_pMappedBase + SEGGER_SIM_SYSVIEW_DOWN_BUFFER_OFF;
 }
 
 /*************************** End of file ****************************/

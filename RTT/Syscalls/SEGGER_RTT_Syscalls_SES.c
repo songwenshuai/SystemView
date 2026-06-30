@@ -68,7 +68,7 @@ Purpose : Reimplementation of printf, puts and __getchar using RTT
 *
 **********************************************************************
 */
-int SEGGER_RTT_vprintf(uintptr_t Address, unsigned BufferIndex, const char * sFormat, va_list * pParamList);
+int SEGGER_RTT_vprintf(PTR_ADDR Address, unsigned BufferIndex, const char * sFormat, va_list * pParamList);
 
 /*********************************************************************
 *
@@ -88,7 +88,7 @@ int printf(const char *fmt,...) {
   va_list args;
 
   va_start (args, fmt);
-  n = SEGGER_RTT_vprintf((uintptr_t)SEGGER_RTT_SYSCALL_CB_ADDRESS, 0u, fmt, &args);
+  n = SEGGER_RTT_vprintf((PTR_ADDR)SEGGER_RTT_SYSCALL_CB_ADDRESS, 0u, fmt, &args);
   va_end(args);
   return n;
 }
@@ -103,7 +103,7 @@ int printf(const char *fmt,...) {
 */
 static int _putchar(int x, __printf_tag_ptr ctx) {
   (void)ctx;
-  SEGGER_RTT_Write((uintptr_t)SEGGER_RTT_SYSCALL_CB_ADDRESS, 0u, (char *)&x, 1u);
+  SEGGER_RTT_Write((PTR_ADDR)SEGGER_RTT_SYSCALL_CB_ADDRESS, 0u, (char *)&x, 1u);
   return x;
 }
 
@@ -160,9 +160,9 @@ int printf(const char *fmt,...) {
   va_start (args, fmt);
   n = vsnprintf(aBuffer, sizeof(aBuffer), fmt, args);
   if (n > (int)sizeof(aBuffer)) {
-    SEGGER_RTT_Write((uintptr_t)SEGGER_RTT_SYSCALL_CB_ADDRESS, 0u, aBuffer, sizeof(aBuffer));
+    SEGGER_RTT_Write((PTR_ADDR)SEGGER_RTT_SYSCALL_CB_ADDRESS, 0u, aBuffer, sizeof(aBuffer));
   } else if (n > 0) {
-    SEGGER_RTT_Write((uintptr_t)SEGGER_RTT_SYSCALL_CB_ADDRESS, 0u, aBuffer, (unsigned)n);
+    SEGGER_RTT_Write((PTR_ADDR)SEGGER_RTT_SYSCALL_CB_ADDRESS, 0u, aBuffer, (unsigned)n);
   }
   va_end(args);
   return n;
@@ -183,7 +183,7 @@ int printf(const char *fmt,...) {
 *    print a string using RTT.
 */
 int puts(const char *s) {
-  return SEGGER_RTT_WriteString((uintptr_t)SEGGER_RTT_SYSCALL_CB_ADDRESS, 0u, s);
+  return SEGGER_RTT_WriteString((PTR_ADDR)SEGGER_RTT_SYSCALL_CB_ADDRESS, 0u, s);
 }
 
 /*********************************************************************
@@ -195,7 +195,7 @@ int puts(const char *s) {
 */
 int __putchar(int x, __printf_tag_ptr ctx) {
   (void)ctx;
-  SEGGER_RTT_Write((uintptr_t)SEGGER_RTT_SYSCALL_CB_ADDRESS, 0u, (char *)&x, 1u);
+  SEGGER_RTT_Write((PTR_ADDR)SEGGER_RTT_SYSCALL_CB_ADDRESS, 0u, (char *)&x, 1u);
   return x;
 }
 
@@ -207,7 +207,7 @@ int __putchar(int x, __printf_tag_ptr ctx) {
 *    Wait for and get a character via RTT.
 */
 int __getchar() {
-  return SEGGER_RTT_WaitKey((uintptr_t)SEGGER_RTT_SYSCALL_CB_ADDRESS);
+  return SEGGER_RTT_WaitKey((PTR_ADDR)SEGGER_RTT_SYSCALL_CB_ADDRESS);
 }
 
 #endif

@@ -104,7 +104,7 @@ int SYSVIEW_REC_GetOutgoing(U8 *pBuf, unsigned BufSize) {
   }
   switch (_State) {
   case RECORDING:
-    RetVal = (int)SEGGER_RTT_ReadUpBufferNoLock(_ChannelId, pBuf, BufSize);
+    RetVal = (int)SEGGER_RTT_ReadUpBufferNoLock((PTR_ADDR)SEGGER_SYSVIEW_RTT_CB_ADDRESS, _ChannelId, pBuf, BufSize);
     break;
   case SEND_CLIENT_HELLO4_VERSION2:
     *pBuf = HelloResponse[3];
@@ -172,7 +172,7 @@ int SYSVIEW_REC_ProcessIncoming(const U8 *pBytes, unsigned NumBytes) {
     NumBytes--;
     switch (_State) {
       case RECORDING:
-        RetVal = SEGGER_RTT_WriteDownBuffer(_ChannelId, &Byte, 1);
+        RetVal = SEGGER_RTT_WriteDownBuffer((PTR_ADDR)SEGGER_SYSVIEW_RTT_CB_ADDRESS, _ChannelId, &Byte, 1);
         break;
       case SEND_CLIENT_HELLO4_VERSION2: // fall through!
       case SEND_CLIENT_HELLO3_VERSION1: // fall through!

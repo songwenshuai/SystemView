@@ -107,39 +107,39 @@ const RTTMem_Backend_t *RTTMem_Backend_MEMSHM(void) {
     return &_stub_backend;
 }
 
-int SEGGER_RTT_EnsureInitEx(uintptr_t Address, size_t Size, unsigned NumBuffers) {
+int SEGGER_RTT_EnsureInitEx(PTR_ADDR Address, size_t Size, unsigned NumBuffers) {
     (void)Address;
     (void)Size;
     (void)NumBuffers;
     return _stub_ensure_result;
 }
 
-int SEGGER_RTT_CheckInit(uintptr_t Address) {
+int SEGGER_RTT_CheckInit(PTR_ADDR Address) {
     (void)Address;
     return _stub_check_init_result;
 }
 
-int SEGGER_RTT_CheckRegion(uintptr_t Address, size_t Size) {
+int SEGGER_RTT_CheckRegion(PTR_ADDR Address, size_t Size) {
     (void)Address;
     (void)Size;
     return _stub_check_region_result;
 }
 
-int SEGGER_RTT_CheckUpBuffer(uintptr_t Address, size_t Size, unsigned BufferIndex) {
+int SEGGER_RTT_CheckUpBuffer(PTR_ADDR Address, size_t Size, unsigned BufferIndex) {
     (void)Address;
     (void)Size;
     (void)BufferIndex;
     return _stub_check_up_result;
 }
 
-int SEGGER_RTT_CheckDownBuffer(uintptr_t Address, size_t Size, unsigned BufferIndex) {
+int SEGGER_RTT_CheckDownBuffer(PTR_ADDR Address, size_t Size, unsigned BufferIndex) {
     (void)Address;
     (void)Size;
     (void)BufferIndex;
     return _stub_check_down_result;
 }
 
-int SEGGER_RTT_FindValidControlBlock(uintptr_t *pAddress, size_t Size, size_t *pRegionSize) {
+int SEGGER_RTT_FindValidControlBlock(PTR_ADDR *pAddress, size_t Size, size_t *pRegionSize) {
     if (_stub_find_result != 0) {
         return _stub_find_result;
     }
@@ -150,13 +150,13 @@ int SEGGER_RTT_FindValidControlBlock(uintptr_t *pAddress, size_t Size, size_t *p
     return 0;
 }
 
-unsigned SEGGER_RTT_GetBytesInBuffer(uintptr_t Address, unsigned BufferIndex) {
+unsigned SEGGER_RTT_GetBytesInBuffer(PTR_ADDR Address, unsigned BufferIndex) {
     (void)Address;
     (void)BufferIndex;
     return _stub_bytes_in_buffer;
 }
 
-unsigned SEGGER_RTT_ReadUpBufferNoLock(uintptr_t Address,
+unsigned SEGGER_RTT_ReadUpBufferNoLock(PTR_ADDR Address,
                                        unsigned BufferIndex,
                                        void *pData,
                                        unsigned BufferSize) {
@@ -168,7 +168,7 @@ unsigned SEGGER_RTT_ReadUpBufferNoLock(uintptr_t Address,
     return _stub_read_result;
 }
 
-unsigned SEGGER_RTT_WriteDownBufferNoLock(uintptr_t Address,
+unsigned SEGGER_RTT_WriteDownBufferNoLock(PTR_ADDR Address,
                                           unsigned BufferIndex,
                                           const void *pBuffer,
                                           unsigned NumBytes) {
