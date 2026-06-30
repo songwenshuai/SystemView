@@ -2500,25 +2500,8 @@ void     OS_Stop      (void)                                               OS_TE
 **********************************************************************
 */
 void                    OS_TASK_AddTerminateHook          (OS_ON_TERMINATE_HOOK* pHook, OS_ROUTINE_TASK_PTR* pfRoutine)                                                                                                                          OS_TEXT_SECTION_ATTRIBUTE(OS_TASK_AddTerminateHook);
-void                    OS_TASK_Create                    (OS_TASK* pTask
-#if (OS_SUPPORT_TRACKNAME != 0)
-                                                           , OS_ROM_DATA const char* sName
-#endif
-                                                           , OS_TASK_PRIO Priority, OS_ROUTINE_VOID* pfRoutine, void OS_STACKPTR* pStack, OS_UINT StackSize
-#if (OS_SUPPORT_RR != 0)
-                                                           , OS_UINT TimeSlice
-#endif
-                                                          ) OS_TEXT_SECTION_ATTRIBUTE(OS_TASK_Create);
-void                    OS_TASK_CreateEx                  (OS_TASK* pTask
-#if (OS_SUPPORT_TRACKNAME != 0)
-                                                           , OS_ROM_DATA const char* sName
-#endif
-                                                           , OS_TASK_PRIO Priority, OS_ROUTINE_VOID_PTR* pfRoutine, void OS_STACKPTR* pStack, OS_UINT StackSize
-#if (OS_SUPPORT_RR != 0)
-                                                           , OS_UINT TimeSlice
-#endif
-                                                           , void* pContext
-                                                          ) OS_TEXT_SECTION_ATTRIBUTE(OS_TASK_CreateEx);
+void                    OS_TASK_Create                    (OS_TASK* pTask, OS_ROM_DATA const char* sName, OS_TASK_PRIO Priority, OS_ROUTINE_VOID*     pfRoutine, void OS_STACKPTR* pStack, OS_UINT StackSize, OS_UINT TimeSlice)                 OS_TEXT_SECTION_ATTRIBUTE(OS_TASK_Create);
+void                    OS_TASK_CreateEx                  (OS_TASK* pTask, OS_ROM_DATA const char* sName, OS_TASK_PRIO Priority, OS_ROUTINE_VOID_PTR* pfRoutine, void OS_STACKPTR* pStack, OS_UINT StackSize, OS_UINT TimeSlice, void* pContext) OS_TEXT_SECTION_ATTRIBUTE(OS_TASK_CreateEx);
 void                    OS_TASK_Delay                     (OS_TIME t)                                                                                                                                                                            OS_TEXT_SECTION_ATTRIBUTE(OS_TASK_Delay);
 void                    OS_TASK_DelayUntil                (OS_TIME t)                                                                                                                                                                            OS_TEXT_SECTION_ATTRIBUTE(OS_TASK_DelayUntil);
 void                    OS_TASK_Delay_us                  (OS_U16  us)                                                                                                                                                                           OS_TEXT_SECTION_ATTRIBUTE(OS_TASK_Delay_us);
@@ -2551,7 +2534,6 @@ void                    OS_TASK_SetContextExtension       (OS_CONST_PTR OS_EXTEN
 void                    OS_TASK_SetDefaultContextExtension(OS_CONST_PTR OS_EXTEND_TASK_CONTEXT* pExtendContext)                                                                                                                                  OS_TEXT_SECTION_ATTRIBUTE(OS_TASK_SetDefaultContextExtension);
 #endif
 
-#if ((OS_SUPPORT_TRACKNAME != 0) && (OS_SUPPORT_RR != 0))
   #define OS_TASK_CREATE(pTask, sName, Priority, pfRoutine, pStack)             \
     OS_TASK_Create ((pTask),                                                    \
                     (sName),                                                    \
@@ -2572,62 +2554,6 @@ void                    OS_TASK_SetDefaultContextExtension(OS_CONST_PTR OS_EXTEN
                       2u,                                                       \
                       (pContext)                                                \
                      )
-#elif (OS_SUPPORT_TRACKNAME != 0)
-  #define OS_TASK_CREATE(pTask, sName, Priority, pfRoutine, pStack)             \
-    OS_TASK_Create ((pTask),                                                    \
-                    (sName),                                                    \
-                    (OS_TASK_PRIO)(Priority),                                   \
-                    (pfRoutine),                                                \
-                    (void OS_STACKPTR*)(pStack),                                \
-                    sizeof(pStack)                                              \
-                   )
-
-  #define OS_TASK_CREATEEX(pTask, sName, Priority, pfRoutine, pStack, pContext) \
-    OS_TASK_CreateEx ((pTask),                                                  \
-                      (sName),                                                  \
-                      (OS_TASK_PRIO)(Priority),                                 \
-                      (pfRoutine),                                              \
-                      (void OS_STACKPTR*)(pStack),                              \
-                      sizeof(pStack),                                           \
-                      (pContext)                                                \
-                     )
-#elif (OS_SUPPORT_RR != 0)
-  #define OS_TASK_CREATE(pTask, sName, Priority, pfRoutine, pStack)             \
-    OS_TASK_Create ((pTask),                                                    \
-                    (OS_TASK_PRIO)(Priority),                                   \
-                    (pfRoutine),                                                \
-                    (void OS_STACKPTR*)(pStack),                                \
-                    sizeof(pStack),                                             \
-                    2u                                                          \
-                   )
-
-  #define OS_TASK_CREATEEX(pTask, sName, Priority, pfRoutine, pStack, pContext) \
-    OS_TASK_CreateEx ((pTask),                                                  \
-                      (OS_TASK_PRIO)(Priority),                                 \
-                      (pfRoutine),                                              \
-                      (void OS_STACKPTR*)(pStack),                              \
-                      sizeof(pStack),                                           \
-                      2u,                                                       \
-                      (pContext)                                                \
-                     )
-#else
-  #define OS_TASK_CREATE(pTask, sName, Priority, pfRoutine, pStack)             \
-    OS_TASK_Create ((pTask),                                                    \
-                    (OS_TASK_PRIO)(Priority),                                   \
-                    (pfRoutine),                                                \
-                    (void OS_STACKPTR*)(pStack),                                \
-                    sizeof(pStack)                                              \
-                   )
-
-  #define OS_TASK_CREATEEX(pTask, sName, Priority, pfRoutine, pStack, pContext) \
-    OS_TASK_CreateEx ((pTask),                                                  \
-                      (OS_TASK_PRIO)(Priority),                                 \
-                      (pfRoutine),                                              \
-                      (void OS_STACKPTR*)(pStack),                              \
-                      sizeof(pStack),                                           \
-                      (pContext)                                                \
-                     )
-#endif
 
 /*********************************************************************
 *
