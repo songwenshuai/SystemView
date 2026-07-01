@@ -26,6 +26,7 @@ Purpose : System visualization API.
 
 #include <stdint.h>
 #include "SEGGER.h"
+#include "SEGGER_SYSVIEW_Version.h"
 #include "SEGGER_SYSVIEW_ConfDefaults.h"
 
 #ifdef __cplusplus
@@ -39,16 +40,6 @@ extern "C" {
 *
 **********************************************************************
 */
-
-//
-// SystemView compatibility version number.
-// Set to minimum required and compatible version of SystemView application.
-// Does not reflect the version number of the SystemView Target Source release.
-//
-#define SEGGER_SYSVIEW_MAJOR          3
-#define SEGGER_SYSVIEW_MINOR          32
-#define SEGGER_SYSVIEW_REV            0
-#define SEGGER_SYSVIEW_VERSION        ((SEGGER_SYSVIEW_MAJOR * 10000) + (SEGGER_SYSVIEW_MINOR * 100) + SEGGER_SYSVIEW_REV)
 
 #define SEGGER_SYSVIEW_INFO_SIZE      9   // Minimum size, which has to be reserved for a packet. 1-2 byte of message type, 0-2  byte of payload length, 1-5 bytes of timestamp.
 #define SEGGER_SYSVIEW_QUANTA_U32     5   // Maximum number of bytes to encode a U32, should be reserved for each 32-bit value in a packet.

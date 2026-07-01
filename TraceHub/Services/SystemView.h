@@ -62,6 +62,8 @@ Purpose : SystemView/TRACE service for a configured RTT channel
 #include <stddef.h>
 #include <stdio.h>
 
+#include "SEGGER_SYSVIEW_Version.h"
+
 #if defined(__cplusplus)         // Allow usage of this module from C++ files (disable name mangling)
 extern "C" {     /* Make sure we have C-declarations in C++ programs */
 #endif
@@ -96,7 +98,7 @@ extern "C" {     /* Make sure we have C-declarations in C++ programs */
 *  SystemView protocol major version number.
 *
 */
-#define SYSVIEW_VERSION_MAJOR       3
+#define SYSVIEW_VERSION_MAJOR       SEGGER_SYSVIEW_MAJOR
 
 /*********************************************************************
 *
@@ -104,7 +106,7 @@ extern "C" {     /* Make sure we have C-declarations in C++ programs */
 *  SystemView protocol minor version number.
 *
 */
-#define SYSVIEW_VERSION_MINOR       60
+#define SYSVIEW_VERSION_MINOR       SEGGER_SYSVIEW_MINOR
 
 /*********************************************************************
 *
@@ -112,7 +114,7 @@ extern "C" {     /* Make sure we have C-declarations in C++ programs */
 *  SystemView protocol revision number.
 *
 */
-#define SYSVIEW_VERSION_REV         0
+#define SYSVIEW_VERSION_REV         SEGGER_SYSVIEW_REV
 
 #if (SYSVIEW_VERSION_MAJOR < 0) || (SYSVIEW_VERSION_MAJOR > 9)
 #error "SYSVIEW_VERSION_MAJOR must fit one decimal digit"
