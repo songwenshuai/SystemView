@@ -2,115 +2,32 @@
 *                             CineLogic                              *
 *                      RTT Trace and Debug Bridge                    *
 **********************************************************************
-*                                                                    *
-*                    (c) 2023 - 2026 CineLogic                       *
-*                                                                    *
-*                  Support: wenshuaisong@gmail.com                   *
-*                                                                    *
-**********************************************************************
 ----------------------------------------------------------------------
-File    : CoreLogRecorderSource.c
-Purpose : Core log recorder source files and consumer queues
+File    : CoreLogRecorderConsumer.c
+Purpose : Core log recorder consumer queues
 ---------------------------END-OF-HEADER------------------------------
 */
 
-#include <errno.h>
+/*********************************************************************
+*
+*       #include Section
+*
+**********************************************************************
+*/
+
 #include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 #include "CoreLogRecorder_internal.h"
-#include "RTTBridge.h"
 
 /*********************************************************************
 *
-*       _Recorder_FindSource()
+*       Internal functions
 *
-*  Function description
-*    Return the source state for an RTT channel.
+**********************************************************************
 */
-static CoreLogRecorder_Source_t *_Recorder_FindSource(unsigned channel) {
-    CoreLogRecorder_Source_t *source;
-
-    source = &_recorder_state.sources[CORE_LOG_RECORDER_LINUX];
-    if (source->enabled && source->channel == channel) {
-        return source;
-    }
-
-    source = &_recorder_state.sources[CORE_LOG_RECORDER_RTOS];
-    if (source->enabled && source->channel == channel) {
-        return source;
-    }
-
-    return NULL;
-}
-
-
-/*********************************************************************
-*
-*       _Recorder_SourceIsEnabled()
-*
-*  Function description
-*    Return whether a source participates in recording.
-*/
-bool _Recorder_SourceIsEnabled(CoreLogRecorder_SourceId_t source_id) {
-    if (source_id >= CORE_LOG_RECORDER_NUM_SOURCES) {
-        return false;
-    }
-
-    return _recorder_state.sources[source_id].enabled;
-}
-
-
-/*********************************************************************
-*
-*       _Recorder_ReportFileErrorLocked()
-*
-*  Function description
-*    Record a source file failure. Caller must hold source lock.
-*/
-static void _Recorder_ReportFileErrorLocked(CoreLogRecorder_Source_t *source, const char *operation) {
-    if (source == NULL) {
-        return;
-    }
-    if (operation == NULL) {
-        operation = "operation";
-    }
-
-    source->file_error = true;
-    if (!source->file_error_logged) {
-        fprintf(stderr,
-                "[CoreLogRecorder] %s file %s failed\n",
-                source->name, operation);
-        source->file_error_logged = true;
-    }
-    _Recorder_SetFatalError();
-}
-
-
-/*********************************************************************
-*
-*       _Recorder_FlushSourceLocked()
-*
-*  Function description
-*    Flush pending file data. Caller must hold source lock.
-*/
-static int _Recorder_FlushSourceLocked(CoreLogRecorder_Source_t *source) {
-    if (source == NULL || source->file == NULL || !source->flush_pending) {
-        return 0;
-    }
-
-    if (fflush(source->file) != 0) {
-        _Recorder_ReportFileErrorLocked(source, "flush");
-        return -1;
-    }
-
-    source->flush_pending = false;
-    source->last_flush_time_us = SYS_GetMonotonicTimeUs();
-    return 0;
-}
-
 
 /*********************************************************************
 *
@@ -120,11 +37,11 @@ static int _Recorder_FlushSourceLocked(CoreLogRecorder_Source_t *source) {
 *    Append recorded bytes to the per-core consumer queue.
 *
 *  Return value
-*    0   Success
-*   -1   Queue capacity would be exceeded
+*    0   Success.
+*   -1   Queue capacity would be exceeded.
 */
-static int _Recorder_QueueBytesLocked(CoreLogRecorder_Source_t *source,
-                                      const char *data, unsigned num_bytes) {
+int _Recorder_QueueBytesLocked(CoreLogRecorder_Source_t *source,
+                               const char *data, unsigned num_bytes) {
     size_t free_space;
     size_t write_pos;
     size_t first_chunk;
@@ -168,7 +85,6 @@ static int _Recorder_QueueBytesLocked(CoreLogRecorder_Source_t *source,
     return 0;
 }
 
-
 /*********************************************************************
 *
 *       _Recorder_ClearConsumerQueueLocked()
@@ -176,7 +92,7 @@ static int _Recorder_QueueBytesLocked(CoreLogRecorder_Source_t *source,
 *  Function description
 *    Drop all bytes owned by the transient consumer stream.
 */
-static void _Recorder_ClearConsumerQueueLocked(CoreLogRecorder_Source_t *source) {
+void _Recorder_ClearConsumerQueueLocked(CoreLogRecorder_Source_t *source) {
     if (source == NULL) {
         return;
     }
@@ -187,7 +103,6 @@ static void _Recorder_ClearConsumerQueueLocked(CoreLogRecorder_Source_t *source)
     source->queue_capacity_failure_pending = false;
 }
 
-
 /*********************************************************************
 *
 *       _Recorder_AllocateConsumerQueue()
@@ -195,7 +110,7 @@ static void _Recorder_ClearConsumerQueueLocked(CoreLogRecorder_Source_t *source)
 *  Function description
 *    Allocate the per-source consumer queue.
 */
-static int _Recorder_AllocateConsumerQueue(CoreLogRecorder_Source_t *source) {
+int _Recorder_AllocateConsumerQueue(CoreLogRecorder_Source_t *source) {
     char   *queue;
     size_t  queue_size;
 
@@ -218,158 +133,6 @@ static int _Recorder_AllocateConsumerQueue(CoreLogRecorder_Source_t *source) {
     _Recorder_ClearConsumerQueueLocked(source);
     return 0;
 }
-
-
-/*********************************************************************
-*
-*       _Recorder_RecordBytes()
-*
-*  Function description
-*    Record clean text to the owned file and publish bytes to consumers.
-*/
-void _Recorder_RecordBytes(CoreLogRecorder_SourceId_t source_id,
-                                  const char *data, unsigned num_bytes) {
-    CoreLogRecorder_Source_t *source;
-    size_t                    clean_len;
-    uint64_t                  now_us;
-
-    if (source_id >= CORE_LOG_RECORDER_NUM_SOURCES ||
-        data == NULL ||
-        num_bytes == 0u) {
-        return;
-    }
-
-    source = &_recorder_state.sources[source_id];
-    if (!source->enabled) {
-        return;
-    }
-
-    SYS_MutexLock(&source->lock);
-
-    if (source->file == NULL || source->file_error) {
-        _Recorder_ReportFileErrorLocked(source, "write");
-        SYS_MutexUnlock(&source->lock);
-        return;
-    }
-
-    clean_len = 0u;
-    if (LOG_WriteCleanTextToFileEx(source->file,
-                                   data,
-                                   num_bytes,
-                                   &source->file_clean_state,
-                                   &clean_len) != 0) {
-        _Recorder_ReportFileErrorLocked(source, "write");
-        SYS_MutexUnlock(&source->lock);
-        return;
-    }
-
-    source->flush_pending = true;
-    source->bytes_recorded += clean_len;
-
-    now_us = SYS_GetMonotonicTimeUs();
-    if ((source->last_flush_time_us == 0u) ||
-        ((now_us - source->last_flush_time_us) >= CORE_LOG_RECORDER_FLUSH_INTERVAL_US)) {
-        if (_Recorder_FlushSourceLocked(source) != 0) {
-            SYS_MutexUnlock(&source->lock);
-            return;
-        }
-    }
-
-    if (!source->seen) {
-        fprintf(stderr,
-                "[CoreLogRecorder] %s log detected on RTT channel %u\n",
-                source->name, source->channel);
-        source->seen = true;
-    }
-
-    if (!source->consumer_ever_registered || source->consumer_registered) {
-        if (_Recorder_QueueBytesLocked(source, data, num_bytes) != 0) {
-            SYS_MutexUnlock(&source->lock);
-            return;
-        }
-    }
-
-    SYS_MutexUnlock(&source->lock);
-}
-
-
-/*********************************************************************
-*
-*       _Recorder_FlushAllSources()
-*
-*  Function description
-*    Flush all owned log files.
-*/
-void _Recorder_FlushAllSources(void) {
-    unsigned i;
-
-    for (i = 0u; i < CORE_LOG_RECORDER_NUM_SOURCES; i++) {
-        CoreLogRecorder_Source_t *source = &_recorder_state.sources[i];
-
-        if (source->enabled && source->lock_initialized) {
-            SYS_MutexLock(&source->lock);
-            (void)_Recorder_FlushSourceLocked(source);
-            SYS_MutexUnlock(&source->lock);
-        }
-    }
-}
-
-
-/*********************************************************************
-*
-*       _Recorder_CloseFiles()
-*
-*  Function description
-*    Close all owned log files.
-*/
-void _Recorder_CloseFiles(void) {
-    unsigned i;
-
-    for (i = 0u; i < CORE_LOG_RECORDER_NUM_SOURCES; i++) {
-        CoreLogRecorder_Source_t *source = &_recorder_state.sources[i];
-        FILE                     *file;
-
-        if (source->enabled && source->lock_initialized) {
-            SYS_MutexLock(&source->lock);
-        }
-        if (source->file != NULL) {
-            file = source->file;
-            if (source->flush_pending) {
-                (void)_Recorder_FlushSourceLocked(source);
-            }
-            source->file = NULL;
-            errno = 0;
-            if (fclose(file) != 0) {
-                _Recorder_ReportFileErrorLocked(source, "close");
-            }
-        }
-        if (source->enabled && source->lock_initialized) {
-            SYS_MutexUnlock(&source->lock);
-        }
-    }
-}
-
-
-/*********************************************************************
-*
-*       _Recorder_DestroySourceLocks()
-*
-*  Function description
-*    Destroy per-source locks.
-*/
-void _Recorder_DestroySourceLocks(void) {
-    unsigned i;
-
-    for (i = 0u; i < CORE_LOG_RECORDER_NUM_SOURCES; i++) {
-        CoreLogRecorder_Source_t *source = &_recorder_state.sources[i];
-
-        if (source->enabled && source->lock_initialized) {
-            SYS_MutexDestroy(&source->lock);
-            source->lock_initialized = false;
-        }
-    }
-}
-
 
 /*********************************************************************
 *
@@ -396,57 +159,12 @@ void _Recorder_FreeSourceQueues(void) {
     }
 }
 
-
 /*********************************************************************
 *
-*       _Recorder_InitSource()
+*       Public functions
 *
-*  Function description
-*    Initialize one source descriptor and create its log file.
+**********************************************************************
 */
-int _Recorder_InitSource(CoreLogRecorder_SourceId_t source_id,
-                                unsigned channel,
-                                bool enabled,
-                                const char *name,
-                                const char *prefix) {
-    CoreLogRecorder_Source_t *source;
-
-    if (source_id >= CORE_LOG_RECORDER_NUM_SOURCES ||
-        name == NULL) {
-        return -1;
-    }
-
-    source = &_recorder_state.sources[source_id];
-    source->channel = channel;
-    source->name    = name;
-    source->enabled = enabled;
-    LOG_TextCleanStateInit(&source->file_clean_state);
-
-    if (!enabled) {
-        return 0;
-    }
-    if (prefix == NULL) {
-        return -1;
-    }
-
-    if (SYS_MutexInit(&source->lock) != 0) {
-        return -1;
-    }
-    source->lock_initialized = true;
-
-    if (_Recorder_AllocateConsumerQueue(source) != 0) {
-        return -1;
-    }
-
-    source->file = LOG_CreateTimestampedFile(prefix);
-    if (source->file == NULL) {
-        return -1;
-    }
-    source->last_flush_time_us = SYS_GetMonotonicTimeUs();
-
-    return 0;
-}
-
 
 /*********************************************************************
 *
@@ -491,7 +209,6 @@ int CoreLogRecorder_RegisterConsumer(unsigned channel) {
     return 0;
 }
 
-
 /*********************************************************************
 *
 *       CoreLogRecorder_UnregisterConsumer()
@@ -519,7 +236,6 @@ void CoreLogRecorder_UnregisterConsumer(unsigned channel) {
     _Recorder_ClearConsumerQueueLocked(source);
     SYS_MutexUnlock(&source->lock);
 }
-
 
 /*********************************************************************
 *
@@ -621,7 +337,6 @@ int CoreLogRecorder_ReadChannel(unsigned channel, void *buffer, size_t buffer_si
     return (int)num_bytes;
 }
 
-
 /*********************************************************************
 *
 *       CoreLogRecorder_IsCoreChannel()
@@ -643,3 +358,5 @@ bool CoreLogRecorder_IsCoreChannel(unsigned channel) {
 
     return (_Recorder_FindSource(channel) != NULL);
 }
+
+/*************************** End of file ****************************/

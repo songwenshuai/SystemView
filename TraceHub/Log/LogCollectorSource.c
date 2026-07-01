@@ -69,17 +69,6 @@ Purpose : LogCollector per-source line processing
 
 /*********************************************************************
 *
-*       _Collector_GetSourceName()
-*
-*  Function description
-*    Return a printable source name.
-*/
-static const char *_Collector_GetSourceName(LogSource_t source) {
-    return (source == LOG_SOURCE_LINUX) ? "Linux" : "RTOS";
-}
-
-/*********************************************************************
-*
 *       _DeliverLogEntry()
 *
 *  Function description
@@ -635,7 +624,7 @@ void LogCollectorSource_ReportUnflushedUntimedLines(LogCollector_SourceState_t *
                                                source_state->pending_untimed_len);
     fprintf(stderr,
             "[LogCollector] %s: %zu leading untimestamped bytes were not rendered during cleanup\n",
-            _Collector_GetSourceName(source_state->source),
+            LogCollectorState_GetSourceName(source_state->source),
             content_len);
     source_state->pending_untimed_len = 0u;
 }

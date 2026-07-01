@@ -73,7 +73,10 @@ set(TRACEHUB_TEST_COMMON_SOURCE ${CMAKE_CURRENT_SOURCE_DIR}/Unit/TestCommon.c)
 set(COMMON_SOURCES
     ${TRACEHUB_RTT_DIR}/RTTMemory.c
     ${TRACEHUB_RTT_DIR}/RTTMemory_memshm.c
-    ${TRACEHUB_RTT_DIR}/RTTBridge.c
+    ${TRACEHUB_RTT_DIR}/RTTBridgeApi.c
+    ${TRACEHUB_RTT_DIR}/RTTBridgeRegion.c
+    ${TRACEHUB_RTT_DIR}/RTTBridgeChannel.c
+    ${TRACEHUB_RTT_DIR}/RTTBridgeState.c
     ${TRACEHUB_LOG_DIR}/LogMain.c
     ${TRACEHUB_LOG_DIR}/LogFile.c
     ${TRACEHUB_LOG_DIR}/LogText.c
@@ -166,7 +169,10 @@ if(BUILD_UNIT_TESTS)
 
     add_executable(test_logcollector
         Unit/LogCollectorTest.c
-        ${TRACEHUB_LOG_DIR}/LogCollectorState.c
+        ${TRACEHUB_LOG_DIR}/LogCollectorStorage.c
+        ${TRACEHUB_LOG_DIR}/LogCollectorError.c
+        ${TRACEHUB_LOG_DIR}/LogCollectorConsumer.c
+        ${TRACEHUB_LOG_DIR}/LogCollectorApi.c
         ${TRACEHUB_LOG_DIR}/LogCollectorSource.c
         ${TRACEHUB_LOG_DIR}/LogCollectorRuntime.c
         ${TRACEHUB_LOG_DIR}/LogLineParser.c
@@ -262,7 +268,10 @@ if(BUILD_UNIT_TESTS)
     add_executable(test_rtt_api
         Unit/RTTApiTest.c
         ${TRACEHUB_RTT_DIR}/RTTMemory.c
-        ${TRACEHUB_RTT_DIR}/RTTBridge.c
+        ${TRACEHUB_RTT_DIR}/RTTBridgeApi.c
+        ${TRACEHUB_RTT_DIR}/RTTBridgeRegion.c
+        ${TRACEHUB_RTT_DIR}/RTTBridgeChannel.c
+        ${TRACEHUB_RTT_DIR}/RTTBridgeState.c
     )
 
     target_include_directories(test_rtt_api PRIVATE ${COMMON_INCLUDES})
@@ -296,7 +305,9 @@ if(BUILD_UNIT_TESTS)
     add_executable(test_app_api
         Unit/AppApiTest.c
         ${TRACEHUB_TEST_COMMON_SOURCE}
-        ${TRACEHUB_APP_DIR}/Options.c
+        ${TRACEHUB_APP_DIR}/OptionsApi.c
+        ${TRACEHUB_APP_DIR}/OptionsParse.c
+        ${TRACEHUB_APP_DIR}/OptionsGetoptWin.c
         ${TRACEHUB_APP_DIR}/ServicePlan.c
         ${TRACEHUB_APP_DIR}/CLI.c
         ${TRACEHUB_APP_DIR}/TraceHubSignal.c
@@ -310,7 +321,9 @@ if(BUILD_UNIT_TESTS)
     add_executable(test_corelog_recorder_api
         Unit/CoreLogRecorderApiTest.c
         ${TRACEHUB_LOG_DIR}/CoreLogRecorderState.c
-        ${TRACEHUB_LOG_DIR}/CoreLogRecorderSource.c
+        ${TRACEHUB_LOG_DIR}/CoreLogRecorderRegistry.c
+        ${TRACEHUB_LOG_DIR}/CoreLogRecorderFile.c
+        ${TRACEHUB_LOG_DIR}/CoreLogRecorderConsumer.c
         ${TRACEHUB_LOG_DIR}/CoreLogRecorderRuntime.c
         ${TRACEHUB_LOG_DIR}/CoreLogRecorderStats.c
         ${TRACEHUB_LOG_DIR}/LogMain.c

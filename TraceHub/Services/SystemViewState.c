@@ -509,6 +509,23 @@ bool _SystemView_TakeClientDisconnectRequest(SystemView_State_t *pState) {
 
 /*********************************************************************
 *
+*       _SystemView_CloseClientForNetworkDisconnect()
+*
+*  Function description
+*    Close the current network client after the peer closes the connection.
+*/
+void _SystemView_CloseClientForNetworkDisconnect(SystemView_State_t *pState,
+                                                 const char *operation) {
+    if (operation == NULL) {
+        operation = "client disconnected";
+    }
+
+    Log_Info("SystemView: network %s; closing current client\n", operation);
+    _SystemView_CloseClient(pState);
+}
+
+/*********************************************************************
+*
 *       _SystemView_CloseClientForNetworkError()
 *
 *  Function description

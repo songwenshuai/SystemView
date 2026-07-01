@@ -181,6 +181,12 @@ unsigned _Recorder_GetPollInterval(void);
 */
 
 bool                     _Recorder_SourceIsEnabled     (CoreLogRecorder_SourceId_t source_id);
+CoreLogRecorder_Source_t *_Recorder_FindSource         (unsigned channel);
+void                     _Recorder_ReportFileErrorLocked(CoreLogRecorder_Source_t *source, const char *operation);
+int                      _Recorder_FlushSourceLocked   (CoreLogRecorder_Source_t *source);
+int                      _Recorder_QueueBytesLocked    (CoreLogRecorder_Source_t *source, const char *data, unsigned num_bytes);
+void                     _Recorder_ClearConsumerQueueLocked(CoreLogRecorder_Source_t *source);
+int                      _Recorder_AllocateConsumerQueue(CoreLogRecorder_Source_t *source);
 void                     _Recorder_RecordBytes         (CoreLogRecorder_SourceId_t source_id, const char *data, unsigned num_bytes);
 void                     _Recorder_FlushAllSources     (void);
 void                     _Recorder_CloseFiles          (void);

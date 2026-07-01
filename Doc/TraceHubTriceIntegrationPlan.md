@@ -22,7 +22,7 @@
 
 ### 3.1 TraceHub 现状
 
-TraceHub 当前是 C11 工程，主流程由 `main.c`、`App/CLI.c`、`App/Options.c`、`App/ServicePlan.c` 和 `App/RunLoop.c` 组织。日志路径以 Linux、RTOS、SystemView 三类固定服务为中心。
+TraceHub 当前是 C11 工程，主流程由 `main.c`、`App/CLI.c`、`App/OptionsApi.c`、`App/OptionsParse.c`、`App/OptionsGetoptWin.c`、`App/ServicePlan.c` 和 `App/RunLoop.c` 组织。日志路径以 Linux、RTOS、SystemView 三类固定服务为中心。
 
 关键限制如下：
 
@@ -458,7 +458,7 @@ tracehub-trice-id updates firmware source and ID table
 | 文件 | 当前问题 | 修改内容 | 完成标准 |
 | --- | --- | --- | --- |
 | `TraceHub/App/Options.h` | `TraceHubOptions_t` 固定保存 `linux_requested`、`rtos_requested`、`linux_channel`、`rtos_channel` | 增加 `TraceHubSource_t sources[]` 和 `source_count`；保留旧字段作为 CLI 兼容输入；新增 `--source` 解析结果字段 | raw options 能表达 `name=core0,type=text,channel=0` 这类 source |
-| `TraceHub/App/Options.c` | `_options` 只认识固定 Linux/RTOS 选项 | 增加 `--source` 长选项；新增 source 描述解析函数；旧 `--linux`、`--rtos`、`--linux-channel`、`--rtos-channel` 只作为 legacy input | `TraceHubOptions_Parse` 输出统一 source 列表，不在下游重复推导 |
+| `TraceHub/App/OptionsApi.c`、`TraceHub/App/OptionsParse.c` | `_options` 只认识固定 Linux/RTOS 选项 | 增加 `--source` 长选项；新增 source 描述解析函数；旧 `--linux`、`--rtos`、`--linux-channel`、`--rtos-channel` 只作为 legacy input | `TraceHubOptions_Parse` 输出统一 source 列表，不在下游重复推导 |
 | `TraceHub/App/CLI.c` | help 文本只描述 Linux/RTOS 固定模式 | 增加 `--source name=...,type=...,channel=...` 用法；保留 legacy 示例并标注会转换为 source | 用户能从帮助信息明确 runtime source 配置方式 |
 | `TraceHub/App/ServicePlan.h` | `TraceHubServicePlan_t` 固定有 linux/rtos prefix 和 fixed config | 增加 resolved source list；把 source label、channel、decoder type、log prefix 放入 plan | run loop 只消费 resolved source，不读取 legacy 字段 |
 | `TraceHub/App/ServicePlan.c` | 通道冲突检查和 log prefix 构造写死 Linux/RTOS/SystemView | 使用 `TraceSource` 集中校验所有 enabled source 与 SystemView 通道；循环构造 source log prefix；旧字段只在构造 source 时使用 | 通道冲突检查对 text、trice、systemview 一致 |
@@ -468,13 +468,13 @@ tracehub-trice-id updates firmware source and ID table
 | `TraceHub/Log/LogEntry.c` | `LogEntry_IsValid` 和 `LogEntry_Compare` 使用 `LOG_SOURCE_MAX` | 按 source_count 之外的固定上限验证 source id；排序仍按 timestamp、source id、sequence | 同 timestamp 下排序稳定 |
 | `TraceHub/Log/LogCollector.h` | `LogCollector_Config_t` 固定 `linux_channel`、`rtos_channel` | 改为 source config 数组，每个 source 包含 channel、decoder type、decoder config、pending buffer size | collector 能表达 N 个 text source |
 | `TraceHub/Log/LogCollector_internal.h` | `sources[LOG_SOURCE_MAX]` 固定大小 | 使用动态 source 数组或 `TRACEHUB_MAX_SOURCES` 上限数组加 `source_count`；`LogCollector_SourceState_t` 增加 source name 和 decoder 实例 | 所有 source 状态由 config 初始化 |
-| `TraceHub/Log/LogCollectorState.c` | pending buffer 分配、释放、重置、consumer 注册写死 Linux/RTOS | 把所有 Linux/RTOS 分支改成按 `source_count` 循环；错误信息用 source name | 新增 source 不需要改 state 代码 |
+| `TraceHub/Log/LogCollectorStorage.c`、`TraceHub/Log/LogCollectorConsumer.c`、`TraceHub/Log/LogCollectorError.c` | pending buffer 分配、释放、重置、consumer 注册和错误信息写死 Linux/RTOS | 把所有 Linux/RTOS 分支改成按 `source_count` 循环；错误信息用 source name | 新增 source 不需要改 state 代码 |
 | `TraceHub/Log/LogCollectorRuntime.c` | `_CollectFromSource` 直接按 CR/LF 切文本行 | 改为读取 raw bytes 后调用 source 绑定的 `TraceDecoder_Feed`；文本切行迁移到 `TextTraceDecoder` | collector 不关心文本或 Trice 格式 |
 | `TraceHub/Log/LogCollectorSource.c` | 文本行处理和 source 状态强耦合 | 保留文本行处理能力并迁入 `TextTraceDecoder.c`；`LogCollectorSource` 只负责 entry delivery、timestamp reserve 和 pending untimed 公共逻辑 | 文本 decoder 与 collector 边界清晰 |
 | `TraceHub/Log/CoreLogRecorder.h` | config 和 stats 固定 Linux/RTOS | 改为 source config 数组；每个 source 指定 channel、name、record mode、consumer queue | recorder 只负责 RTT bytes，不承载 Linux/RTOS 语义 |
 | `TraceHub/Log/CoreLogRecorder_internal.h` | 固定 `CORE_LOG_RECORDER_LINUX/RTOS`、两个线程字段 | 改为 source array 和线程数组；source 保存 record mode：text clean、raw binary、off | Trice raw bytes 不再经过文本清理路径 |
 | `TraceHub/Log/CoreLogRecorderState.c` | 初始化固定两个 source 和两个文件前缀 | 按 source list 初始化；text source 写 clean text 文件，Trice source 默认不写文本文件，可选 raw dump | 二进制 Trice 不被当作文本落盘 |
-| `TraceHub/Log/CoreLogRecorderSource.c` | `_Recorder_FindSource` 只查 Linux/RTOS | 按 source_count 查找 channel；consumer queue 和 raw bytes 保持通用 | 任意 source channel 可注册 consumer |
+| `TraceHub/Log/CoreLogRecorderRegistry.c`、`TraceHub/Log/CoreLogRecorderConsumer.c`、`TraceHub/Log/CoreLogRecorderFile.c` | `_Recorder_FindSource` 只查 Linux/RTOS | 按 source_count 查找 channel；consumer queue 和 raw bytes 保持通用 | 任意 source channel 可注册 consumer |
 | `TraceHub/Log/CoreLogRecorderRuntime.c` | 固定 Linux/RTOS drain thread | 每个 enabled source 启动一个 drain thread；线程入口使用 source index | source 数变化不需要新增线程函数 |
 | `TraceHub/Log/CoreLogRecorderStats.c` | stats 输出固定 linux/rtos 字段 | 输出动态 source stats；若保留公共 stats struct，应包含 source_count 和 source_stats 数组 | 诊断信息包含 source name |
 | `TraceHub/Log/LogMerger.h` | `required_source[LOG_SOURCE_MAX]` 固定 | 改为 required source 数组和 source label 数组，由 config 提供 source_count | merger 能合并两个 Trice core 或更多 source |
@@ -540,10 +540,10 @@ tracehub-trice-id updates firmware source and ID table
 | 文件 | 修改内容 | 完成标准 |
 | --- | --- | --- |
 | `TraceHub/Core/TraceSource.h` | source descriptor 增加 Trice 配置字段：`til_path`、`li_path`、`framing`、`endianness`、`log_level`、`pick`、`ban`、`default_bit_width`、`target_timestamp`、`doubled_16_bit_id`、`single_framing`、`cycle_check` | source 能完整描述一个 Trice core |
-| `TraceHub/App/Options.c` | `--source` 解析支持 `type=trice`、`til=...`、`li=...`、`framing=...`、`endian=...`、`log-level=...` | CLI 输入能构造 Trice source |
+| `TraceHub/App/OptionsApi.c`、`TraceHub/App/OptionsParse.c` | `--source` 解析支持 `type=trice`、`til=...`、`li=...`、`framing=...`、`endian=...`、`log-level=...` | CLI 输入能构造 Trice source |
 | `TraceHub/App/ServicePlan.c` | 校验 Trice source 必须有 ID 表；校验 framing 和 endian；构造 source log prefix | 错误在 plan 阶段暴露 |
 | `TraceHub/Log/TraceDecoder.h` | 增加 Trice decoder factory 注册或明确 switch | collector 通过 decoder type 创建实例 |
-| `TraceHub/Log/LogCollectorState.c` | 初始化 source 时创建 text 或 Trice decoder；cleanup 时释放 decoder | decoder 生命周期归 source state |
+| `TraceHub/Log/LogCollectorStorage.c` | 初始化 source 时创建 text 或 Trice decoder；cleanup 时释放 decoder | decoder 生命周期归 source state |
 | `TraceHub/Log/LogCollectorRuntime.c` | raw bytes 送入 `TraceDecoder_Feed`，decoder 自己决定何时输出 entry | Trice 二进制不经过 CR/LF 切分 |
 | `TraceHub/CMakeLists.txt` | 增加 `TRACEHUB_TRICE_DIR`、Trice decoder sources、COBS/TCOBSv1 C sources、include dir | runtime target 包含 Trice 解码模块 |
 
@@ -676,7 +676,7 @@ TriceIdOptions_Parse
 
 | 能力 | 新增文件 | 修改文件 | 触发条件 |
 | --- | --- | --- | --- |
-| XTEA 解密 | `TraceHub/Trice/TriceXtea.h`、`TraceHub/Trice/TriceXtea.c`、`TraceHub/Trice/TriceSha1.h`、`TraceHub/Trice/TriceSha1.c` | `TriceDecoder.c`、`App/Options.c` | 固件启用 Trice XTEA 加密，且用户传入 password 或 key |
+| XTEA 解密 | `TraceHub/Trice/TriceXtea.h`、`TraceHub/Trice/TriceXtea.c`、`TraceHub/Trice/TriceSha1.h`、`TraceHub/Trice/TriceSha1.c` | `TriceDecoder.c`、`App/OptionsApi.c`、`App/OptionsParse.c` | 固件启用 Trice XTEA 加密，且用户传入 password 或 key |
 | `TRICE_X0` | `TraceHub/Trice/TriceTypeX0.h`、`TraceHub/Trice/TriceTypeX0.c` | `TriceRecord.c`、`TriceDecoder.c` | 固件输出 selector-0 extension record |
 | ANSI 着色 | `TraceHub/Trice/TriceAnsi.h`、`TraceHub/Trice/TriceAnsi.c` | `SwimLaneRenderer.c`、`TriceTag.c` | 需要按 Trice tag 给终端显示上色 |
 | tag 统计 | `TraceHub/Trice/TriceTagStats.h`、`TraceHub/Trice/TriceTagStats.c` | `TriceTag.c`、`RunLoop.c` | 需要输出 tag 计数统计 |
@@ -730,8 +730,8 @@ TriceIdOptions_Parse
 
 | Go 文件 | 迁移目标 | 迁移内容 |
 | --- | --- | --- |
-| `Trice/internal/args/handler.go` | `TraceHub/Tools/TriceIdTool/main.c`、`TriceIdOptions.c`、`TraceHub/App/Options.c` | `insert/clean/add/generate` 进入 `tracehub-trice-id`；`log` 的 Trice runtime flags 子集进入 `tracehub --source` |
-| `Trice/internal/args/init.go` | `TriceIdOptions.c`、`App/Options.c` | ID range、src/exclude、til/li、framing、endianness、logLevel、pick、ban、default bit width、stamp size、target timestamp、doubled ID、single framing、cycle check、LI path kind、aliases、saliases、dry-run |
+| `Trice/internal/args/handler.go` | `TraceHub/Tools/TriceIdTool/main.c`、`TriceIdOptions.c`、`TraceHub/App/OptionsApi.c`、`TraceHub/App/OptionsParse.c` | `insert/clean/add/generate` 进入 `tracehub-trice-id`；`log` 的 Trice runtime flags 子集进入 `tracehub --source` |
+| `Trice/internal/args/init.go` | `TriceIdOptions.c`、`App/OptionsApi.c`、`App/OptionsParse.c` | ID range、src/exclude、til/li、framing、endianness、logLevel、pick、ban、default bit width、stamp size、target timestamp、doubled ID、single framing、cycle check、LI path kind、aliases、saliases、dry-run |
 | `Trice/internal/id/id.go` | `TraceHub/Trice/TriceIdTable.h` | ID、format、LI 数据结构 |
 | `Trice/internal/id/manage.go` | `TraceHub/Trice/TriceIdTable.c`、`TriceIdState.c`、`TriceIdAlloc.c` | TIL/LI JSON、reverse lookup、ID 分配、AddFmtCount |
 | `Trice/internal/id/switchIDs.go` | `TriceIdState.c`、`TriceIdRange.c`、`TriceIdAlloc.c` | 处理前状态、ID range、tag range、处理后写回 |

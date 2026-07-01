@@ -50,6 +50,7 @@ static int _TestMainLogLifecycle(void) {
     TEST_ASSERT(LOG_Init() == -1);
 
     LOG_Debug("unit", 1, "fn", "debug %d\n", 1);
+    LOG_Info("info %d\n", 1);
     LOG_Warn("warn %d\n", 2);
     LOG_Error("error %d\n", 3);
     LOG_LogToFile(main_file, "main entry\n");

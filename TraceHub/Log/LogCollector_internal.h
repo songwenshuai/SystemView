@@ -142,12 +142,22 @@ typedef struct {
 
 /*********************************************************************
 *
+*       Shared state
+*
+**********************************************************************
+*/
+
+extern LogCollector_State_t _collector_state;
+
+/*********************************************************************
+*
 *       State functions
 *
 **********************************************************************
 */
 
 LogCollector_State_t *LogCollectorState_Get                      (void);
+const char           *LogCollectorState_GetSourceName             (LogSource_t source);
 int                   LogCollectorState_Init                     (const LogCollector_Config_t *config);
 void                  LogCollectorState_Destroy                  (void);
 void                  LogCollectorState_ResetStorage             (void);

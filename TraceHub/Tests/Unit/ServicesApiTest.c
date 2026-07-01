@@ -33,6 +33,10 @@ void LOG_Warn(const char *sFormat, ...) {
     (void)sFormat;
 }
 
+void LOG_Info(const char *sFormat, ...) {
+    (void)sFormat;
+}
+
 FILE *LOG_CreateTimestampedFileEx(const char *prefix, const char *extension, const char *mode) {
     (void)prefix;
     (void)extension;

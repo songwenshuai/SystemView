@@ -214,7 +214,9 @@ set(RTT_MEMORY_COMMON_DEFINITIONS
 set(SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/main.c
     ${TRACEHUB_APP_DIR}/CLI.c
-    ${TRACEHUB_APP_DIR}/Options.c
+    ${TRACEHUB_APP_DIR}/OptionsApi.c
+    ${TRACEHUB_APP_DIR}/OptionsParse.c
+    ${TRACEHUB_APP_DIR}/OptionsGetoptWin.c
     ${TRACEHUB_APP_DIR}/ServicePlan.c
     ${TRACEHUB_APP_DIR}/TraceHubSignal.c
     ${TRACEHUB_APP_DIR}/RunLoop.c
@@ -230,9 +232,14 @@ set(SOURCES
     ${TRACEHUB_CORE_DIR}/ByteQueue.c
     ${TRACEHUB_CORE_DIR}/Utils.c
     ${TRACEHUB_CORE_DIR}/SYS.c
-    ${TRACEHUB_RTT_DIR}/RTTBridge.c
+    ${TRACEHUB_RTT_DIR}/RTTBridgeApi.c
+    ${TRACEHUB_RTT_DIR}/RTTBridgeRegion.c
+    ${TRACEHUB_RTT_DIR}/RTTBridgeChannel.c
+    ${TRACEHUB_RTT_DIR}/RTTBridgeState.c
     ${TRACEHUB_LOG_DIR}/CoreLogRecorderState.c
-    ${TRACEHUB_LOG_DIR}/CoreLogRecorderSource.c
+    ${TRACEHUB_LOG_DIR}/CoreLogRecorderRegistry.c
+    ${TRACEHUB_LOG_DIR}/CoreLogRecorderFile.c
+    ${TRACEHUB_LOG_DIR}/CoreLogRecorderConsumer.c
     ${TRACEHUB_LOG_DIR}/CoreLogRecorderRuntime.c
     ${TRACEHUB_LOG_DIR}/CoreLogRecorderStats.c
     ${TRACEHUB_NETWORK_DIR}/TelnetCodec.c
@@ -247,7 +254,10 @@ set(SOURCES
     ${TRACEHUB_SERVICES_DIR}/SystemViewRuntime.c
     ${TRACEHUB_LOG_DIR}/LogEntry.c
     ${TRACEHUB_LOG_DIR}/LogLineParser.c
-    ${TRACEHUB_LOG_DIR}/LogCollectorState.c
+    ${TRACEHUB_LOG_DIR}/LogCollectorStorage.c
+    ${TRACEHUB_LOG_DIR}/LogCollectorError.c
+    ${TRACEHUB_LOG_DIR}/LogCollectorConsumer.c
+    ${TRACEHUB_LOG_DIR}/LogCollectorApi.c
     ${TRACEHUB_LOG_DIR}/LogCollectorSource.c
     ${TRACEHUB_LOG_DIR}/LogCollectorRuntime.c
     ${TRACEHUB_LOG_DIR}/LogMergerBuffer.c

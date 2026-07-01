@@ -63,8 +63,8 @@ static int _SystemView_ReceiveAppPacket(SystemView_State_t *pState,
             return 0;
         }
         if (Result == 0) {
-            _SystemView_CloseClientForNetworkError(pState,
-                                                   "client disconnected before app packet length");
+            _SystemView_CloseClientForNetworkDisconnect(pState,
+                                                        "client disconnected before app packet length");
             return -1;
         }
 
@@ -102,8 +102,8 @@ static int _SystemView_ReceiveAppPacket(SystemView_State_t *pState,
             return 0;
         }
         if (Result == 0) {
-            _SystemView_CloseClientForNetworkError(pState,
-                                                   "client disconnected during app packet payload");
+            _SystemView_CloseClientForNetworkDisconnect(pState,
+                                                        "client disconnected during app packet payload");
             return -1;
         }
 
@@ -222,7 +222,7 @@ void _SystemView_ServiceThread(void *pArg) {
             //
             ConnectionsCount = _SystemView_SetConnectedClient(pState, hClient);
 
-            Log_Print("SystemView: new client connected (total: %u)\n", ConnectionsCount);
+            Log_Info("SystemView: new client connected (total: %u)\n", ConnectionsCount);
         }
 
         if (_SystemView_ReceiveAppPacket(pState, hClient) < 0) {

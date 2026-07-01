@@ -102,6 +102,7 @@ int               _SystemView_QueueTargetData(SystemView_State_t *pState, const 
 unsigned          _SystemView_DequeueTargetData(SystemView_State_t *pState, char *buffer, unsigned buffer_size);
 void              _SystemView_CloseClient(SystemView_State_t *pState);
 bool              _SystemView_TakeClientDisconnectRequest(SystemView_State_t *pState);
+void              _SystemView_CloseClientForNetworkDisconnect(SystemView_State_t *pState, const char *operation);
 void              _SystemView_CloseClientForNetworkError(SystemView_State_t *pState, const char *operation);
 void              _SystemView_RecordingThread(void *pArg);
 void              _SystemView_ServiceThread(void *pArg);

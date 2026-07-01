@@ -90,6 +90,7 @@ extern "C" {     /* Make sure we have C-declarations in C++ programs */
 
 #define Log_Error(...)  LOG_Error(__VA_ARGS__)
 #define Log_Warn(...)   LOG_Warn(__VA_ARGS__)
+#define Log_Info(...)   LOG_Info(__VA_ARGS__)
 
 /*********************************************************************
 *
@@ -131,6 +132,7 @@ void   LOG_LogToFile            (FILE *file, const char *sFormat, ...);
 void   LOG_Debug                (const char *file, int line, const char *function, const char *sFormat, ...);
 void   LOG_Error                (const char *sFormat, ...);
 void   LOG_Warn                 (const char *sFormat, ...);
+void   LOG_Info                 (const char *sFormat, ...);
 void   LOG_TextCleanStateInit   (LOG_TextCleanState_t *state);
 int    LOG_WriteCleanTextToFile (FILE *file, const char *data, size_t len, LOG_TextCleanState_t *state);
 int    LOG_WriteCleanTextToFileEx (FILE *file, const char *data, size_t len, LOG_TextCleanState_t *state, size_t *clean_len);

@@ -184,6 +184,28 @@ void LOG_Debug(const char *file, int line, const char *function, const char* sFo
 
 /*********************************************************************
 *
+*       _Log_OutputPrefixed()
+*
+*  Function description
+*    Output one always-on diagnostic message with a fixed severity prefix.
+*/
+static void _Log_OutputPrefixed(const char *prefix, const char *sFormat, va_list ParamList) {
+  va_list ParamListCopy;
+  char    ac[256];
+  char    output[288];
+
+  va_copy(ParamListCopy, ParamList);
+  (void)vsnprintf(ac, (int)sizeof(ac), sFormat, ParamListCopy);
+  va_end(ParamListCopy);
+  (void)snprintf(output, sizeof(output), "%s%s", prefix, ac);
+  SYS_MutexLock(&_log_mutex);
+  _Log_OutputUnlocked(_main_log_file, output);
+  SYS_MutexUnlock(&_log_mutex);
+}
+
+
+/*********************************************************************
+*
 *       LOG_Error()
 *
 *  Function description
@@ -191,17 +213,10 @@ void LOG_Debug(const char *file, int line, const char *function, const char* sFo
 */
 void LOG_Error(const char* sFormat, ...) {
   va_list ParamList;
-  char    ac[256];
-  char    output[288];
 
   va_start(ParamList, sFormat);
-  (void)vsnprintf(ac, (int)sizeof(ac), sFormat, ParamList);
+  _Log_OutputPrefixed("[ERROR] ", sFormat, ParamList);
   va_end(ParamList);
-
-  (void)snprintf(output, sizeof(output), "[ERROR] %s", ac);
-  SYS_MutexLock(&_log_mutex);
-  _Log_OutputUnlocked(_main_log_file, output);
-  SYS_MutexUnlock(&_log_mutex);
 }
 
 
@@ -214,17 +229,26 @@ void LOG_Error(const char* sFormat, ...) {
 */
 void LOG_Warn(const char* sFormat, ...) {
   va_list ParamList;
-  char    ac[256];
-  char    output[288];
 
   va_start(ParamList, sFormat);
-  (void)vsnprintf(ac, (int)sizeof(ac), sFormat, ParamList);
+  _Log_OutputPrefixed("[WARN] ", sFormat, ParamList);
   va_end(ParamList);
+}
 
-  (void)snprintf(output, sizeof(output), "[WARN] %s", ac);
-  SYS_MutexLock(&_log_mutex);
-  _Log_OutputUnlocked(_main_log_file, output);
-  SYS_MutexUnlock(&_log_mutex);
+
+/*********************************************************************
+*
+*       LOG_Info()
+*
+*  Function description
+*    Output an always-on informational diagnostic to main log and stderr.
+*/
+void LOG_Info(const char* sFormat, ...) {
+  va_list ParamList;
+
+  va_start(ParamList, sFormat);
+  _Log_OutputPrefixed("[INFO] ", sFormat, ParamList);
+  va_end(ParamList);
 }
 
 
