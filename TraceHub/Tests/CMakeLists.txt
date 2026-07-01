@@ -67,6 +67,7 @@ set(SEGGER_SYSVIEW_SOURCE_DIR ${TRACEHUB_SOURCE_DIR}/../SystemView/SYSVIEW)
 set(SEGGER_SOURCE_DIR ${TRACEHUB_SOURCE_DIR}/../SystemView/SEGGER)
 set(SEGGER_CONFIG_DIR ${TRACEHUB_SOURCE_DIR}/../SystemView/Config)
 set(SYSVIEW_CONFIG_DIR ${CMAKE_CURRENT_SOURCE_DIR}/SystemViewConfig)
+set(TRACEHUB_TEST_COMMON_SOURCE ${CMAKE_CURRENT_SOURCE_DIR}/Unit/TestCommon.c)
 
 # Common source files needed by test programs
 set(COMMON_SOURCES
@@ -226,6 +227,7 @@ if(BUILD_UNIT_TESTS)
 
     add_executable(test_log_api
         Unit/LogApiTest.c
+        ${TRACEHUB_TEST_COMMON_SOURCE}
         ${TRACEHUB_LOG_DIR}/LogMain.c
         ${TRACEHUB_LOG_DIR}/LogFile.c
         ${TRACEHUB_LOG_DIR}/LogText.c
@@ -285,6 +287,7 @@ if(BUILD_UNIT_TESTS)
 
     add_executable(test_app_api
         Unit/AppApiTest.c
+        ${TRACEHUB_TEST_COMMON_SOURCE}
         ${TRACEHUB_APP_DIR}/Options.c
         ${TRACEHUB_APP_DIR}/ServicePlan.c
         ${TRACEHUB_APP_DIR}/CLI.c
@@ -318,6 +321,7 @@ if(BUILD_UNIT_TESTS)
 
     add_executable(test_services_api
         Unit/ServicesApiTest.c
+        ${TRACEHUB_TEST_COMMON_SOURCE}
         ${TRACEHUB_SERVICES_DIR}/TerminalService.c
         ${TRACEHUB_SERVICES_DIR}/TerminalState.c
         ${TRACEHUB_SERVICES_DIR}/SystemViewService.c

@@ -45,7 +45,7 @@ Purpose : Initializes and handles the hardware for embOS.
 #include <time.h>
 #include "RTOS.h"
 #include "UDPCOM.h"
-#if ((OS_SUPPORT_TRACE_API != 0) && !defined(_WIN64))
+#if (OS_SUPPORT_TRACE_API != 0)
 #include "SEGGER_SYSVIEW_Win32.h"
 #endif
 
@@ -120,7 +120,7 @@ static void _ISRTickThread(void) {
   int t;
   int tLast;
 
-#if ((OS_SUPPORT_TRACE_API != 0) && !defined(_WIN64))
+#if (OS_SUPPORT_TRACE_API != 0)
   SEGGER_SYSVIEW_X_SetISRName("Tick ISR");
 #endif
   //
@@ -271,7 +271,7 @@ void OS_InitHW(void) {
   //
   // Configure and initialize SEGGER SystemView
   //
-#if ((OS_SUPPORT_TRACE_API != 0) && !((defined(_WIN64) && (_WIN64 == 1)) || (defined(__x86_64__) && (__x86_64__ == 1))))
+#if (OS_SUPPORT_TRACE_API != 0)
   SEGGER_SYSVIEW_Conf();
 #endif
   OS_INT_DecRI();
@@ -309,7 +309,7 @@ void OS_COM_Send1(OS_U8 c) {
 
 #include "RTOS.h"
 #include "UDPCOM.h"
-#if ((OS_SUPPORT_TRACE_API != 0) && !(OS_64BIT))
+#if (OS_SUPPORT_TRACE_API != 0)
 #include "SEGGER_SYSVIEW_Posix.h"
 #endif
 
@@ -587,7 +587,7 @@ static int _SystemTickController(void) {
 
   if (InitOnce != 0) {
     InitOnce = 0;
-#if ((OS_SUPPORT_TRACE_API != 0) && !(OS_64BIT))
+#if (OS_SUPPORT_TRACE_API != 0)
     SEGGER_SYSVIEW_X_SetISRName("Tick ISR");
 #endif
     //
@@ -699,7 +699,7 @@ void OS_InitHW(void) {
   //
   // Configure and initialize SEGGER SystemView
   //
-#if ((OS_SUPPORT_TRACE_API != 0) && !(OS_64BIT))
+#if (OS_SUPPORT_TRACE_API != 0)
   SEGGER_SYSVIEW_Conf();
 #endif
   OS_INT_DecRI();

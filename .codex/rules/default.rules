@@ -60,6 +60,12 @@ prefix_rule(
 )
 
 prefix_rule(
+    pattern = ["git", "add"],
+    decision = "forbidden",
+    justification = "Staging changes must be handled manually by the user.",
+)
+
+prefix_rule(
     pattern = ["git", "checkout", "--"],
     decision = "forbidden",
     justification = "Do not overwrite files from Git history.",

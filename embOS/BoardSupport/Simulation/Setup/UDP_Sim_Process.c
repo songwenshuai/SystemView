@@ -44,7 +44,7 @@ Purpose : UPD communication for embOSView and embOS Simulation.
 #include "RTOS.h"
 #include "UDPCOM.h"
 #include <stdio.h>
-#if ((OS_SUPPORT_TRACE_API != 0) && !defined(_WIN64))
+#if (OS_SUPPORT_TRACE_API != 0)
 #include "SEGGER_SYSVIEW_Win32.h"
 #endif
 
@@ -107,7 +107,7 @@ static void _OnRx(void) {
   int Len;
 
   OS_SIM_SetThreadName(-1, "embOSView Communication");
-#if ((OS_SUPPORT_TRACE_API != 0) && !defined(_WIN64))
+#if (OS_SUPPORT_TRACE_API != 0)
   SEGGER_SYSVIEW_X_SetISRName("embOSView Communication");
 #endif
   while (1) {
@@ -259,7 +259,7 @@ void UDP_Process_Init(void) {
 
 #include "RTOS.h"
 #include "UDPCOM.h"
-#if ((OS_SUPPORT_TRACE_API != 0) && !(OS_64BIT))
+#if (OS_SUPPORT_TRACE_API != 0)
 #include "SEGGER_SYSVIEW_Posix.h"
 #endif
 
@@ -334,13 +334,13 @@ void* _embOSViewISRHandle;
 *    This function controls the occurrence of RX interrupts.
 */
 static int _OnRxController(void) {
-#if ((OS_SUPPORT_TRACE_API != 0) && !(OS_64BIT))
+#if (OS_SUPPORT_TRACE_API != 0)
   static int         InitOnce = 1;
 #endif
   struct sockaddr_in SockAddr;
   socklen_t          Len;
 
-#if ((OS_SUPPORT_TRACE_API != 0) && !(OS_64BIT))
+#if (OS_SUPPORT_TRACE_API != 0)
   if (InitOnce != 0) {
     InitOnce = 0;
     SEGGER_SYSVIEW_X_SetISRName("embOSView Communication");
