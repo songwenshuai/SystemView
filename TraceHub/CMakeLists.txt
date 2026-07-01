@@ -250,8 +250,15 @@ set(SOURCES
     ${TRACEHUB_LOG_DIR}/LogCollectorState.c
     ${TRACEHUB_LOG_DIR}/LogCollectorSource.c
     ${TRACEHUB_LOG_DIR}/LogCollectorRuntime.c
-    ${TRACEHUB_LOG_DIR}/LogMerger.c
-    ${TRACEHUB_LOG_DIR}/SwimLaneRenderer.c
+    ${TRACEHUB_LOG_DIR}/LogMergerBuffer.c
+    ${TRACEHUB_LOG_DIR}/LogMergerWatermark.c
+    ${TRACEHUB_LOG_DIR}/LogMergerOutput.c
+    ${TRACEHUB_LOG_DIR}/LogMergerFile.c
+    ${TRACEHUB_LOG_DIR}/LogMergerApi.c
+    ${TRACEHUB_LOG_DIR}/SwimLaneLayout.c
+    ${TRACEHUB_LOG_DIR}/SwimLaneText.c
+    ${TRACEHUB_LOG_DIR}/SwimLaneCell.c
+    ${TRACEHUB_LOG_DIR}/SwimLaneRendererApi.c
 )
 
 # ==============================================================================

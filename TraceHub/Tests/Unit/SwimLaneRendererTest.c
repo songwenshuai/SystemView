@@ -62,6 +62,7 @@ Purpose : Unit checks for swimlane layout resolution
 #include <stdio.h>
 #include <string.h>
 
+#include "SwimLaneRenderer_internal.h"
 #include "SYS.h"
 
 /*********************************************************************
@@ -107,8 +108,6 @@ int SYS_MutexDestroy(SYS_Mutex *mutex) {
     return 0;
 }
 
-#include "SwimLaneRenderer.c"
-
 /*********************************************************************
 *
 *       Static functions
@@ -120,11 +119,11 @@ static int _TestNarrowWidthClampsToMinimumLayout(void) {
     unsigned linux_width;
     unsigned rtos_width;
 
-    TEST_ASSERT(_ResolveColumnWidths(1u,
-                                     SWIMLANE_DEFAULT_TIMESTAMP_WIDTH,
-                                     true,
-                                     &linux_width,
-                                     &rtos_width) == 0);
+    TEST_ASSERT(SwimLaneLayout_ResolveColumnWidths(1u,
+                                                   SWIMLANE_DEFAULT_TIMESTAMP_WIDTH,
+                                                   true,
+                                                   &linux_width,
+                                                   &rtos_width) == 0);
     TEST_ASSERT(linux_width >= SWIMLANE_MIN_SOURCE_WIDTH);
     TEST_ASSERT(rtos_width >= SWIMLANE_MIN_SOURCE_WIDTH);
     return 0;
@@ -134,11 +133,11 @@ static int _TestExplicitNarrowWidthFails(void) {
     unsigned linux_width;
     unsigned rtos_width;
 
-    TEST_ASSERT(_ResolveColumnWidths(1u,
-                                     SWIMLANE_DEFAULT_TIMESTAMP_WIDTH,
-                                     false,
-                                     &linux_width,
-                                     &rtos_width) != 0);
+    TEST_ASSERT(SwimLaneLayout_ResolveColumnWidths(1u,
+                                                   SWIMLANE_DEFAULT_TIMESTAMP_WIDTH,
+                                                   false,
+                                                   &linux_width,
+                                                   &rtos_width) != 0);
     return 0;
 }
 
@@ -147,11 +146,11 @@ static int _TestNormalWidthUsesAvailableColumns(void) {
     unsigned rtos_width;
     unsigned source_width;
 
-    TEST_ASSERT(_ResolveColumnWidths(120u,
-                                     SWIMLANE_DEFAULT_TIMESTAMP_WIDTH,
-                                     false,
-                                     &linux_width,
-                                     &rtos_width) == 0);
+    TEST_ASSERT(SwimLaneLayout_ResolveColumnWidths(120u,
+                                                   SWIMLANE_DEFAULT_TIMESTAMP_WIDTH,
+                                                   false,
+                                                   &linux_width,
+                                                   &rtos_width) == 0);
 
     source_width = 120u - SWIMLANE_DEFAULT_TIMESTAMP_WIDTH - SWIMLANE_SEPARATOR_WIDTH;
     TEST_ASSERT(linux_width + rtos_width == source_width);
@@ -162,10 +161,12 @@ static int _TestNormalWidthUsesAvailableColumns(void) {
 
 static int _TestExplicitOversizedWidthFails(void) {
     SwimLane_Config_t config;
+    SwimLane_Layout_t layout;
 
     memset(&config, 0, sizeof(config));
+    memset(&layout, 0, sizeof(layout));
     config.total_width = UINT_MAX;
-    TEST_ASSERT(_ResolveLayout(&config) != 0);
+    TEST_ASSERT(SwimLaneLayout_Resolve(&config, &layout) != 0);
     return 0;
 }
 

@@ -179,7 +179,11 @@ if(BUILD_UNIT_TESTS)
 
     add_executable(test_logmerger
         Unit/LogMergerTest.c
-        ${TRACEHUB_LOG_DIR}/LogMerger.c
+        ${TRACEHUB_LOG_DIR}/LogMergerBuffer.c
+        ${TRACEHUB_LOG_DIR}/LogMergerWatermark.c
+        ${TRACEHUB_LOG_DIR}/LogMergerOutput.c
+        ${TRACEHUB_LOG_DIR}/LogMergerFile.c
+        ${TRACEHUB_LOG_DIR}/LogMergerApi.c
         ${TRACEHUB_LOG_DIR}/LogEntry.c
         ${TRACEHUB_LOG_DIR}/LogMain.c
         ${TRACEHUB_LOG_DIR}/LogFile.c
@@ -199,6 +203,10 @@ if(BUILD_UNIT_TESTS)
 
     add_executable(test_swimlane_renderer
         Unit/SwimLaneRendererTest.c
+        ${TRACEHUB_LOG_DIR}/SwimLaneLayout.c
+        ${TRACEHUB_LOG_DIR}/SwimLaneText.c
+        ${TRACEHUB_LOG_DIR}/SwimLaneCell.c
+        ${TRACEHUB_LOG_DIR}/SwimLaneRendererApi.c
         ${TRACEHUB_LOG_DIR}/LogEntry.c
     )
 
