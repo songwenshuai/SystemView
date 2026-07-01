@@ -1,0 +1,102 @@
+# Block repository commands that must be handled manually or through apply_patch.
+prefix_rule(
+    pattern = ["./build.sh"],
+    decision = "forbidden",
+    justification = "Build and test commands must be run manually by the user.",
+)
+
+prefix_rule(
+    pattern = ["make"],
+    decision = "forbidden",
+    justification = "Build commands must be run manually by the user.",
+)
+
+prefix_rule(
+    pattern = ["cmake"],
+    decision = "forbidden",
+    justification = "Build configuration commands must be run manually by the user.",
+)
+
+prefix_rule(
+    pattern = ["ninja"],
+    decision = "forbidden",
+    justification = "Build commands must be run manually by the user.",
+)
+
+prefix_rule(
+    pattern = ["sudo", "make", "install"],
+    decision = "forbidden",
+    justification = "System installation commands are forbidden.",
+)
+
+prefix_rule(
+    pattern = ["sudo", "apt"],
+    decision = "forbidden",
+    justification = "System package installation commands are forbidden.",
+)
+
+prefix_rule(
+    pattern = ["sudo", "apt-get"],
+    decision = "forbidden",
+    justification = "System package installation commands are forbidden.",
+)
+
+prefix_rule(
+    pattern = ["git", "restore"],
+    decision = "forbidden",
+    justification = "Do not overwrite or discard working tree changes.",
+)
+
+prefix_rule(
+    pattern = ["git", "stash"],
+    decision = "forbidden",
+    justification = "Do not hide working tree changes.",
+)
+
+prefix_rule(
+    pattern = ["git", "reset"],
+    decision = "forbidden",
+    justification = "Do not overwrite or discard Git state.",
+)
+
+prefix_rule(
+    pattern = ["git", "checkout", "--"],
+    decision = "forbidden",
+    justification = "Do not overwrite files from Git history.",
+)
+
+prefix_rule(
+    pattern = ["sed", "-i"],
+    decision = "forbidden",
+    justification = "Use apply_patch for file edits.",
+)
+
+prefix_rule(
+    pattern = ["sed", "-E", "-i"],
+    decision = "forbidden",
+    justification = "Use apply_patch for file edits.",
+)
+
+prefix_rule(
+    pattern = ["perl", "-i"],
+    decision = "forbidden",
+    justification = "Use apply_patch for file edits.",
+)
+
+prefix_rule(
+    pattern = ["perl", "-p"],
+    decision = "forbidden",
+    justification = "Use read-only commands or apply_patch instead.",
+)
+
+prefix_rule(
+    pattern = ["perl", "-pi"],
+    decision = "forbidden",
+    justification = "Use apply_patch for file edits.",
+)
+
+prefix_rule(
+    pattern = ["perl", "-p", "-i"],
+    decision = "forbidden",
+    justification = "Use apply_patch for file edits.",
+)
