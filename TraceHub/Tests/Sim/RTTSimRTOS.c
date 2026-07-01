@@ -68,6 +68,7 @@ Purpose : Simulate RTOS logs written to RTT channel 1
 #include "RTTMemory.h"
 #include "SYS.h"
 #include "SEGGER_RTT.h"
+#include "SEGGER_SYSVIEW_Conf.h"
 #include "RTTSimCommon.h"
 #include "RTTSimSystemView.h"
 
@@ -82,7 +83,7 @@ Purpose : Simulate RTOS logs written to RTT channel 1
 #define SIM_BASE_ADDRESS        UINT64_C(0x10000000)
 #define SIM_RTOS_CHANNEL        1
 #define SIM_LINUX_CHANNEL       0
-#define SIM_SYSVIEW_CHANNEL     2
+#define SIM_SYSVIEW_CHANNEL     SEGGER_SYSVIEW_RTT_CHANNEL
 #define SIM_LOG_INTERVAL_MS     20
 #define SIM_NUM_CHANNELS        3
 #define SIM_SYSVIEW_CPU_FREQ_HZ UINT32_C(400000000)

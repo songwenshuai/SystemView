@@ -41,7 +41,9 @@ Purpose : POSIX MEMSHM RTT memory ownership for embOS simulation.
 */
 
 static int             _hShm = -1;
-static pthread_mutex_t _Lock = PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t _Lock;
+static pthread_once_t  _LockOnce = PTHREAD_ONCE_INIT;
+static int             _LockInitStatus;
 static void           *_pMappedBase;
 static size_t          _MappedSize;
 static int             _IsCreator;
@@ -105,6 +107,49 @@ static int _SEGGER_SIM_RTT_NormalizeName(const char *sPath, char *sName, size_t 
 
 /*********************************************************************
 *
+*       _SEGGER_SIM_RTT_InitLock()
+*
+*  Function description
+*    Initializes the host lock used by SEGGER_RTT_LOCK().
+*/
+static void _SEGGER_SIM_RTT_InitLock(void) {
+  pthread_mutexattr_t Attr;
+  int                 Status;
+
+  _LockInitStatus = -1;
+  Status = pthread_mutexattr_init(&Attr);
+  if (Status != 0) {
+    return;
+  }
+  Status = pthread_mutexattr_settype(&Attr, PTHREAD_MUTEX_RECURSIVE);
+  if (Status == 0) {
+    Status = pthread_mutex_init(&_Lock, &Attr);
+  }
+  (void)pthread_mutexattr_destroy(&Attr);
+  if (Status == 0) {
+    _LockInitStatus = 0;
+  }
+}
+
+/*********************************************************************
+*
+*       _SEGGER_SIM_RTT_EnsureLock()
+*
+*  Function description
+*    Ensures that the host RTT lock is initialized.
+*/
+static void _SEGGER_SIM_RTT_EnsureLock(void) {
+  int Status;
+
+  Status = pthread_once(&_LockOnce, _SEGGER_SIM_RTT_InitLock);
+  if ((Status != 0) || (_LockInitStatus != 0)) {
+    fprintf(stderr, "embOS MEMSHM: failed to initialize recursive RTT lock\n");
+    abort();
+  }
+}
+
+/*********************************************************************
+*
 *       _SEGGER_SIM_RTT_Map()
 *
 *  Function description
@@ -145,23 +190,31 @@ static int _SEGGER_SIM_RTT_Map(const char *sName, size_t *pSize) {
     }
   } else {
     _IsCreator = 0;
-    if (fstat(_hShm, &Stat) == -1) {
-      fprintf(stderr, "embOS MEMSHM: fstat failed: %s\n", strerror(errno));
-      close(_hShm);
-      _hShm = -1;
-      return -1;
-    }
-    if ((Stat.st_size < 0) || ((size_t)Stat.st_size < *pSize)) {
-      fprintf(stderr,
-              "embOS MEMSHM: existing shared memory object is too small: %zu bytes required, %zu bytes found\n",
-              *pSize,
-              (Stat.st_size < 0) ? 0u : (size_t)Stat.st_size);
-      close(_hShm);
-      _hShm = -1;
-      return -1;
-    }
-    *pSize = (size_t)Stat.st_size;
   }
+  if (fstat(_hShm, &Stat) == -1) {
+    fprintf(stderr, "embOS MEMSHM: fstat failed: %s\n", strerror(errno));
+    close(_hShm);
+    if (_IsCreator != 0) {
+      shm_unlink(sName);
+    }
+    _hShm = -1;
+    _IsCreator = 0;
+    return -1;
+  }
+  if ((Stat.st_size < 0) || ((size_t)Stat.st_size < *pSize)) {
+    fprintf(stderr,
+            "embOS MEMSHM: existing shared memory object is too small: %zu bytes required, %zu bytes found\n",
+            *pSize,
+            (Stat.st_size < 0) ? 0u : (size_t)Stat.st_size);
+    close(_hShm);
+    if (_IsCreator != 0) {
+      shm_unlink(sName);
+    }
+    _hShm = -1;
+    _IsCreator = 0;
+    return -1;
+  }
+  *pSize = (size_t)Stat.st_size;
   //
   // Map the shared memory object into the current process.
   //
@@ -270,7 +323,14 @@ void SEGGER_SIM_RTT_CleanupMemory(void) {
 *    Locks RTT access for the simulation process.
 */
 void SEGGER_SIM_RTT_Lock(void) {
-  (void)pthread_mutex_lock(&_Lock);
+  int Status;
+
+  _SEGGER_SIM_RTT_EnsureLock();
+  Status = pthread_mutex_lock(&_Lock);
+  if (Status != 0) {
+    fprintf(stderr, "embOS MEMSHM: failed to lock RTT mutex\n");
+    abort();
+  }
 }
 
 /*********************************************************************
@@ -281,7 +341,14 @@ void SEGGER_SIM_RTT_Lock(void) {
 *    Unlocks RTT access for the simulation process.
 */
 void SEGGER_SIM_RTT_Unlock(void) {
-  (void)pthread_mutex_unlock(&_Lock);
+  int Status;
+
+  _SEGGER_SIM_RTT_EnsureLock();
+  Status = pthread_mutex_unlock(&_Lock);
+  if (Status != 0) {
+    fprintf(stderr, "embOS MEMSHM: failed to unlock RTT mutex\n");
+    abort();
+  }
 }
 
 /*********************************************************************

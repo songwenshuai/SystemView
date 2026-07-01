@@ -100,6 +100,14 @@ int SystemView_Init(SystemView_Config_t *pConfig) {
             memset(&_sysview_state, 0, sizeof(_sysview_state));
             return -1;
         }
+        if (_SystemView_WriteRecordFileHeader(&_sysview_state, _sysview_state.record_file) != 0) {
+            (void)fclose(_sysview_state.record_file);
+            _sysview_state.record_file = NULL;
+            free(_sysview_state.pNetworkQueue);
+            SYS_MutexDestroy(&_sysview_state.Lock);
+            memset(&_sysview_state, 0, sizeof(_sysview_state));
+            return -1;
+        }
         Log_Print("SystemView: SVDat record file created\n");
     }
 

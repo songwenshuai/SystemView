@@ -11,10 +11,49 @@ Purpose : SystemView recording file runtime
 #include <errno.h>
 #include <stdio.h>
 #include <string.h>
+#include <time.h>
 
 #include "SystemView_internal.h"
 #include "Log.h"
 #include "RTTBridge.h"
+
+/*********************************************************************
+*
+*       Static functions
+*
+**********************************************************************
+*/
+
+/*********************************************************************
+*
+*       _SystemView_FormatRecordTime()
+*
+*  Function description
+*    Format the current local wall-clock time for the SVDat header.
+*/
+static int _SystemView_FormatRecordTime(char *buffer, size_t buffer_size) {
+    struct tm Tm;
+    time_t    Now;
+
+    if ((buffer == NULL) || (buffer_size == 0u)) {
+        return -1;
+    }
+
+    Now = time(NULL);
+    if (Now == (time_t)-1) {
+        return -1;
+    }
+#if defined(_WIN32)
+    if (localtime_s(&Tm, &Now) != 0) {
+        return -1;
+    }
+#else
+    if (localtime_r(&Now, &Tm) == NULL) {
+        return -1;
+    }
+#endif
+    return (strftime(buffer, buffer_size, "%d %b %Y %H:%M:%S", &Tm) == 0u) ? -1 : 0;
+}
 
 /*********************************************************************
 *
@@ -61,6 +100,49 @@ void _SystemView_ReportRecordFileError(SystemView_State_t *pState,
             Log_Error("SystemView: record file %s failed\n", operation);
         }
     }
+}
+
+/*********************************************************************
+*
+*       _SystemView_WriteRecordFileHeader()
+*
+*  Function description
+*    Write the textual SVDat container header before binary trace bytes.
+*/
+int _SystemView_WriteRecordFileHeader(SystemView_State_t *pState, FILE *record_file) {
+    char RecordTime[32];
+    int  Result;
+
+    if (record_file == NULL) {
+        return 0;
+    }
+
+    if (_SystemView_FormatRecordTime(RecordTime, sizeof(RecordTime)) != 0) {
+        _SystemView_ReportRecordFileError(pState, "header timestamp", 0);
+        return -1;
+    }
+
+    errno = 0;
+    Result = fprintf(record_file,
+                     ";\n"
+                     "; Version     SEGGER SystemViewer V%u.%02u.%02u\n"
+                     "; RecordTime  %s\n"
+                     "; Author      CineLogic TraceHub\n"
+                     "; Title       TraceHub SystemView Recording\n"
+                     "; Description TraceHub SystemView RTT recording, channel %u\n"
+                     ";\n"
+                     "\n",
+                     SYSVIEW_VERSION_MAJOR,
+                     SYSVIEW_VERSION_MINOR,
+                     SYSVIEW_VERSION_REV,
+                     RecordTime,
+                     pState != NULL ? pState->Config.channel : 0u);
+    if (Result < 0) {
+        _SystemView_ReportRecordFileError(pState, "header write", errno);
+        return -1;
+    }
+
+    return _SystemView_FlushRecordFile(pState, record_file);
 }
 
 /*********************************************************************

@@ -17,6 +17,109 @@ Purpose : SystemView TCP service and RTT transfer runtime
 
 /*********************************************************************
 *
+*       Static functions
+*
+**********************************************************************
+*/
+
+/*********************************************************************
+*
+*       _SystemView_ReceiveAppPacket()
+*
+*  Function description
+*    Receive one length-prefixed SystemView App command packet.
+*
+*  Return value
+*     0  No complete packet is ready yet.
+*     1  A complete packet is ready in pState->pWriteBuf.
+*    -1  Network error or disconnect.
+*/
+static int _SystemView_ReceiveAppPacket(SystemView_State_t *pState,
+                                        SYS_SOCKET_HANDLE hClient) {
+    unsigned char Len;
+    unsigned      NumBytes;
+    int           Result;
+
+    if (pState->WriteNumBytes != 0) {
+        return 0;
+    }
+
+    if (pState->AppPacketExpected == 0u) {
+        Result = SYS_SOCKET_IsReadable(hClient, 0);
+        if (Result < 0) {
+            _SystemView_CloseClientForNetworkError(pState, "socket read wait failed");
+            return -1;
+        }
+        if (Result == 0) {
+            return 0;
+        }
+
+        Result = SYS_SOCKET_Receive(hClient, &Len, 1u);
+        if (Result < 0) {
+            if (Result != SYS_SOCKET_ERR_WOULDBLOCK) {
+                _SystemView_CloseClientForNetworkError(pState, "socket receive failed");
+                return -1;
+            }
+            return 0;
+        }
+        if (Result == 0) {
+            _SystemView_CloseClientForNetworkError(pState,
+                                                   "client disconnected before app packet length");
+            return -1;
+        }
+
+        _SystemView_AddBytesReceived(pState, 1u);
+        pState->AppPacketExpected = (unsigned)Len;
+        pState->AppPacketReceived = 0u;
+        if (pState->AppPacketExpected == 0u) {
+            return 0;
+        }
+        if (pState->AppPacketExpected > SYSVIEW_APP_PACKET_MAX_SIZE) {
+            _SystemView_CloseClientForNetworkError(pState, "invalid app packet length");
+            return -1;
+        }
+    }
+
+    while (pState->AppPacketReceived < pState->AppPacketExpected) {
+        Result = SYS_SOCKET_IsReadable(hClient, 0);
+        if (Result < 0) {
+            _SystemView_CloseClientForNetworkError(pState, "socket read wait failed");
+            return -1;
+        }
+        if (Result == 0) {
+            return 0;
+        }
+
+        NumBytes = pState->AppPacketExpected - pState->AppPacketReceived;
+        Result = SYS_SOCKET_Receive(hClient,
+                                    pState->acWriteBuf + pState->AppPacketReceived,
+                                    NumBytes);
+        if (Result < 0) {
+            if (Result != SYS_SOCKET_ERR_WOULDBLOCK) {
+                _SystemView_CloseClientForNetworkError(pState, "socket receive failed");
+                return -1;
+            }
+            return 0;
+        }
+        if (Result == 0) {
+            _SystemView_CloseClientForNetworkError(pState,
+                                                   "client disconnected during app packet payload");
+            return -1;
+        }
+
+        pState->AppPacketReceived += (unsigned)Result;
+        _SystemView_AddBytesReceived(pState, (unsigned)Result);
+    }
+
+    pState->WriteNumBytes = (int)pState->AppPacketExpected;
+    pState->pWriteBuf = pState->acWriteBuf;
+    pState->AppPacketExpected = 0u;
+    pState->AppPacketReceived = 0u;
+    return 1;
+}
+
+/*********************************************************************
+*
 *       _SystemView_ServiceThread()
 *
 *  Function description
@@ -122,27 +225,8 @@ void _SystemView_ServiceThread(void *pArg) {
             Log_Print("SystemView: new client connected (total: %u)\n", ConnectionsCount);
         }
 
-        //
-        // Receive new data from socket only if previous data has been fully written to RTT
-        //
-        if (pState->WriteNumBytes == 0) {
-            Result = SYS_SOCKET_IsReadable(hClient, 0);
-            if (Result == 1) {
-                Result = SYS_SOCKET_Receive(hClient, pState->acWriteBuf, sizeof(pState->acWriteBuf));
-                if (Result < 0) {
-                    if (Result != SYS_SOCKET_ERR_WOULDBLOCK) {
-                        _SystemView_CloseClientForNetworkError(pState, "socket receive failed");
-                        continue;
-                    }
-                } else if (Result == 0) {
-                    _SystemView_CloseClientForNetworkError(pState, "client disconnected");
-                    continue;
-                } else if (Result > 0) {
-                    pState->WriteNumBytes = Result;
-                    pState->pWriteBuf     = pState->acWriteBuf;
-                    _SystemView_AddBytesReceived(pState, (unsigned)Result);
-                }
-            }
+        if (_SystemView_ReceiveAppPacket(pState, hClient) < 0) {
+            continue;
         }
 
         //

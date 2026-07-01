@@ -237,21 +237,30 @@ static int _memshm_map_posix(const char *name, size_t *size, bool reset_on_init)
         }
     } else {
         _is_creator = 0;
-        if (fstat(_shm_fd, &st) == -1) {
-            fprintf(stderr, "MEMSHM: fstat failed: %s\n", strerror(errno));
-            close(_shm_fd);
-            _shm_fd = -1;
-            return -1;
-        }
-        if ((st.st_size < 0) || ((size_t)st.st_size < *size)) {
-            fprintf(stderr, "MEMSHM: existing shared memory object is too small: %zu bytes required, %zu bytes found\n",
-                    *size, (st.st_size < 0) ? 0u : (size_t)st.st_size);
-            close(_shm_fd);
-            _shm_fd = -1;
-            return -1;
-        }
-        *size = (size_t)st.st_size;
     }
+
+    if (fstat(_shm_fd, &st) == -1) {
+        fprintf(stderr, "MEMSHM: fstat failed: %s\n", strerror(errno));
+        close(_shm_fd);
+        if (_is_creator) {
+            shm_unlink(name);
+        }
+        _shm_fd = -1;
+        _is_creator = 0;
+        return -1;
+    }
+    if ((st.st_size < 0) || ((size_t)st.st_size < *size)) {
+        fprintf(stderr, "MEMSHM: existing shared memory object is too small: %zu bytes required, %zu bytes found\n",
+                *size, (st.st_size < 0) ? 0u : (size_t)st.st_size);
+        close(_shm_fd);
+        if (_is_creator) {
+            shm_unlink(name);
+        }
+        _shm_fd = -1;
+        _is_creator = 0;
+        return -1;
+    }
+    *size = (size_t)st.st_size;
 
     _mapped_base = mmap(NULL, *size, PROT_READ | PROT_WRITE, MAP_SHARED, _shm_fd, 0);
     if (_mapped_base == MAP_FAILED) {

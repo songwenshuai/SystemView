@@ -53,6 +53,8 @@ Revision: $Rev: 25329 $
 #include "SEGGER_RTT.h"
 #include "SEGGER_SYSVIEW_embOS.h"
 
+#include <string.h>
+
 #if (OS_VERSION < 41201)
   #error "SystemView is only supported in embOS V4.12a and later."
 #endif
@@ -137,39 +139,102 @@ static void _cbSendTaskList(void) {
 
 /*********************************************************************
 *
+*       _cbRecordEnterISR()
+*
+*  Function description
+*    Records ISR entry events.
+*/
+static void _cbRecordEnterISR(void) {
+  SEGGER_SYSVIEW_RecordEnterISR();
+}
+
+/*********************************************************************
+*
+*       _cbRecordExitISR()
+*
+*  Function description
+*    Records ISR exit events.
+*/
+static void _cbRecordExitISR(void) {
+  SEGGER_SYSVIEW_RecordExitISR();
+}
+
+/*********************************************************************
+*
+*       _cbRecordExitISRToScheduler()
+*
+*  Function description
+*    Records ISR exits that switch to the scheduler.
+*/
+static void _cbRecordExitISRToScheduler(void) {
+  SEGGER_SYSVIEW_RecordExitISRToScheduler();
+}
+
+/*********************************************************************
+*
 *       _cbOnTaskCreate()
 *
 *  Function description
-*    Binds the embOS task-create trace callback.
+*    Records task creation events.
 */
-#define _cbOnTaskCreate   SEGGER_SYSVIEW_OnTaskCreate
+static void _cbOnTaskCreate(OS_TRACE_ID_TYPE TaskId) {
+  SEGGER_SYSVIEW_OnTaskCreate((PTR_ADDR)TaskId);
+}
 
 /*********************************************************************
 *
 *       _cbOnTaskStartExec()
 *
 *  Function description
-*    Binds the embOS task-start-exec trace callback.
+*    Records task execution start events.
 */
-#define _cbOnTaskStartExec  SEGGER_SYSVIEW_OnTaskStartExec
+static void _cbOnTaskStartExec(OS_TRACE_ID_TYPE TaskId) {
+  SEGGER_SYSVIEW_OnTaskStartExec((PTR_ADDR)TaskId);
+}
+
+/*********************************************************************
+*
+*       _cbOnTaskStopExec()
+*
+*  Function description
+*    Records task execution stop events.
+*/
+static void _cbOnTaskStopExec(void) {
+  SEGGER_SYSVIEW_OnTaskStopExec();
+}
 
 /*********************************************************************
 *
 *       _cbOnTaskStartReady()
 *
 *  Function description
-*    Binds the embOS task-start-ready trace callback.
+*    Records task ready start events.
 */
-#define _cbOnTaskStartReady SEGGER_SYSVIEW_OnTaskStartReady
+static void _cbOnTaskStartReady(OS_TRACE_ID_TYPE TaskId) {
+  SEGGER_SYSVIEW_OnTaskStartReady((PTR_ADDR)TaskId);
+}
 
 /*********************************************************************
 *
 *       _cbOnTaskStopReady()
 *
 *  Function description
-*    Binds the embOS task-stop-ready trace callback.
+*    Records task ready stop events.
 */
-#define _cbOnTaskStopReady  SEGGER_SYSVIEW_OnTaskStopReady
+static void _cbOnTaskStopReady(OS_TRACE_ID_TYPE TaskId, unsigned int Reason) {
+  SEGGER_SYSVIEW_OnTaskStopReady((PTR_ADDR)TaskId, Reason);
+}
+
+/*********************************************************************
+*
+*       _cbOnIdle()
+*
+*  Function description
+*    Records idle events.
+*/
+static void _cbOnIdle(void) {
+  SEGGER_SYSVIEW_OnIdle();
+}
 
 /*********************************************************************
 *
@@ -187,16 +252,16 @@ const OS_TRACE_API embOS_TraceAPI_SYSVIEW = {
   //
   // Specific Trace Events
   //
-  SEGGER_SYSVIEW_RecordEnterISR,                //  void (*pfRecordEnterISR)              (void);
-  SEGGER_SYSVIEW_RecordExitISR,                 //  void (*pfRecordExitISR)               (void);
-  SEGGER_SYSVIEW_RecordExitISRToScheduler,      //  void (*pfRecordExitISRToScheduler)    (void);
+  _cbRecordEnterISR,                            //  void (*pfRecordEnterISR)              (void);
+  _cbRecordExitISR,                             //  void (*pfRecordExitISR)               (void);
+  _cbRecordExitISRToScheduler,                  //  void (*pfRecordExitISRToScheduler)    (void);
   _cbSendTaskInfo,                              //  void (*pfRecordTaskInfo)              (const OS_TASK* pTask);
   _cbOnTaskCreate,                              //  void (*pfRecordTaskCreate)            (OS_TRACE_ID_TYPE TaskId);
   _cbOnTaskStartExec,                           //  void (*pfRecordTaskStartExec)         (OS_TRACE_ID_TYPE TaskId);
-  SEGGER_SYSVIEW_OnTaskStopExec,                //  void (*pfRecordTaskStopExec)          (void);
+  _cbOnTaskStopExec,                            //  void (*pfRecordTaskStopExec)          (void);
   _cbOnTaskStartReady,                          //  void (*pfRecordTaskStartReady)        (OS_TRACE_ID_TYPE TaskId);
   _cbOnTaskStopReady,                           //  void (*pfRecordTaskStopReady)         (OS_TRACE_ID_TYPE TaskId, unsigned Reason);
-  SEGGER_SYSVIEW_OnIdle,                        //  void (*pfRecordIdle)                  (void);
+  _cbOnIdle,                                    //  void (*pfRecordIdle)                  (void);
   //
   // Generic Trace Event logging
   //

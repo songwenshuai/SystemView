@@ -28,6 +28,7 @@ Purpose : Internal SystemView service interfaces
 
 #define SYSVIEW_SEND_BUF_SIZE       8192
 #define SYSVIEW_RECV_BUF_SIZE       8192
+#define SYSVIEW_APP_PACKET_MAX_SIZE 255u
 #define SYSVIEW_IDLE_DELAY_MS       20
 #define SYSVIEW_HANDSHAKE_TIMEOUT_MS 5000
 #define SYSVIEW_RECORD_FILE_EXTENSION "SVDat"
@@ -37,6 +38,10 @@ Purpose : Internal SystemView service interfaces
 
 #ifndef SYSTEMVIEW_DEFAULT_NETWORK_QUEUE_SIZE
   #define SYSTEMVIEW_DEFAULT_NETWORK_QUEUE_SIZE (1024u * 1024u)
+#endif
+
+#if (SYSVIEW_APP_PACKET_MAX_SIZE > SYSVIEW_RECV_BUF_SIZE)
+  #error "SYSVIEW_APP_PACKET_MAX_SIZE must fit in the receive buffer"
 #endif
 
 typedef struct {
@@ -59,6 +64,8 @@ typedef struct {
     FILE               *record_file;
     int                 SendNumBytes;
     int                 WriteNumBytes;
+    unsigned            AppPacketExpected;
+    unsigned            AppPacketReceived;
     char               *pSendBuf;
     char               *pWriteBuf;
     char                acSendBuf[SYSVIEW_SEND_BUF_SIZE];
@@ -79,6 +86,7 @@ bool              _SystemView_HasFatalError(SystemView_State_t *pState);
 void              _SystemView_ReportFatalServiceError(SystemView_State_t *pState, const char *operation);
 void              _SystemView_ReportRecoverableRTTError(SystemView_State_t *pState, const char *operation);
 void              _SystemView_ReportRecordFileError(SystemView_State_t *pState, const char *operation, int saved_errno);
+int               _SystemView_WriteRecordFileHeader(SystemView_State_t *pState, FILE *record_file);
 int               _SystemView_FlushRecordFile(SystemView_State_t *pState, FILE *record_file);
 void              _SystemView_ClearNetworkQueueLocked(SystemView_State_t *pState);
 void              _SystemView_RequestNetworkStreamResetLocked(SystemView_State_t *pState);

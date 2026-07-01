@@ -287,10 +287,12 @@ SYS_SOCKET_HANDLE _SystemView_GetClient(SystemView_State_t *pState) {
 *    Reset per-client transfer state. Caller must hold pState->Lock.
 */
 void _SystemView_ResetConnectionStateLocked(SystemView_State_t *pState) {
-    pState->SendNumBytes  = 0;
-    pState->WriteNumBytes = 0;
-    pState->pSendBuf      = NULL;
-    pState->pWriteBuf     = NULL;
+    pState->SendNumBytes      = 0;
+    pState->WriteNumBytes     = 0;
+    pState->AppPacketExpected = 0u;
+    pState->AppPacketReceived = 0u;
+    pState->pSendBuf          = NULL;
+    pState->pWriteBuf         = NULL;
 }
 
 /*********************************************************************

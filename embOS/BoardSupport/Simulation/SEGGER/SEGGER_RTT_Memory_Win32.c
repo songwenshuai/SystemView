@@ -41,11 +41,12 @@ Purpose : Win32 MEMSHM RTT memory ownership for embOS simulation.
 
 static HANDLE           _hMapping;
 static CRITICAL_SECTION _Lock;
+static INIT_ONCE        _LockOnce = INIT_ONCE_STATIC_INIT;
+static int              _LockInitStatus;
 static void            *_pMappedBase;
 static size_t           _MappedSize;
 static int              _IsCreator;
 static int              _IsAtexitRegistered;
-static int              _IsLockInitialized;
 
 /*********************************************************************
 *
@@ -133,10 +134,32 @@ static int _SEGGER_SIM_RTT_NormalizeName(const char *sPath, char *sName, size_t 
 *  Function description
 *    Initializes the host lock used by SEGGER_RTT_LOCK().
 */
-static void _SEGGER_SIM_RTT_InitLock(void) {
-  if (_IsLockInitialized == 0) {
-    InitializeCriticalSection(&_Lock);
-    _IsLockInitialized = 1;
+static BOOL CALLBACK _SEGGER_SIM_RTT_InitLock(PINIT_ONCE pInitOnce, PVOID pParameter, PVOID *ppContext) {
+  (void)pInitOnce;
+  (void)pParameter;
+  (void)ppContext;
+
+  _LockInitStatus = -1;
+  if (InitializeCriticalSectionAndSpinCount(&_Lock, 0u) != 0) {
+    _LockInitStatus = 0;
+  }
+  return TRUE;
+}
+
+/*********************************************************************
+*
+*       _SEGGER_SIM_RTT_EnsureLock()
+*
+*  Function description
+*    Ensures that the host RTT lock is initialized.
+*/
+static void _SEGGER_SIM_RTT_EnsureLock(void) {
+  BOOL Status;
+
+  Status = InitOnceExecuteOnce(&_LockOnce, _SEGGER_SIM_RTT_InitLock, NULL, NULL);
+  if ((Status == 0) || (_LockInitStatus != 0)) {
+    fprintf(stderr, "embOS MEMSHM: failed to initialize RTT lock\n");
+    abort();
   }
 }
 
@@ -149,19 +172,27 @@ static void _SEGGER_SIM_RTT_InitLock(void) {
 *
 *  Parameters
 *    sName  Mapping name.
-*    Size   Required mapping size in bytes.
+*    pSize  In: required size in bytes. Out: mapped view size in bytes.
 *
 *  Return value
 *    == 0  O.K.
 *    != 0  Error.
 */
-static int _SEGGER_SIM_RTT_Map(const char *sName, size_t Size) {
-  DWORD Error;
-  DWORD SizeHigh;
-  DWORD SizeLow;
+static int _SEGGER_SIM_RTT_Map(const char *sName, size_t *pSize) {
+  MEMORY_BASIC_INFORMATION Info;
+  SIZE_T                   QuerySize;
+  DWORD                    Error;
+  DWORD                    SizeHigh;
+  DWORD                    SizeLow;
+  size_t                   RequiredSize;
 
-  SizeHigh = (DWORD)(((uint64_t)Size) >> 32);
-  SizeLow  = (DWORD)(((uint64_t)Size) & 0xFFFFFFFFu);
+  if (pSize == NULL) {
+    return -1;
+  }
+  RequiredSize = *pSize;
+
+  SizeHigh = (DWORD)(((uint64_t)RequiredSize) >> 32);
+  SizeLow  = (DWORD)(((uint64_t)RequiredSize) & 0xFFFFFFFFu);
   //
   // Open an existing mapping or create a new one.
   //
@@ -175,7 +206,7 @@ static int _SEGGER_SIM_RTT_Map(const char *sName, size_t Size) {
   //
   // Map the object into the current process.
   //
-  _pMappedBase = MapViewOfFile(_hMapping, FILE_MAP_ALL_ACCESS, 0u, 0u, Size);
+  _pMappedBase = MapViewOfFile(_hMapping, FILE_MAP_ALL_ACCESS, 0u, 0u, 0u);
   if (_pMappedBase == NULL) {
     fprintf(stderr, "embOS MEMSHM: MapViewOfFile failed: %lu\n", GetLastError());
     CloseHandle(_hMapping);
@@ -183,8 +214,31 @@ static int _SEGGER_SIM_RTT_Map(const char *sName, size_t Size) {
     _IsCreator = 0;
     return -1;
   }
+  QuerySize = VirtualQuery(_pMappedBase, &Info, sizeof(Info));
+  if (QuerySize != sizeof(Info)) {
+    fprintf(stderr, "embOS MEMSHM: VirtualQuery failed: %lu\n", GetLastError());
+    UnmapViewOfFile(_pMappedBase);
+    CloseHandle(_hMapping);
+    _pMappedBase = NULL;
+    _hMapping = NULL;
+    _IsCreator = 0;
+    return -1;
+  }
+  if (Info.RegionSize < RequiredSize) {
+    fprintf(stderr,
+            "embOS MEMSHM: existing file mapping is too small: %zu bytes required, %zu bytes found\n",
+            RequiredSize,
+            (size_t)Info.RegionSize);
+    UnmapViewOfFile(_pMappedBase);
+    CloseHandle(_hMapping);
+    _pMappedBase = NULL;
+    _hMapping = NULL;
+    _IsCreator = 0;
+    return -1;
+  }
+  *pSize = (size_t)Info.RegionSize;
   if (_IsCreator != 0) {
-    memset(_pMappedBase, 0, Size);
+    memset(_pMappedBase, 0, *pSize);
   }
   return 0;
 }
@@ -222,11 +276,10 @@ int SEGGER_SIM_RTT_EnsureMemory(void) {
     return -1;
   }
   Size = SEGGER_SIM_RTT_REQUIRED_MEMORY_SIZE;
-  if (_SEGGER_SIM_RTT_Map(sName, Size) != 0) {
+  if (_SEGGER_SIM_RTT_Map(sName, &Size) != 0) {
     return -1;
   }
   _MappedSize = Size;
-  _SEGGER_SIM_RTT_InitLock();
   //
   // Register cleanup and initialize the shared RTT layout.
   //
@@ -262,10 +315,6 @@ void SEGGER_SIM_RTT_CleanupMemory(void) {
     CloseHandle(_hMapping);
     _hMapping = NULL;
   }
-  if (_IsLockInitialized != 0) {
-    DeleteCriticalSection(&_Lock);
-    _IsLockInitialized = 0;
-  }
   _MappedSize = 0u;
   _IsCreator  = 0;
 }
@@ -278,7 +327,7 @@ void SEGGER_SIM_RTT_CleanupMemory(void) {
 *    Locks RTT access for the simulation process.
 */
 void SEGGER_SIM_RTT_Lock(void) {
-  _SEGGER_SIM_RTT_InitLock();
+  _SEGGER_SIM_RTT_EnsureLock();
   EnterCriticalSection(&_Lock);
 }
 
@@ -290,6 +339,7 @@ void SEGGER_SIM_RTT_Lock(void) {
 *    Unlocks RTT access for the simulation process.
 */
 void SEGGER_SIM_RTT_Unlock(void) {
+  _SEGGER_SIM_RTT_EnsureLock();
   LeaveCriticalSection(&_Lock);
 }
 

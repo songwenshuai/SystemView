@@ -144,6 +144,11 @@ void SYS_SOCKET_Close(SYS_SOCKET_HANDLE hSocket) {
     (void)hSocket;
 }
 
+void SYS_SOCKET_Shutdown(SYS_SOCKET_HANDLE hSocket, int How) {
+    (void)hSocket;
+    (void)How;
+}
+
 int SYS_SOCKET_ListenAtTCPAddr(SYS_SOCKET_HANDLE hSocket,
                                unsigned IPAddr,
                                unsigned Port,
@@ -242,11 +247,53 @@ static int _TestSystemViewHelloHelpers(void) {
     TEST_ASSERT(SystemView_BuildHelloMessage(message, sizeof(message)));
     TEST_ASSERT(SystemView_HelloHasValidPrefix(message, sizeof(message)));
     TEST_ASSERT(memcmp(message, SYSVIEW_HELLO_PREFIX, SYSVIEW_HELLO_PREFIX_SIZE) == 0);
+    TEST_ASSERT(message[SYSVIEW_HELLO_PREFIX_SIZE] == ' ');
+    TEST_ASSERT(message[SYSVIEW_HELLO_PREFIX_SIZE + 1u] == 'V');
+    TEST_ASSERT(message[SYSVIEW_HELLO_PREFIX_SIZE + 2u] == (unsigned char)('0' + SEGGER_SYSVIEW_MAJOR));
+    TEST_ASSERT(message[SYSVIEW_HELLO_PREFIX_SIZE + 3u] == '.');
+    TEST_ASSERT(message[SYSVIEW_HELLO_PREFIX_SIZE + 4u] == (unsigned char)('0' + (SEGGER_SYSVIEW_MINOR / 10)));
+    TEST_ASSERT(message[SYSVIEW_HELLO_PREFIX_SIZE + 5u] == (unsigned char)('0' + (SEGGER_SYSVIEW_MINOR % 10)));
+    TEST_ASSERT(message[SYSVIEW_HELLO_PREFIX_SIZE + 6u] == '.');
+    TEST_ASSERT(message[SYSVIEW_HELLO_PREFIX_SIZE + 7u] == (unsigned char)('0' + (SEGGER_SYSVIEW_REV / 10)));
+    TEST_ASSERT(message[SYSVIEW_HELLO_PREFIX_SIZE + 8u] == (unsigned char)('0' + (SEGGER_SYSVIEW_REV % 10)));
     TEST_ASSERT(!SystemView_BuildHelloMessage(NULL, sizeof(message)));
     TEST_ASSERT(!SystemView_BuildHelloMessage(message, sizeof(message) - 1u));
     TEST_ASSERT(!SystemView_HelloHasValidPrefix(NULL, sizeof(message)));
     message[0] = 'X';
     TEST_ASSERT(!SystemView_HelloHasValidPrefix(message, sizeof(message)));
+    return 0;
+}
+
+static int _TestSystemViewRecordFileHeader(void) {
+    SystemView_State_t state;
+    FILE              *file;
+    char               buffer[512];
+    char               expected_version[64];
+
+    memset(&state, 0, sizeof(state));
+    state.Config.channel = 2u;
+
+    file = tmpfile();
+    TEST_ASSERT(file != NULL);
+    TEST_ASSERT(_SystemView_WriteRecordFileHeader(&state, file) == 0);
+    TEST_ASSERT(Test_ReadTmpFile(file, buffer, sizeof(buffer)) == 0);
+
+    snprintf(expected_version,
+             sizeof(expected_version),
+             "; Version     SEGGER SystemViewer V%u.%02u.%02u\n",
+             SYSVIEW_VERSION_MAJOR,
+             SYSVIEW_VERSION_MINOR,
+             SYSVIEW_VERSION_REV);
+    TEST_ASSERT(buffer[0] == ';');
+    TEST_ASSERT(buffer[1] == '\n');
+    TEST_ASSERT(strstr(buffer, expected_version) != NULL);
+    TEST_ASSERT(strstr(buffer, "; RecordTime  ") != NULL);
+    TEST_ASSERT(strstr(buffer, "; Author      CineLogic TraceHub\n") != NULL);
+    TEST_ASSERT(strstr(buffer, "; Title       TraceHub SystemView Recording\n") != NULL);
+    TEST_ASSERT(strstr(buffer, "; Description TraceHub SystemView RTT recording, channel 2\n") != NULL);
+    TEST_ASSERT(strstr(buffer, ";\n\n") != NULL);
+
+    fclose(file);
     return 0;
 }
 
@@ -294,6 +341,7 @@ static int _TestSystemViewLifecycle(void) {
 int main(void) {
     TEST_RUN(_TestTerminalLifecycle);
     TEST_RUN(_TestSystemViewHelloHelpers);
+    TEST_RUN(_TestSystemViewRecordFileHeader);
     TEST_RUN(_TestSystemViewLifecycle);
     return 0;
 }

@@ -282,6 +282,36 @@ static int _ConfigureSpinLock(const RTT_SIM_SYSVIEW_CoreConfig_t *config) {
 
 /*********************************************************************
 *
+*       _GetChannelBufferBase()
+*
+*  Function description
+*    Returns the start address of the configured RTT buffer pair.
+*
+*  Return value
+*    Local address of the channel buffer pair.
+*/
+static uintptr_t _GetChannelBufferBase(void) {
+    size_t Offset;
+
+    if (_rtt_address == 0u) {
+        return 0u;
+    }
+    if (_core_config.channel == 0u) {
+        Offset = SEGGER_RTT__UP_NAME_OFF;
+    } else {
+        Offset = SEGGER_RTT_GetRequiredMemSize(_core_config.channel);
+        if (Offset == 0u) {
+            return 0u;
+        }
+    }
+    if (_rtt_address > (uintptr_t)(UINTPTR_MAX - Offset)) {
+        return 0u;
+    }
+    return _rtt_address + Offset;
+}
+
+/*********************************************************************
+*
 *       Public hooks used by SEGGER_SYSVIEW_Conf.h
 *
 **********************************************************************
@@ -299,6 +329,51 @@ static int _ConfigureSpinLock(const RTT_SIM_SYSVIEW_CoreConfig_t *config) {
 */
 uintptr_t RTT_SIM_SYSVIEW_GetRTTAddress(void) {
     return _rtt_address;
+}
+
+/*********************************************************************
+*
+*       RTT_SIM_SYSVIEW_GetRTTUpBufferAddress()
+*
+*  Function description
+*    Return the active simulated SystemView RTT up-buffer address.
+*
+*  Return value
+*    RTT up-buffer address.
+*/
+uintptr_t RTT_SIM_SYSVIEW_GetRTTUpBufferAddress(void) {
+    uintptr_t Base;
+    size_t    Offset;
+
+    Base = _GetChannelBufferBase();
+    Offset = SEGGER_RTT__TERMINAL_NAME_SIZE_ALIGNED;
+    if ((Base == 0u) || (Base > (uintptr_t)(UINTPTR_MAX - Offset))) {
+        return 0u;
+    }
+    return Base + Offset;
+}
+
+/*********************************************************************
+*
+*       RTT_SIM_SYSVIEW_GetRTTDownBufferAddress()
+*
+*  Function description
+*    Return the active simulated SystemView RTT down-buffer address.
+*
+*  Return value
+*    RTT down-buffer address.
+*/
+uintptr_t RTT_SIM_SYSVIEW_GetRTTDownBufferAddress(void) {
+    uintptr_t Base;
+    size_t    Offset;
+
+    Base = _GetChannelBufferBase();
+    Offset = SEGGER_RTT__TERMINAL_NAME_SIZE_ALIGNED +
+             BUFFER_SIZE_UP;
+    if ((Base == 0u) || (Base > (uintptr_t)(UINTPTR_MAX - Offset))) {
+        return 0u;
+    }
+    return Base + Offset;
 }
 
 /*********************************************************************
@@ -407,6 +482,10 @@ int RTT_SIM_SYSVIEW_StartCore(const RTT_SIM_SYSVIEW_CoreConfig_t *config) {
         (config->application_name == NULL) ||
         (config->device_name == NULL) ||
         (config->os_name == NULL)) {
+        return -1;
+    }
+    if ((config->channel != SEGGER_SYSVIEW_RTT_CHANNEL) ||
+        (config->channel >= config->num_channels)) {
         return -1;
     }
     if (_ConfigureSpinLock(config) != 0) {

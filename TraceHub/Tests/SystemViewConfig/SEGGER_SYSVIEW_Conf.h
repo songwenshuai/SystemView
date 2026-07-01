@@ -67,6 +67,8 @@ Purpose : SystemView configuration for RTT simulation programs
 */
 
 uintptr_t RTT_SIM_SYSVIEW_GetRTTAddress(void);
+uintptr_t RTT_SIM_SYSVIEW_GetRTTUpBufferAddress(void);
+uintptr_t RTT_SIM_SYSVIEW_GetRTTDownBufferAddress(void);
 unsigned  RTT_SIM_SYSVIEW_GetTimestamp(void);
 unsigned  RTT_SIM_SYSVIEW_GetInterruptId(void);
 void      RTT_SIM_SYSVIEW_OnEventRecorded(unsigned NumBytes);
@@ -83,8 +85,11 @@ void      RTT_SIM_SYSVIEW_Unlock(void);
 #define SEGGER_SYSVIEW_CORE                    0
 #define SEGGER_SYSVIEW_RTT_CB_ADDRESS          RTT_SIM_SYSVIEW_GetRTTAddress()
 #define SEGGER_SYSVIEW_RTT_NAME_ADDRESS        0u
+#define SEGGER_SYSVIEW_RTT_UP_BUFFER_ADDRESS   RTT_SIM_SYSVIEW_GetRTTUpBufferAddress()
+#define SEGGER_SYSVIEW_RTT_DOWN_BUFFER_ADDRESS RTT_SIM_SYSVIEW_GetRTTDownBufferAddress()
 #define SEGGER_SYSVIEW_RTT_CHANNEL             2
 #define SEGGER_SYSVIEW_RTT_BUFFER_SIZE         4096
+#define SEGGER_SYSVIEW_RTT_DOWN_BUFFER_SIZE    1024
 #define SEGGER_SYSVIEW_MAX_STRING_LEN          96
 #define SEGGER_SYSVIEW_MAX_ARGUMENTS           16
 #define SEGGER_SYSVIEW_CPU_CACHE_LINE_SIZE     0
