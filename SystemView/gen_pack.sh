@@ -30,8 +30,6 @@ DEFAULT_ARGS=()
 #
 PACK_DIRS="
   Config
-  Sample/FreeRTOSV11
-  Sample/NoOS
   SEGGER
   SYSVIEW
 "
@@ -72,7 +70,6 @@ PACKCHK_ARGS=(-x M317,M362)
 # "
 PACKCHK_DEPS="
   SEGGER.RTT.pdsc
-  ARM.CMSIS-FreeRTOS.pdsc
 "
 
 # Optional: restrict fallback modes for changelog generation

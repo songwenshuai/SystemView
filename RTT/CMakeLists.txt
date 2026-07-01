@@ -41,7 +41,6 @@ endif()
 
 option(RTT_BUILD_LIBRARY       "Build the reusable SEGGER RTT library target." ON)
 option(RTT_BUILD_TESTS         "Build RTT unit tests." ${RTT_STANDALONE})
-option(RTT_BUILD_EXAMPLES      "Build RTT example applications." ${RTT_STANDALONE})
 
 set(RTT_TEST_BUFFER_SIZE_UP        "16"  CACHE STRING "Unit-test up-buffer size in bytes.")
 set(RTT_TEST_BUFFER_SIZE_DOWN      "16"  CACHE STRING "Unit-test down-buffer size in bytes.")
@@ -104,7 +103,7 @@ endif()
 #
 ######################################################################
 
-if(RTT_BUILD_TESTS OR RTT_BUILD_EXAMPLES)
+if(RTT_BUILD_TESTS)
   add_library(rtt_test_options INTERFACE)
   add_library(rtt_test_instrumentation INTERFACE)
 
@@ -136,24 +135,6 @@ if(RTT_BUILD_TESTS OR RTT_BUILD_EXAMPLES)
     else()
       message(WARNING "RTT_ENABLE_COVERAGE is only configured for GCC/Clang-compatible compilers.")
     endif()
-  endif()
-endif()
-
-######################################################################
-#
-#       Example compile configuration
-#
-######################################################################
-
-if(RTT_BUILD_EXAMPLES)
-  add_library(rtt_example_options INTERFACE)
-
-  target_link_libraries(rtt_example_options INTERFACE rtt_test_options)
-
-  if(MSVC)
-    target_compile_options(rtt_example_options INTERFACE /wd4326)
-  else()
-    target_compile_options(rtt_example_options INTERFACE -Wno-main -Wno-main-return-type)
   endif()
 endif()
 
@@ -230,51 +211,6 @@ endif()
 
 ######################################################################
 #
-#       _AddRTTExample
-#
-# Function description
-#   Builds an RTT example application as a compile/link check.  Example
-#   applications are not registered with CTest because they are
-#   interactive, endless-loop, or board/RTOS demonstration programs.
-#
-# Parameters
-#   TargetName  Name of the executable target to create.
-#   SourceFile  Example source file to compile.
-#
-######################################################################
-
-function(_AddRTTExample TargetName SourceFile)
-  add_executable(${TargetName}
-    ${SourceFile}
-    RTT/SEGGER_RTT.c
-    RTT/SEGGER_RTT_printf.c
-  )
-
-  target_include_directories(${TargetName}
-    PRIVATE
-      SEGGER
-      RTT
-  )
-
-  target_compile_features(${TargetName} PRIVATE c_std_99)
-  target_link_libraries(${TargetName} PRIVATE rtt_example_options)
-endfunction()
-
-######################################################################
-#
-#       RTT example targets
-#
-######################################################################
-
-if(RTT_BUILD_EXAMPLES)
-  _AddRTTExample(SEGGER_RTT_InputEchoApp Examples/Main_RTT_InputEchoApp.c)
-  _AddRTTExample(SEGGER_RTT_MenuApp      Examples/Main_RTT_MenuApp.c)
-  _AddRTTExample(SEGGER_RTT_PrintfTest   Examples/Main_RTT_PrintfTest.c)
-  _AddRTTExample(SEGGER_RTT_SpeedTestApp Examples/Main_RTT_SpeedTestApp.c)
-endif()
-
-######################################################################
-#
 #       Configuration summary
 #
 ######################################################################
@@ -287,7 +223,6 @@ if(RTT_STANDALONE)
   message(STATUS "Coverage:             ${RTT_ENABLE_COVERAGE}")
   message(STATUS "Warnings as errors:   ${RTT_WARNINGS_AS_ERRORS}")
   message(STATUS "Build tests:          ${RTT_BUILD_TESTS}")
-  message(STATUS "Build examples:       ${RTT_BUILD_EXAMPLES}")
   message(STATUS "Config directory:     ${RTT_CONFIG_DIR}")
   message(STATUS "Up buffer size:       ${RTT_TEST_BUFFER_SIZE_UP}")
   message(STATUS "Down buffer size:     ${RTT_TEST_BUFFER_SIZE_DOWN}")

@@ -1,3 +1,28 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+# ==============================================================================
+# TraceHub Log Checks
+# ==============================================================================
+#
+# Project decision:
+#   This script must remain self-contained for independent log validation.
+#   Do not source it from other scripts or extract it into shared helpers.
+#
+# ==============================================================================
+
+show_usage() {
+    cat << EOF
+Usage: $0 LOG_FILE [LOG_FILE...]
+
+Validate that each log file does not contain C1 control bytes.
+
+Options:
+  -h, --help    Show this help message
+EOF
+}
+
 contains_c1_control_bytes() {
     local log_file="$1"
 
@@ -94,3 +119,47 @@ contains_c1_control_bytes() {
         }
     '
 }
+
+check_log_file() {
+    local log_file="$1"
+
+    if [ ! -f "$log_file" ]; then
+        printf "Log file not found: %s\n" "$log_file" >&2
+        return 1
+    fi
+
+    if contains_c1_control_bytes "$log_file"; then
+        printf "Log file contains C1 control bytes: %s\n" "$log_file" >&2
+        return 1
+    fi
+
+    printf "Log file passed C1 control byte check: %s\n" "$log_file"
+    return 0
+}
+
+main() {
+    local status=0
+    local log_file
+
+    if [ "$#" -eq 0 ]; then
+        show_usage >&2
+        return 1
+    fi
+
+    case "$1" in
+        -h|--help)
+            show_usage
+            return 0
+            ;;
+    esac
+
+    for log_file in "$@"; do
+        if ! check_log_file "$log_file"; then
+            status=1
+        fi
+    done
+
+    return "$status"
+}
+
+main "$@"

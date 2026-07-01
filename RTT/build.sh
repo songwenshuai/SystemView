@@ -11,8 +11,6 @@
 #   ./build.sh --release    # Release build and run tests
 #   ./build.sh --clean      # Clean and rebuild
 #   ./build.sh --coverage   # Build, run tests, and print coverage
-#   ./build.sh --no-examples
-#                            # Skip example compile targets
 #   ./build.sh -n           # Use Ninja generator
 #   ./build.sh --help       # Show all options
 #
@@ -30,7 +28,6 @@ BUILD_TYPE="${CMAKE_BUILD_TYPE:-Debug}"
 CLEAN_BUILD=false
 VERBOSE=false
 RUN_TESTS=true
-BUILD_EXAMPLES=true
 COVERAGE="${COVERAGE:-OFF}"
 WARNINGS_AS_ERRORS=false
 JOBS=$(nproc 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || echo 4)
@@ -60,13 +57,14 @@ Build Options:
   -j, --jobs N      Number of parallel jobs (default: auto)
   -v, --verbose     Verbose build output
   -n, --ninja       Use Ninja build system
-  --no-test         Build only; do not run CTest
-  --examples        Build example applications (default)
-  --no-examples     Do not build example applications
   --werror          Treat warnings as errors
 
+Test Options:
+  --test            Run CTest after building
+  --no-test         Build only; do not run CTest
+
 Coverage Options:
-  --coverage        Enable compiler coverage instrumentation and print summary
+  --coverage        Enable compiler coverage instrumentation, run unit tests, and print summary
   --no-coverage     Disable coverage instrumentation
 
 Other:
@@ -77,11 +75,10 @@ Environment:
   CMAKE_BUILD_TYPE  Initial build type. Defaults to Debug.
   COVERAGE          Initial coverage switch. Use ON or OFF.
 
-Examples:
+Commands:
   ./build.sh
   ./build.sh --release
   ./build.sh --clean --coverage
-  ./build.sh --clean --no-examples
   ./build.sh -n -j 8
 
 EOF
@@ -106,16 +103,25 @@ parse_args() {
       -j|--jobs)        require_next_arg "$1" "$#"; JOBS="$2"; shift 2 ;;
       -v|--verbose)     VERBOSE=true; shift ;;
       -n|--ninja)       CMAKE_GENERATOR=(-G Ninja); shift ;;
+      --test)           RUN_TESTS=true; shift ;;
       --no-test)        RUN_TESTS=false; shift ;;
-      --examples)       BUILD_EXAMPLES=true; shift ;;
-      --no-examples)    BUILD_EXAMPLES=false; shift ;;
-      --coverage)       COVERAGE=ON; shift ;;
+      --coverage)       COVERAGE=ON; RUN_TESTS=true; shift ;;
       --no-coverage)    COVERAGE=OFF; shift ;;
       --werror)         WARNINGS_AS_ERRORS=true; shift ;;
       -h|--help)        show_help ;;
       *)                log_error "Unknown option: $1. Use --help for usage." ;;
     esac
   done
+}
+
+validate_args() {
+  if [[ "${BUILD_TYPE}" != "Debug" && "${BUILD_TYPE}" != "Release" ]]; then
+    log_error "Invalid build type: ${BUILD_TYPE}. Use Debug or Release."
+  fi
+
+  if ! [[ "${JOBS}" =~ ^[0-9]+$ ]]; then
+    log_error "Invalid number of jobs: ${JOBS}"
+  fi
 }
 
 normalize_on_off() {
@@ -180,6 +186,7 @@ print_gcov_summary() {
   local gcno_file
   local object_dir
   local object_index=0
+  local -a gcov_files
 
   rm -rf "${gcov_dir}"
   mkdir -p "${gcov_dir}"
@@ -194,6 +201,12 @@ print_gcov_summary() {
 
   if [[ "${object_index}" -eq 0 ]]; then
     log_warn "No .gcno files were found under ${BUILD_DIR}/CMakeFiles."
+    return
+  fi
+
+  gcov_files=("${gcov_dir}"/object_*/*.gcov)
+  if [[ ! -e "${gcov_files[0]}" ]]; then
+    log_warn "No .gcov files were generated under ${gcov_dir}."
     return
   fi
 
@@ -272,7 +285,7 @@ print_gcov_summary() {
         }
       }
     }
-  ' "${gcov_dir}"/object_*/*.gcov
+  ' "${gcov_files[@]}"
 }
 
 print_coverage_report() {
@@ -291,6 +304,19 @@ print_coverage_report() {
   fi
 }
 
+get_ctest_test_count() {
+  local ctest_output
+  local test_count
+
+  if ! ctest_output="$(ctest --test-dir "${BUILD_DIR}" -N 2>&1)"; then
+    printf '%s\n' "${ctest_output}" >&2
+    log_error "CTest test discovery failed."
+  fi
+
+  test_count="$(printf '%s\n' "${ctest_output}" | awk '/Total Tests:/ { count = $3 } END { print count + 0 }')"
+  printf '%s\n' "${test_count}"
+}
+
 # ==============================================================================
 # Main
 # ==============================================================================
@@ -298,13 +324,14 @@ print_coverage_report() {
 main() {
   local build_args
   local configure_args
+  local test_count
 
   parse_args "$@"
+  validate_args
 
   COVERAGE="$(normalize_on_off "${COVERAGE}")"
   CMAKE_OPTIONS+=("-DCMAKE_BUILD_TYPE=${BUILD_TYPE}")
   CMAKE_OPTIONS+=("-DRTT_ENABLE_COVERAGE=${COVERAGE}")
-  CMAKE_OPTIONS+=("-DRTT_BUILD_EXAMPLES=$(bool_to_on_off "${BUILD_EXAMPLES}")")
   CMAKE_OPTIONS+=("-DRTT_WARNINGS_AS_ERRORS=$(bool_to_on_off "${WARNINGS_AS_ERRORS}")")
 
   if [[ "${VERBOSE}" == true ]]; then
@@ -314,7 +341,6 @@ main() {
   log_info "Build type: ${BUILD_TYPE}"
   log_info "Parallel jobs: ${JOBS}"
   log_info "Coverage: ${COVERAGE}"
-  log_info "Build examples: $(bool_to_on_off "${BUILD_EXAMPLES}")"
   if [[ ${#CMAKE_GENERATOR[@]} -gt 0 ]]; then
     log_info "Generator: Ninja"
   else
@@ -348,6 +374,11 @@ main() {
 
   if [[ "${RUN_TESTS}" == true ]]; then
     log_info "Running RTT unit tests..."
+    test_count="$(get_ctest_test_count)"
+    if [[ "${test_count}" -eq 0 ]]; then
+      log_error "CTest did not discover any unit tests."
+    fi
+    log_info "Discovered ${test_count} unit tests."
     ctest --test-dir "${BUILD_DIR}" --output-on-failure -j "${JOBS}"
     log_success "RTT unit tests passed."
   else

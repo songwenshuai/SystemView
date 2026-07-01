@@ -21,12 +21,11 @@ and the RTT package and extract them to the project.
 
 Follow the documentation of RTT on how to add it to a project.
 
-To include SystemView, add the SystemView core source code `SYSVIEW/*.c` and the SystemView RTOS Interface for the
-project's RTOS, e.g. `Sample/embOS/SEGGER_SYSVIEW_embOS.c`.
+To include SystemView, add the SystemView core source code `SYSVIEW/*.c` and the project-specific runtime
+integration code required by the operating system or scheduler.
 
 SystemView requires project-specific runtime configuration.
-Add the matching sample configuration source code from for example `Sample/embOS/Config/Cortex-M0/`
-or implement a custom configuration, providing the required interface.
+Provide the configuration source code for the target and implement the required SystemView runtime interface.
 
 SystemView can be compile-time configured through `SEGGER_SYSVIEW_Conf.h`.
 This package uses the shared-memory RTT address API only.  The project configuration must define
@@ -35,8 +34,7 @@ This package uses the shared-memory RTT address API only.  The project configura
 inside the same mapped shared-memory region.  `SEGGER_SYSVIEW_RTT_NAME_ADDRESS` is optional and must also point
 inside that region when a channel name is required.
 The shared-memory transport addresses and the address-aware public SystemView APIs use `PTR_ADDR` and are encoded
-with address-sized variable-length fields.  RTOS sample ports that still encode their RTOS-specific event payloads
-through U32 records keep their upstream 32-bit event layout until that port is migrated explicitly.
+with address-sized variable-length fields.
 It is recommended to copy `SEGGER_SYSVIEW_Conf.h` to the project's configuration directory and make changes to
 the copy.  That way, configuration does not get overwritten by an update of the package.  In that case, do not add
 `Config` as include directory.
@@ -50,11 +48,9 @@ the [SystemView User Guide](https://doc.segger.com/UM08027_SystemView.html).
 
 The CMSIS-Pack enables easy integration of SystemView into CMSIS-based projects.
 
-To use SystemView in a *csolution project* add `pack: SEGGER::SystemView` and one of these components:
+To use SystemView in a *csolution project* add `pack: SEGGER::SystemView` and
+`component: SEGGER:SystemView`.
 
-* `component: SEGGER:SystemView&NoOS` for bare-metal applications
-* `component: SEGGER:SystemView&FreeRTOS` for FreeRTOS-based applications
-
-Both components require the RTT pack.
+The component requires the RTT pack.
 The [RTE directory](https://open-cmsis-pack.github.io/cmsis-toolbox/build-overview/#rte-directory-structure)
 is the project's config directory and contains the local copy of `SEGGER_SYSVIEW_Conf.h` for additional configuration.

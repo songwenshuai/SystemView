@@ -43,6 +43,8 @@ Purpose : Unit tests for the shared-memory RTT public API.
 #define TEST_ENSURE_EXTRA_PAIR_SIZE           (SEGGER_RTT__TERMINAL_NAME_SIZE_ALIGNED + BUFFER_SIZE_UP + BUFFER_SIZE_DOWN)
 #define TEST_RUNTIME_DOWN_OFF(NumUp)          (SEGGER_RTT__CB_OFF_A_UP + ((PTR_ADDR)(NumUp) * SEGGER_RTT__BUFFER_SIZE))
 #define TEST_RUNTIME_DOWN_INDEX(NumUp, Index) (TEST_RUNTIME_DOWN_OFF(NumUp) + ((PTR_ADDR)(Index) * SEGGER_RTT__BUFFER_SIZE))
+#define TEST_SPINLOCK_MAGIC_OFF               (0u)
+#define TEST_SPINLOCK_MAX_CORES_OFF           (SEGGER_RTT_SPINLOCK_SW_WORD_SIZE)
 
 /*********************************************************************
 *
@@ -382,6 +384,49 @@ static void* _SharedBuffer(PTR_ADDR Address, unsigned Off, unsigned NumBytes) {
 
 /*********************************************************************
 *
+*       _SpinLockEntering()
+*
+*  Function description
+*    Returns the shared-memory address of a software spinlock entering
+*    word for a core id.
+*
+*  Parameters
+*    Address  Base address of the software spinlock object.
+*    Id       Core id.
+*
+*  Return value
+*    Address of the selected entering word.
+*/
+static PTR_ADDR _SpinLockEntering(PTR_ADDR Address, unsigned Id) {
+  return SEGGER_RTT__ADDR(Address,
+                          SEGGER_RTT_SPINLOCK_SW_HEADER_SIZE +
+                          ((PTR_ADDR)Id * SEGGER_RTT_SPINLOCK_SW_WORD_SIZE));
+}
+
+/*********************************************************************
+*
+*       _SpinLockNumber()
+*
+*  Function description
+*    Returns the shared-memory address of a software spinlock ticket
+*    word for a core id.
+*
+*  Parameters
+*    Address  Base address of the software spinlock object.
+*    Id       Core id.
+*
+*  Return value
+*    Address of the selected ticket word.
+*/
+static PTR_ADDR _SpinLockNumber(PTR_ADDR Address, unsigned Id) {
+  return SEGGER_RTT__ADDR(Address,
+                          SEGGER_RTT_SPINLOCK_SW_HEADER_SIZE +
+                          ((PTR_ADDR)SEGGER_RTT_SPINLOCK_MAX_CORES * SEGGER_RTT_SPINLOCK_SW_WORD_SIZE) +
+                          ((PTR_ADDR)Id * SEGGER_RTT_SPINLOCK_SW_WORD_SIZE));
+}
+
+/*********************************************************************
+*
 *       _CallVPrintf()
 *
 *  Function description
@@ -431,6 +476,7 @@ static int _CallVPrintf(PTR_ADDR Address, const char* sFormat, ...) {
 static void _TestInitAndFind(void) {
   PTR_ADDR Address;
   PTR_ADDR Search;
+  PTR_ADDR TopAddress;
   size_t DescriptorRegionSize;
   size_t RegionSize;
   size_t TruncatedRegionSize;
@@ -444,6 +490,13 @@ static void _TestInitAndFind(void) {
   TEST_ASSERT_EQ_I(-1, SEGGER_RTT_InitEx(Address + 4u, TEST_MEM_SIZE - 4u));
   TEST_ASSERT_EQ_I(-1, SEGGER_RTT_InitEx(Address, SEGGER_RTT__REQUIRED_MEM_SIZE - 1u));
   TEST_ASSERT_EQ_I(-1, SEGGER_RTT_FindControlBlock(NULL, sizeof(_TestMem.ac)));
+  TopAddress = (PTR_ADDR)((PTR_ADDR)UINTPTR_MAX & ~((PTR_ADDR)SEGGER_RTT__CB_ALIGNMENT_MASK));
+  TEST_ASSERT_EQ_I(-1, SEGGER_RTT_InitEx(TopAddress, SEGGER_RTT__REQUIRED_MEM_SIZE));
+  TEST_ASSERT_EQ_I(-1, SEGGER_RTT_CheckRegion(TopAddress, SEGGER_RTT__CB_OFF_A_UP));
+  Search = TopAddress;
+  TEST_ASSERT_EQ_I(-1, SEGGER_RTT_FindControlBlock(&Search, SEGGER_RTT__CB_OFF_A_UP));
+  Search = TopAddress;
+  TEST_ASSERT_EQ_I(-1, SEGGER_RTT_FindValidControlBlock(&Search, SEGGER_RTT__CB_OFF_A_UP, NULL));
 
   TEST_ASSERT_EQ_I(0, SEGGER_RTT_InitEx(Address, TEST_MEM_SIZE));
   TEST_ASSERT_EQ_I(0, SEGGER_RTT_CheckInit(Address));
@@ -497,6 +550,14 @@ static void _TestInitAndFind(void) {
   TEST_ASSERT_EQ_I(-1, SEGGER_RTT_CheckRegion(Address, TEST_MEM_SIZE));
 
   Address = _Reset();
+  SEGGER_RTT__WR64(SEGGER_RTT__FIELD(_UpRing(Address, 0u), SEGGER_RTT__BUFFER_OFF_NAME), TEST_MEM_SIZE);
+  TEST_ASSERT_EQ_I(-1, SEGGER_RTT_CheckRegion(Address, TEST_MEM_SIZE));
+
+  Address = _Reset();
+  SEGGER_RTT__WR32(SEGGER_RTT__FIELD(_UpRing(Address, 1u), SEGGER_RTT__BUFFER_OFF_SIZE_OF_BUFFER), 1u);
+  TEST_ASSERT_EQ_I(-1, SEGGER_RTT_CheckRegion(Address, TEST_MEM_SIZE));
+
+  Address = _Reset();
   SEGGER_RTT__WR32(SEGGER_RTT__ADDR(Address, SEGGER_RTT__CB_OFF_MAX_NUM_UP_BUFFERS), TEST_MEM_SIZE);
   TEST_ASSERT_EQ_I(-1, SEGGER_RTT_CheckRegion(Address, TEST_MEM_SIZE));
 
@@ -506,6 +567,124 @@ static void _TestInitAndFind(void) {
   TEST_ASSERT_EQ_I(-1, SEGGER_RTT_CheckInit(Address));
   TEST_ASSERT_EQ_U(1u, SEGGER_RTT_PutChar(Address, 0u, 'Z'));
   TEST_ASSERT_EQ_I(0, SEGGER_RTT_CheckInit(Address));
+}
+
+/*********************************************************************
+*
+*       _TestRequiredMemSizeAPI()
+*
+*  Function description
+*    Verifies the public required-size query and its matching
+*    compile-time size macro for valid and invalid buffer counts.
+*
+*  Parameters
+*    None.
+*
+*  Return value
+*    None.
+*/
+static void _TestRequiredMemSizeAPI(void) {
+  unsigned MaxNumBuffers;
+
+  MaxNumBuffers = SEGGER_RTT_MAX_NUM_UP_BUFFERS;
+  if (MaxNumBuffers > SEGGER_RTT_MAX_NUM_DOWN_BUFFERS) {
+    MaxNumBuffers = SEGGER_RTT_MAX_NUM_DOWN_BUFFERS;
+  }
+
+  TEST_ASSERT_EQ_U(0u, SEGGER_RTT_GetRequiredMemSize(0u));
+  TEST_ASSERT_EQ_U(SEGGER_RTT__REQUIRED_MEM_SIZE, SEGGER_RTT_GetRequiredMemSize(1u));
+  TEST_ASSERT_EQ_U(SEGGER_RTT_REQUIRED_MEM_SIZE_FOR_BUFFER_PAIRS(1u), SEGGER_RTT_GetRequiredMemSize(1u));
+  if (MaxNumBuffers > 1u) {
+    TEST_ASSERT_EQ_U(SEGGER_RTT_REQUIRED_MEM_SIZE_FOR_BUFFER_PAIRS(2u), SEGGER_RTT_GetRequiredMemSize(2u));
+  }
+  TEST_ASSERT_EQ_U(SEGGER_RTT_REQUIRED_MEM_SIZE_FOR_BUFFER_PAIRS(MaxNumBuffers), SEGGER_RTT_GetRequiredMemSize(MaxNumBuffers));
+  TEST_ASSERT_EQ_U(0u, SEGGER_RTT_GetRequiredMemSize(MaxNumBuffers + 1u));
+  TEST_ASSERT_EQ_U(0u, SEGGER_RTT_REQUIRED_MEM_SIZE_FOR_BUFFER_PAIRS(0u));
+}
+
+/*********************************************************************
+*
+*       _TestSpinLockAPI()
+*
+*  Function description
+*    Exercises the software spinlock public API, including creation,
+*    validation, locking, bounded wait cancellation, bad ids, and
+*    corrupted header detection.
+*
+*  Parameters
+*    None.
+*
+*  Return value
+*    None.
+*/
+static void _TestSpinLockAPI(void) {
+  PTR_ADDR Address;
+  PTR_ADDR TopAddress;
+  unsigned i;
+
+  memset(&_TestMem, 0, sizeof(_TestMem));
+  Address = _Base();
+  TopAddress = (PTR_ADDR)((PTR_ADDR)UINTPTR_MAX & ~((PTR_ADDR)SEGGER_RTT_SPINLOCK_SW_WORD_SIZE - 1u));
+
+  TEST_ASSERT_EQ_I(-1, SEGGER_RTT_SPINLOCK_SW_Create(0u, SEGGER_RTT_SPINLOCK_SW_SIZE));
+  TEST_ASSERT_EQ_I(-1, SEGGER_RTT_SPINLOCK_SW_Create(Address + 1u, SEGGER_RTT_SPINLOCK_SW_SIZE));
+  TEST_ASSERT_EQ_I(-1, SEGGER_RTT_SPINLOCK_SW_Create(Address, SEGGER_RTT_SPINLOCK_SW_SIZE - 1u));
+  TEST_ASSERT_EQ_I(-1, SEGGER_RTT_SPINLOCK_SW_Create(TopAddress, SEGGER_RTT_SPINLOCK_SW_SIZE));
+  TEST_ASSERT_EQ_I(-1, SEGGER_RTT_SPINLOCK_SW_Check(TopAddress, SEGGER_RTT_SPINLOCK_SW_SIZE));
+  TEST_ASSERT_EQ_I(-1, SEGGER_RTT_SPINLOCK_SW_Check(Address, SEGGER_RTT_SPINLOCK_SW_SIZE));
+
+  TEST_ASSERT_EQ_I(0, SEGGER_RTT_SPINLOCK_SW_Create(Address, SEGGER_RTT_SPINLOCK_SW_SIZE));
+  TEST_ASSERT_EQ_I(0, SEGGER_RTT_SPINLOCK_SW_Check(Address, SEGGER_RTT_SPINLOCK_SW_SIZE));
+  for (i = 0u; i < SEGGER_RTT_SPINLOCK_MAX_CORES; i++) {
+    TEST_ASSERT_EQ_U(0u, SEGGER_RTT__RD32(_SpinLockEntering(Address, i)));
+    TEST_ASSERT_EQ_U(0u, SEGGER_RTT__RD32(_SpinLockNumber(Address, i)));
+  }
+
+  TEST_ASSERT_EQ_I(-1, SEGGER_RTT_SPINLOCK_SW_Lock(0u, 0u));
+  TEST_ASSERT_EQ_I(-1, SEGGER_RTT_SPINLOCK_SW_Lock(Address, SEGGER_RTT_SPINLOCK_MAX_CORES));
+  TEST_ASSERT_EQ_I(-1, SEGGER_RTT_SPINLOCK_SW_LockWithLimit(Address, SEGGER_RTT_SPINLOCK_MAX_CORES, 0u));
+  TEST_ASSERT_EQ_I(-1, SEGGER_RTT_SPINLOCK_SW_Unlock(Address, SEGGER_RTT_SPINLOCK_MAX_CORES));
+
+  TEST_ASSERT_EQ_I(0, SEGGER_RTT_SPINLOCK_SW_Lock(Address, 0u));
+  TEST_ASSERT(SEGGER_RTT__RD32(_SpinLockNumber(Address, 0u)) != 0u);
+  TEST_ASSERT_EQ_I(0, SEGGER_RTT_SPINLOCK_SW_Unlock(Address, 0u));
+  TEST_ASSERT_EQ_U(0u, SEGGER_RTT__RD32(_SpinLockNumber(Address, 0u)));
+
+  TEST_ASSERT_EQ_I(0, SEGGER_RTT_SPINLOCK_SW_LockWithLimit(Address, 0u, 0u));
+  TEST_ASSERT_EQ_I(0, SEGGER_RTT_SPINLOCK_SW_Unlock(Address, 0u));
+
+#if SEGGER_RTT_SPINLOCK_MAX_CORES > 1u
+  SEGGER_RTT__WR32(_SpinLockEntering(Address, 0u), 1u);
+  TEST_ASSERT_EQ_I(-1, SEGGER_RTT_SPINLOCK_SW_LockWithLimit(Address, 1u, 0u));
+  TEST_ASSERT_EQ_U(0u, SEGGER_RTT__RD32(_SpinLockEntering(Address, 1u)));
+  TEST_ASSERT_EQ_U(0u, SEGGER_RTT__RD32(_SpinLockNumber(Address, 1u)));
+  SEGGER_RTT__WR32(_SpinLockEntering(Address, 0u), 0u);
+
+  SEGGER_RTT__WR32(_SpinLockNumber(Address, 0u), 1u);
+  TEST_ASSERT_EQ_I(-1, SEGGER_RTT_SPINLOCK_SW_LockWithLimit(Address, 1u, 0u));
+  TEST_ASSERT_EQ_U(0u, SEGGER_RTT__RD32(_SpinLockNumber(Address, 1u)));
+  TEST_ASSERT_EQ_I(-1, SEGGER_RTT_SPINLOCK_SW_LockWithLimit(Address, 1u, 1u));
+  TEST_ASSERT_EQ_U(0u, SEGGER_RTT__RD32(_SpinLockNumber(Address, 1u)));
+
+  SEGGER_RTT__WR32(_SpinLockNumber(Address, 0u), UINT32_MAX);
+  TEST_ASSERT_EQ_I(-1, SEGGER_RTT_SPINLOCK_SW_LockWithLimit(Address, 1u, 1u));
+  TEST_ASSERT_EQ_U(0u, SEGGER_RTT__RD32(_SpinLockNumber(Address, 1u)));
+  SEGGER_RTT__WR32(_SpinLockNumber(Address, 0u), 0u);
+
+  TEST_ASSERT_EQ_I(0, SEGGER_RTT_SPINLOCK_SW_LockWithLimit(Address, 1u, 0u));
+  TEST_ASSERT_EQ_I(0, SEGGER_RTT_SPINLOCK_SW_Unlock(Address, 1u));
+#endif
+
+  SEGGER_RTT__WR32(SEGGER_RTT__ADDR(Address, TEST_SPINLOCK_MAGIC_OFF), 0u);
+  TEST_ASSERT_EQ_I(-1, SEGGER_RTT_SPINLOCK_SW_Check(Address, SEGGER_RTT_SPINLOCK_SW_SIZE));
+  TEST_ASSERT_EQ_I(-1, SEGGER_RTT_SPINLOCK_SW_Lock(Address, 0u));
+  TEST_ASSERT_EQ_I(-1, SEGGER_RTT_SPINLOCK_SW_Unlock(Address, 0u));
+
+  TEST_ASSERT_EQ_I(0, SEGGER_RTT_SPINLOCK_SW_Create(Address, SEGGER_RTT_SPINLOCK_SW_SIZE));
+  SEGGER_RTT__WR32(SEGGER_RTT__ADDR(Address, TEST_SPINLOCK_MAX_CORES_OFF), 0u);
+  TEST_ASSERT_EQ_I(-1, SEGGER_RTT_SPINLOCK_SW_Check(Address, SEGGER_RTT_SPINLOCK_SW_SIZE));
+  TEST_ASSERT_EQ_I(-1, SEGGER_RTT_SPINLOCK_SW_Lock(Address, 0u));
+  TEST_ASSERT_EQ_I(-1, SEGGER_RTT_SPINLOCK_SW_Unlock(Address, 0u));
 }
 
 /*********************************************************************
@@ -588,6 +767,15 @@ static void _TestEnsureInitExAPI(void) {
   memset(ac, 0, sizeof(ac));
   TEST_ASSERT_EQ_U(2u, SEGGER_RTT_ReadNoLock(Address, 2u, ac, sizeof(ac)));
   _ExpectMem(ac, "d2", 2u);
+
+  Address = _Reset();
+  TEST_ASSERT_EQ_I(0, SEGGER_RTT_ConfigUpBuffer(Address,
+                                                1u,
+                                                _SharedString(Address, TEST_EXTRA_STR0_OFF, "OnlyUp"),
+                                                _SharedBuffer(Address, TEST_EXTRA_UP_BUF_OFF, 20u),
+                                                20u,
+                                                SEGGER_RTT_MODE_NO_BLOCK_SKIP));
+  TEST_ASSERT_EQ_I(-1, SEGGER_RTT_EnsureInitEx(Address, TEST_MEM_SIZE, 2u));
 }
 
 /*********************************************************************
@@ -820,11 +1008,15 @@ static void _TestInvalidDescriptorAPI(void) {
   Search = _Base();
   TEST_ASSERT_EQ_I(-1, SEGGER_RTT_FindControlBlock(&Search, sizeof(_TestMem.ac)));
   TEST_ASSERT_EQ_U(0u, SEGGER_RTT_ReadUpBufferNoLock(0u, 0u, ac, sizeof(ac)));
+  TEST_ASSERT_EQ_U(0u, SEGGER_RTT_ReadUpBuffer(0u, 0u, ac, sizeof(ac)));
   TEST_ASSERT_EQ_U(0u, SEGGER_RTT_ReadNoLock(0u, 0u, ac, sizeof(ac)));
+  TEST_ASSERT_EQ_U(0u, SEGGER_RTT_Read(0u, 0u, ac, sizeof(ac)));
   TEST_ASSERT_EQ_U(0u, SEGGER_RTT_WriteNoLock(0u, 0u, "A", 1u));
+  TEST_ASSERT_EQ_U(0u, SEGGER_RTT_Write(0u, 0u, "A", 1u));
   TEST_ASSERT_EQ_U(0u, SEGGER_RTT_WriteSkipNoLock(0u, 0u, "A", 1u));
   SEGGER_RTT_WriteWithOverwriteNoLock(0u, 0u, "A", 1u);
   TEST_ASSERT_EQ_U(0u, SEGGER_RTT_WriteDownBufferNoLock(0u, 0u, "A", 1u));
+  TEST_ASSERT_EQ_U(0u, SEGGER_RTT_WriteDownBuffer(0u, 0u, "A", 1u));
   TEST_ASSERT_EQ_U(0u, SEGGER_RTT_PutCharSkipNoLock(0u, 0u, 'A'));
   TEST_ASSERT_EQ_U(0u, SEGGER_RTT_PutCharSkip(0u, 0u, 'A'));
   TEST_ASSERT_EQ_U(0u, SEGGER_RTT_PutChar(0u, 0u, 'A'));
@@ -838,19 +1030,6 @@ static void _TestInvalidDescriptorAPI(void) {
   Address = _Reset();
   SEGGER_RTT__WR8(Address, 'X');
   TEST_ASSERT_EQ_I(-1, SEGGER_RTT_CheckInit(Address));
-  TEST_ASSERT_EQ_U(0u, SEGGER_RTT_ReadUpBufferNoLock(Address, 0u, ac, sizeof(ac)));
-  TEST_ASSERT_EQ_U(0u, SEGGER_RTT_WriteNoLock(Address, 0u, "A", 1u));
-  TEST_ASSERT_EQ_U(0u, SEGGER_RTT_WriteSkipNoLock(Address, 0u, "A", 1u));
-  SEGGER_RTT_WriteWithOverwriteNoLock(Address, 0u, "A", 1u);
-  TEST_ASSERT_EQ_U(0u, SEGGER_RTT_WriteDownBufferNoLock(Address, 0u, "A", 1u));
-  TEST_ASSERT_EQ_U(0u, SEGGER_RTT_PutCharSkipNoLock(Address, 0u, 'A'));
-  TEST_ASSERT_EQ_U(0u, SEGGER_RTT_ReadNoLock(Address, 0u, ac, sizeof(ac)));
-  TEST_ASSERT_EQ_I(0, SEGGER_RTT_HasKey(Address));
-  TEST_ASSERT_EQ_U(0u, SEGGER_RTT_HasData(Address, 0u));
-  TEST_ASSERT_EQ_U(0u, SEGGER_RTT_HasDataUp(Address, 0u));
-  TEST_ASSERT_EQ_U(0u, SEGGER_RTT_GetAvailWriteSpace(Address, 0u));
-  TEST_ASSERT_EQ_U(0u, SEGGER_RTT_GetBytesInBuffer(Address, 0u));
-  TEST_ASSERT_EQ_U(0u, SEGGER_RTT_GetBytesDownInBuffer(Address, 0u));
 
   Address = _Reset();
   pRing = _UpRing(Address, 0u);
@@ -1047,6 +1226,7 @@ static void _TestRingBoundaryAPI(void) {
 */
 static void _TestConfigErrorAPI(void) {
   PTR_ADDR Address;
+  PTR_ADDR pRing;
   char* sName;
   void* pBuffer;
 
@@ -1057,6 +1237,7 @@ static void _TestConfigErrorAPI(void) {
   TEST_ASSERT_EQ_I(-1, SEGGER_RTT_ConfigUpBuffer(Address, 9u, sName, pBuffer, 24u, SEGGER_RTT_MODE_NO_BLOCK_SKIP));
   TEST_ASSERT_EQ_I(-1, SEGGER_RTT_ConfigUpBuffer(Address, 1u, (const char*)Address, pBuffer, 24u, SEGGER_RTT_MODE_NO_BLOCK_SKIP));
   TEST_ASSERT_EQ_I(-1, SEGGER_RTT_ConfigUpBuffer(Address, 1u, sName, (void*)Address, 24u, SEGGER_RTT_MODE_NO_BLOCK_SKIP));
+  TEST_ASSERT_EQ_I(-1, SEGGER_RTT_ConfigUpBuffer(Address, 1u, sName, (void*)((PTR_ADDR)UINTPTR_MAX - 4u), 8u, SEGGER_RTT_MODE_NO_BLOCK_SKIP));
   TEST_ASSERT_EQ_I(-1, SEGGER_RTT_ConfigUpBuffer(Address, 1u, sName, pBuffer, 1u, SEGGER_RTT_MODE_NO_BLOCK_SKIP));
   TEST_ASSERT_EQ_I(-1, SEGGER_RTT_ConfigUpBuffer(Address, 1u, sName, pBuffer, 24u, 3u));
   TEST_ASSERT_EQ_I(-1, SEGGER_RTT_ConfigDownBuffer(Address, 1u, (const char*)Address, pBuffer, 24u, SEGGER_RTT_MODE_NO_BLOCK_SKIP));
@@ -1087,6 +1268,18 @@ static void _TestConfigErrorAPI(void) {
   TEST_ASSERT_EQ_I(-1, SEGGER_RTT_AllocDownBuffer(Address, sName, (void*)Address, 24u, SEGGER_RTT_MODE_NO_BLOCK_SKIP));
   TEST_ASSERT_EQ_I(-1, SEGGER_RTT_AllocDownBuffer(Address, sName, pBuffer, 1u, SEGGER_RTT_MODE_NO_BLOCK_SKIP));
   TEST_ASSERT_EQ_I(-1, SEGGER_RTT_AllocDownBuffer(Address, sName, pBuffer, 24u, 3u));
+
+  TEST_ASSERT_EQ_I(0, SEGGER_RTT_ConfigUpBuffer(Address, 1u, NULL, pBuffer, 24u, SEGGER_RTT_MODE_NO_BLOCK_SKIP));
+  pRing = _UpRing(Address, 1u);
+  TEST_ASSERT_EQ_U(0u, SEGGER_RTT__RD64(SEGGER_RTT__FIELD(pRing, SEGGER_RTT__BUFFER_OFF_NAME)));
+  Address = _Reset();
+  pBuffer = _SharedBuffer(Address, TEST_EXTRA_UP_BUF_OFF, 24u);
+  TEST_ASSERT_EQ_I(0, SEGGER_RTT_SetNameUpBuffer(Address, 0u, NULL));
+  TEST_ASSERT_EQ_U(0u, SEGGER_RTT__RD64(SEGGER_RTT__FIELD(_UpRing(Address, 0u), SEGGER_RTT__BUFFER_OFF_NAME)));
+  TEST_ASSERT_EQ_I(0, SEGGER_RTT_SetNameDownBuffer(Address, 0u, NULL));
+  TEST_ASSERT_EQ_U(0u, SEGGER_RTT__RD64(SEGGER_RTT__FIELD(_DownRing(Address, 0u), SEGGER_RTT__BUFFER_OFF_NAME)));
+  TEST_ASSERT_EQ_I(1, SEGGER_RTT_AllocUpBuffer(Address, NULL, pBuffer, 24u, SEGGER_RTT_MODE_NO_BLOCK_SKIP));
+  TEST_ASSERT_EQ_U(0u, SEGGER_RTT__RD64(SEGGER_RTT__FIELD(_UpRing(Address, 1u), SEGGER_RTT__BUFFER_OFF_NAME)));
 
   SEGGER_RTT__WR32(SEGGER_RTT__ADDR(Address, SEGGER_RTT__CB_OFF_MAX_NUM_UP_BUFFERS), 0u);
   TEST_ASSERT_EQ_I(-1, SEGGER_RTT_AllocUpBuffer(Address, sName, pBuffer, 24u, SEGGER_RTT_MODE_NO_BLOCK_SKIP));
@@ -1284,6 +1477,8 @@ static void _TestTerminalAndPrintfAPI(void) {
 
 int main(void) {
   _TestInitAndFind();
+  _TestRequiredMemSizeAPI();
+  _TestSpinLockAPI();
   _TestEnsureInitExAPI();
   _TestUpBufferAPI();
   _TestDownBufferAPI();

@@ -772,6 +772,21 @@ static const U8* _WritePayload(unsigned WriteIndex, unsigned* pPayloadLen) {
 
 /*********************************************************************
 *
+*       _ExpectPayloadFieldsConsumed()
+*
+*  Function description
+*    Verifies that all event payload fields were decoded and only the
+*    trailing timestamp delta remains in the captured packet.
+*/
+static void _ExpectPayloadFieldsConsumed(unsigned PayloadLen, unsigned PayloadOff) {
+  TEST_ASSERT(PayloadOff <= PayloadLen);
+  if (PayloadOff <= PayloadLen) {
+    TEST_ASSERT((PayloadLen - PayloadOff) <= SEGGER_SYSVIEW_QUANTA_U32);
+  }
+}
+
+/*********************************************************************
+*
 *       _FindLastWriteFrom()
 *
 *  Function description
@@ -790,6 +805,32 @@ static int _FindLastWriteFrom(unsigned StartIndex) {
   while (i > StartIndex) {
     i--;
     if (_Writes[i].NumBytes > 0u) {
+      return (int)i;
+    }
+  }
+  return -1;
+}
+
+/*********************************************************************
+*
+*       _FindEventFrom()
+*
+*  Function description
+*    Finds the first captured write after a given index with the
+*    expected SystemView event id.
+*
+*  Parameters
+*    StartIndex     First captured write index to consider.
+*    ExpectedEvent  SystemView event id to find.
+*
+*  Return value
+*    Write index, or -1 if no matching write was captured.
+*/
+static int _FindEventFrom(unsigned StartIndex, unsigned ExpectedEvent) {
+  unsigned i;
+
+  for (i = StartIndex; i < _NumWrites; i++) {
+    if (_WriteEventId(i) == ExpectedEvent) {
       return (int)i;
     }
   }
@@ -828,17 +869,10 @@ static unsigned _ExpectLastEventFrom(unsigned StartIndex, unsigned ExpectedEvent
 *    expected SystemView event id.
 */
 static void _ExpectEventInRange(unsigned StartIndex, unsigned ExpectedEvent) {
-  unsigned i;
-  unsigned Found;
+  int WriteIndex;
 
-  Found = 0u;
-  for (i = StartIndex; i < _NumWrites; i++) {
-    if (_WriteEventId(i) == ExpectedEvent) {
-      Found = 1u;
-      break;
-    }
-  }
-  TEST_ASSERT(Found != 0u);
+  WriteIndex = _FindEventFrom(StartIndex, ExpectedEvent);
+  TEST_ASSERT(WriteIndex >= 0);
 }
 
 /*********************************************************************
@@ -893,7 +927,7 @@ static void _ExpectRecordIdPayload(unsigned WriteIndex, PTR_ADDR ExpectedId, con
     PayloadOff += NumUsed;
     TEST_ASSERT_EQ_U(pExpectedU32[i], DecodedU32);
   }
-  TEST_ASSERT_EQ_U(PayloadLen, PayloadOff);
+  _ExpectPayloadFieldsConsumed(PayloadLen, PayloadOff);
 }
 
 /*********************************************************************
@@ -916,6 +950,148 @@ static void _ExpectNoNewWrites(unsigned StartIndex) {
 */
 static void _ExpectMem(const void* pActual, const void* pExpected, unsigned NumBytes) {
   TEST_ASSERT(memcmp(pActual, pExpected, NumBytes) == 0);
+}
+
+/*********************************************************************
+*
+*       _ExpectEncodedString()
+*
+*  Function description
+*    Verifies one SystemView length-prefixed string in a packet payload.
+*/
+static void _ExpectEncodedString(const U8* pPayload, unsigned PayloadLen, unsigned* pPayloadOff, const char* sExpected, unsigned MaxLen) {
+  unsigned ExpectedLen;
+  unsigned Len;
+
+  ExpectedLen = (sExpected != NULL) ? (unsigned)strlen(sExpected) : 0u;
+  if (ExpectedLen > MaxLen) {
+    ExpectedLen = MaxLen;
+  }
+  TEST_ASSERT(*pPayloadOff < PayloadLen);
+  if (*pPayloadOff >= PayloadLen) {
+    return;
+  }
+  Len = pPayload[*pPayloadOff];
+  (*pPayloadOff)++;
+  TEST_ASSERT_EQ_U(ExpectedLen, Len);
+  TEST_ASSERT((*pPayloadOff + Len) <= PayloadLen);
+  if (((*pPayloadOff + Len) <= PayloadLen) && (Len > 0u) && (sExpected != NULL)) {
+    _ExpectMem(pPayload + *pPayloadOff, sExpected, Len);
+  }
+  *pPayloadOff += Len;
+}
+
+/*********************************************************************
+*
+*       _ExpectTaskInfoPayload()
+*
+*  Function description
+*    Verifies the payload emitted by SEGGER_SYSVIEW_SendTaskInfo() for
+*    the task descriptor packet.
+*/
+static void _ExpectTaskInfoPayload(unsigned WriteIndex, const SEGGER_SYSVIEW_TASKINFO* pExpected) {
+  const U8* pPayload;
+  unsigned PayloadLen;
+  unsigned PayloadOff;
+  unsigned NumUsed;
+  PTR_ADDR DecodedAddr;
+  U32 DecodedU32;
+
+  pPayload = _WritePayload(WriteIndex, &PayloadLen);
+  PayloadOff = 0u;
+  DecodedAddr = _DecodeAddr(pPayload + PayloadOff, PayloadLen - PayloadOff, &NumUsed);
+  PayloadOff += NumUsed;
+  TEST_ASSERT_EQ_ADDR(SEGGER_SYSVIEW_ShrinkId(pExpected->TaskID), DecodedAddr);
+  DecodedU32 = _DecodeU32(pPayload + PayloadOff, PayloadLen - PayloadOff, &NumUsed);
+  PayloadOff += NumUsed;
+  TEST_ASSERT_EQ_U(pExpected->Prio, DecodedU32);
+  _ExpectEncodedString(pPayload, PayloadLen, &PayloadOff, pExpected->sName, 32u);
+  _ExpectPayloadFieldsConsumed(PayloadLen, PayloadOff);
+}
+
+/*********************************************************************
+*
+*       _ExpectStackInfoPayload()
+*
+*  Function description
+*    Verifies the payload emitted by stack-info packets.
+*/
+static void _ExpectStackInfoPayload(unsigned WriteIndex, PTR_ADDR TaskID, PTR_ADDR StackBase, U32 StackSize, U32 StackUsage) {
+  const U8* pPayload;
+  unsigned PayloadLen;
+  unsigned PayloadOff;
+  unsigned NumUsed;
+  PTR_ADDR DecodedAddr;
+  U32 DecodedU32;
+
+  pPayload = _WritePayload(WriteIndex, &PayloadLen);
+  PayloadOff = 0u;
+  DecodedAddr = _DecodeAddr(pPayload + PayloadOff, PayloadLen - PayloadOff, &NumUsed);
+  PayloadOff += NumUsed;
+  TEST_ASSERT_EQ_ADDR(SEGGER_SYSVIEW_ShrinkId(TaskID), DecodedAddr);
+  DecodedAddr = _DecodeAddr(pPayload + PayloadOff, PayloadLen - PayloadOff, &NumUsed);
+  PayloadOff += NumUsed;
+  TEST_ASSERT_EQ_ADDR(StackBase, DecodedAddr);
+  DecodedU32 = _DecodeU32(pPayload + PayloadOff, PayloadLen - PayloadOff, &NumUsed);
+  PayloadOff += NumUsed;
+  TEST_ASSERT_EQ_U(StackSize, DecodedU32);
+  DecodedU32 = _DecodeU32(pPayload + PayloadOff, PayloadLen - PayloadOff, &NumUsed);
+  PayloadOff += NumUsed;
+  TEST_ASSERT_EQ_U(StackUsage, DecodedU32);
+  _ExpectPayloadFieldsConsumed(PayloadLen, PayloadOff);
+}
+
+/*********************************************************************
+*
+*       _ExpectPrintElfPayload()
+*
+*  Function description
+*    Verifies the common payload emitted by PrintElf APIs and macros.
+*/
+static void _ExpectPrintElfPayload(unsigned WriteIndex, U32 ExpectedOptions, const U32* pExpectedU32, unsigned NumExpectedU32, const char* const* psExpectedStr, unsigned NumExpectedStr) {
+  const U8* pPayload;
+  unsigned PayloadLen;
+  unsigned PayloadOff;
+  unsigned NumUsed;
+  unsigned i;
+  PTR_ADDR DecodedAddr;
+  U32 DecodedU32;
+
+  pPayload = _WritePayload(WriteIndex, &PayloadLen);
+  PayloadOff = 0u;
+  DecodedU32 = _DecodeU32(pPayload + PayloadOff, PayloadLen - PayloadOff, &NumUsed);
+  PayloadOff += NumUsed;
+  TEST_ASSERT_EQ_U(SYSVIEW_EVTID_EX_PRINT_ELF, DecodedU32);
+  DecodedAddr = _DecodeAddr(pPayload + PayloadOff, PayloadLen - PayloadOff, &NumUsed);
+  PayloadOff += NumUsed;
+  TEST_ASSERT(DecodedAddr != 0u);
+  DecodedU32 = _DecodeU32(pPayload + PayloadOff, PayloadLen - PayloadOff, &NumUsed);
+  PayloadOff += NumUsed;
+  TEST_ASSERT_EQ_U(ExpectedOptions, DecodedU32);
+  for (i = 0u; i < NumExpectedU32; i++) {
+    DecodedU32 = _DecodeU32(pPayload + PayloadOff, PayloadLen - PayloadOff, &NumUsed);
+    PayloadOff += NumUsed;
+    TEST_ASSERT_EQ_U(pExpectedU32[i], DecodedU32);
+  }
+  for (i = 0u; i < NumExpectedStr; i++) {
+    _ExpectEncodedString(pPayload, PayloadLen, &PayloadOff, psExpectedStr[i], SEGGER_SYSVIEW_MAX_STRING_LEN);
+  }
+  _ExpectPayloadFieldsConsumed(PayloadLen, PayloadOff);
+}
+
+/*********************************************************************
+*
+*       _ExpectLastPrintElfFrom()
+*
+*  Function description
+*    Verifies the last captured extended PrintElf packet after a given
+*    write index.
+*/
+static void _ExpectLastPrintElfFrom(unsigned StartIndex, U32 ExpectedOptions, const U32* pExpectedU32, unsigned NumExpectedU32, const char* const* psExpectedStr, unsigned NumExpectedStr) {
+  unsigned WriteIndex;
+
+  WriteIndex = _ExpectLastExtEventFrom(StartIndex, SYSVIEW_EVTID_EX_PRINT_ELF);
+  _ExpectPrintElfPayload(WriteIndex, ExpectedOptions, pExpectedU32, NumExpectedU32, psExpectedStr, NumExpectedStr);
 }
 
 /*********************************************************************
@@ -1355,14 +1531,39 @@ static void _TestTaskAndDescriptionAPI(void) {
   TaskInfo.TaskID = 0x120u;
   TaskInfo.sName = "TaskB";
   TaskInfo.Prio = 3u;
-  TEST_EXPECT_EVENT(SYSVIEW_EVTID_STACK_INFO, SEGGER_SYSVIEW_SendTaskInfo(&TaskInfo));
+  TaskInfo.StackBase = 0x300u;
+  TaskInfo.StackSize = 0x90u;
+  TaskInfo.StackUsage = 0x30u;
+  {
+    unsigned Before;
+    int TaskInfoWrite;
+    unsigned StackInfoWrite;
+
+    Before = _NumWrites;
+    SEGGER_SYSVIEW_SendTaskInfo(&TaskInfo);
+    TaskInfoWrite = _FindEventFrom(Before, SYSVIEW_EVTID_TASK_INFO);
+    TEST_ASSERT(TaskInfoWrite >= 0);
+    if (TaskInfoWrite >= 0) {
+      _ExpectTaskInfoPayload((unsigned)TaskInfoWrite, &TaskInfo);
+    }
+    StackInfoWrite = _ExpectLastEventFrom(Before, SYSVIEW_EVTID_STACK_INFO);
+    _ExpectStackInfoPayload(StackInfoWrite, TaskInfo.TaskID, TaskInfo.StackBase, TaskInfo.StackSize, TaskInfo.StackUsage);
+  }
 
   memset(&StackInfo, 0, sizeof(StackInfo));
   StackInfo.TaskID = 0x120u;
   StackInfo.StackBase = 0x200u;
   StackInfo.StackSize = 0x80u;
   StackInfo.StackUsage = 0x20u;
-  TEST_EXPECT_EVENT(SYSVIEW_EVTID_STACK_INFO, SEGGER_SYSVIEW_SendStackInfo(&StackInfo));
+  {
+    unsigned Before;
+    unsigned WriteIndex;
+
+    Before = _NumWrites;
+    SEGGER_SYSVIEW_SendStackInfo(&StackInfo);
+    WriteIndex = _ExpectLastEventFrom(Before, SYSVIEW_EVTID_STACK_INFO);
+    _ExpectStackInfoPayload(WriteIndex, StackInfo.TaskID, StackInfo.StackBase, StackInfo.StackSize, StackInfo.StackUsage);
+  }
 
   {
     unsigned Before;
@@ -1468,7 +1669,7 @@ static void _TestRecordAPI(void) {
     PayloadOff += NumUsed;
     TEST_ASSERT_EQ_U(60u, DecodedEventId);
     TEST_ASSERT_EQ_ADDR((PTR_ADDR)0x100000077u, DecodedAddr);
-    TEST_ASSERT_EQ_U(PayloadLen, PayloadOff);
+    _ExpectPayloadFieldsConsumed(PayloadLen, PayloadOff);
   }
 
   _InitAndStart(NULL);
@@ -1750,6 +1951,82 @@ static void _TestPrintElfAPI(void) {
 
 /*********************************************************************
 *
+*       _TestPrintElfMacroAPI()
+*
+*  Function description
+*    Verifies the public PrintElf convenience macros, including fixed
+*    integer argument counts, variable integer/string arguments, and
+*    SV_INT_ARGS/SV_STR_ARGS format argument helpers.
+*/
+static void _TestPrintElfMacroAPI(void) {
+  const U32 aExpectedU32[10] = { 1u, 2u, 3u, 4u, 5u, 6u, 7u, 8u, 9u, 10u };
+  const U32 aVarU32[3] = { 11u, 12u, 13u };
+  const U32 aFmtU32[2] = { 21u, 22u };
+  const char* asVarStr[2] = { "left", "right" };
+  const char* asFmtStr[2] = { "fmt-a", "fmt-b" };
+  unsigned Before;
+
+  _InitAndStart(&_OSAPI);
+
+  Before = _NumWrites;
+  SEGGER_SYSVIEW_PRINT_ELF(SEGGER_SYSVIEW_LOG, "macro0");
+  _ExpectLastPrintElfFrom(Before, SEGGER_SYSVIEW_LOG, NULL, 0u, NULL, 0u);
+
+  Before = _NumWrites;
+  SEGGER_SYSVIEW_PRINT_ELF_U32(SEGGER_SYSVIEW_WARNING, "macro1", 1u);
+  _ExpectLastPrintElfFrom(Before, SEGGER_SYSVIEW_WARNING, aExpectedU32, 1u, NULL, 0u);
+
+  Before = _NumWrites;
+  SEGGER_SYSVIEW_PRINT_ELF_U32_X2(SEGGER_SYSVIEW_ERROR, "macro2", 1u, 2u);
+  _ExpectLastPrintElfFrom(Before, SEGGER_SYSVIEW_ERROR, aExpectedU32, 2u, NULL, 0u);
+
+  Before = _NumWrites;
+  SEGGER_SYSVIEW_PRINT_ELF_U32_X3(SEGGER_SYSVIEW_LOG, "macro3", 1u, 2u, 3u);
+  _ExpectLastPrintElfFrom(Before, SEGGER_SYSVIEW_LOG, aExpectedU32, 3u, NULL, 0u);
+
+  Before = _NumWrites;
+  SEGGER_SYSVIEW_PRINT_ELF_U32_X4(SEGGER_SYSVIEW_WARNING, "macro4", 1u, 2u, 3u, 4u);
+  _ExpectLastPrintElfFrom(Before, SEGGER_SYSVIEW_WARNING, aExpectedU32, 4u, NULL, 0u);
+
+  Before = _NumWrites;
+  SEGGER_SYSVIEW_PRINT_ELF_U32_X5(SEGGER_SYSVIEW_ERROR, "macro5", 1u, 2u, 3u, 4u, 5u);
+  _ExpectLastPrintElfFrom(Before, SEGGER_SYSVIEW_ERROR, aExpectedU32, 5u, NULL, 0u);
+
+  Before = _NumWrites;
+  SEGGER_SYSVIEW_PRINT_ELF_U32_X6(SEGGER_SYSVIEW_LOG, "macro6", 1u, 2u, 3u, 4u, 5u, 6u);
+  _ExpectLastPrintElfFrom(Before, SEGGER_SYSVIEW_LOG, aExpectedU32, 6u, NULL, 0u);
+
+  Before = _NumWrites;
+  SEGGER_SYSVIEW_PRINT_ELF_U32_X7(SEGGER_SYSVIEW_WARNING, "macro7", 1u, 2u, 3u, 4u, 5u, 6u, 7u);
+  _ExpectLastPrintElfFrom(Before, SEGGER_SYSVIEW_WARNING, aExpectedU32, 7u, NULL, 0u);
+
+  Before = _NumWrites;
+  SEGGER_SYSVIEW_PRINT_ELF_U32_X8(SEGGER_SYSVIEW_ERROR, "macro8", 1u, 2u, 3u, 4u, 5u, 6u, 7u, 8u);
+  _ExpectLastPrintElfFrom(Before, SEGGER_SYSVIEW_ERROR, aExpectedU32, 8u, NULL, 0u);
+
+  Before = _NumWrites;
+  SEGGER_SYSVIEW_PRINT_ELF_U32_X9(SEGGER_SYSVIEW_LOG, "macro9", 1u, 2u, 3u, 4u, 5u, 6u, 7u, 8u, 9u);
+  _ExpectLastPrintElfFrom(Before, SEGGER_SYSVIEW_LOG, aExpectedU32, 9u, NULL, 0u);
+
+  Before = _NumWrites;
+  SEGGER_SYSVIEW_PRINT_ELF_U32_X10(SEGGER_SYSVIEW_WARNING, "macro10", 1u, 2u, 3u, 4u, 5u, 6u, 7u, 8u, 9u, 10u);
+  _ExpectLastPrintElfFrom(Before, SEGGER_SYSVIEW_WARNING, aExpectedU32, 10u, NULL, 0u);
+
+  Before = _NumWrites;
+  SEGGER_SYSVIEW_PRINT_ELF_U32_VAR(SEGGER_SYSVIEW_ERROR, "macro-var-u32", 11u, 12u, 13u);
+  _ExpectLastPrintElfFrom(Before, SEGGER_SYSVIEW_ERROR, aVarU32, SEGGER_COUNTOF(aVarU32), NULL, 0u);
+
+  Before = _NumWrites;
+  SEGGER_SYSVIEW_PRINT_ELF_STR_VAR(SEGGER_SYSVIEW_LOG, "macro-var-str", "left", "right");
+  _ExpectLastPrintElfFrom(Before, SEGGER_SYSVIEW_LOG, NULL, 0u, asVarStr, SEGGER_COUNTOF(asVarStr));
+
+  Before = _NumWrites;
+  SEGGER_SYSVIEW_PRINT_ELF_FMT(SEGGER_SYSVIEW_WARNING, "macro-fmt", SV_INT_ARGS(21u, 22u), SV_STR_ARGS("fmt-a", "fmt-b"));
+  _ExpectLastPrintElfFrom(Before, SEGGER_SYSVIEW_WARNING, aFmtU32, SEGGER_COUNTOF(aFmtU32), asFmtStr, SEGGER_COUNTOF(asFmtStr));
+}
+
+/*********************************************************************
+*
 *       _TestModuleAPI()
 *
 *  Function description
@@ -1812,6 +2089,7 @@ int main(void) {
   _TestSendPacketAPI();
   _TestPrintfAPI();
   _TestPrintElfAPI();
+  _TestPrintElfMacroAPI();
   _TestModuleAPI();
 
   TEST_ASSERT_EQ_U(0u, _BadRTTAddressCount);

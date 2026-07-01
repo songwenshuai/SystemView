@@ -3,17 +3,24 @@
 # SEGGER SystemView Unit Test Build Script
 # ==============================================================================
 #
+# CMake wrapper script for configuring, building, running, and reporting
+# coverage for the SEGGER SystemView public API unit tests.
+#
 # Usage:
 #   ./build.sh              # Debug build and run tests
 #   ./build.sh --release    # Release build and run tests
 #   ./build.sh --clean      # Clean and rebuild
-#   ./build.sh --coverage   # Build with coverage instrumentation
+#   ./build.sh --coverage   # Build, run tests, and print coverage
 #   ./build.sh -n           # Use Ninja generator
 #   ./build.sh --werror     # Treat warnings as errors
 #
 # ==============================================================================
 
 set -euo pipefail
+
+# ==============================================================================
+# Configuration
+# ==============================================================================
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 BUILD_DIR="${BUILD_DIR:-"${SCRIPT_DIR}/build"}"
@@ -27,6 +34,10 @@ JOBS=$(nproc 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || echo 4)
 
 CMAKE_GENERATOR=()
 VERBOSE_FLAG=()
+
+# ==============================================================================
+# Functions
+# ==============================================================================
 
 print_color() { printf '\033[%sm%s\033[0m\n' "$1" "$2"; }
 log_info()    { print_color 34 "[INFO] $1"; }
@@ -45,11 +56,14 @@ Build Options:
   -j, --jobs N      Number of parallel jobs (default: auto)
   -v, --verbose     Verbose build output
   -n, --ninja       Use Ninja build system
-  --no-test         Build only; do not run CTest
   --werror          Treat warnings as errors
 
+Test Options:
+  --test            Run CTest after building
+  --no-test         Build only; do not run CTest
+
 Coverage Options:
-  --coverage        Enable compiler coverage instrumentation
+  --coverage        Enable compiler coverage instrumentation, run unit tests, and print summary
   --no-coverage     Disable coverage instrumentation
 
 Other:
@@ -59,6 +73,12 @@ Environment:
   BUILD_DIR         Build directory. Defaults to ./build.
   CMAKE_BUILD_TYPE  Initial build type. Defaults to Debug.
   COVERAGE          Initial coverage switch. Use ON or OFF.
+
+Commands:
+  ./build.sh
+  ./build.sh --release
+  ./build.sh --clean --coverage
+  ./build.sh -n -j 8
 
 EOF
   exit 0
@@ -77,10 +97,24 @@ normalize_on_off() {
   local value="$1"
 
   case "$value" in
-    ON|on|On|1|true|TRUE|yes|YES) printf '%s\n' "ON" ;;
-    OFF|off|Off|0|false|FALSE|no|NO) printf '%s\n' "OFF" ;;
-    *) log_error "Invalid ON/OFF value: ${value}" ;;
+    ON|on|On|1|true|TRUE|yes|YES)
+      printf '%s\n' "ON"
+      ;;
+    OFF|off|Off|0|false|FALSE|no|NO)
+      printf '%s\n' "OFF"
+      ;;
+    *)
+      log_error "Invalid ON/OFF value: ${value}"
+      ;;
   esac
+}
+
+bool_to_on_off() {
+  if [[ "$1" == true ]]; then
+    printf '%s\n' "ON"
+  else
+    printf '%s\n' "OFF"
+  fi
 }
 
 parse_args() {
@@ -92,14 +126,25 @@ parse_args() {
       -j|--jobs)        require_next_arg "$1" "$#"; JOBS="$2"; shift 2 ;;
       -v|--verbose)     VERBOSE=true; shift ;;
       -n|--ninja)       CMAKE_GENERATOR=(-G Ninja); shift ;;
+      --test)           RUN_TESTS=true; shift ;;
       --no-test)        RUN_TESTS=false; shift ;;
-      --coverage)       COVERAGE=ON; shift ;;
+      --coverage)       COVERAGE=ON; RUN_TESTS=true; shift ;;
       --no-coverage)    COVERAGE=OFF; shift ;;
       --werror)         WARNINGS_AS_ERRORS=true; shift ;;
       -h|--help)        show_help ;;
       *)                log_error "Unknown option: $1. Use --help for usage." ;;
     esac
   done
+}
+
+validate_args() {
+  if [[ "${BUILD_TYPE}" != "Debug" && "${BUILD_TYPE}" != "Release" ]]; then
+    log_error "Invalid build type: ${BUILD_TYPE}. Use Debug or Release."
+  fi
+
+  if ! [[ "${JOBS}" =~ ^[0-9]+$ ]]; then
+    log_error "Invalid number of jobs: ${JOBS}"
+  fi
 }
 
 select_gcov_tool() {
@@ -140,6 +185,7 @@ print_gcov_summary() {
   local gcno_file
   local object_dir
   local object_index=0
+  local -a gcov_files
 
   rm -rf "${gcov_dir}"
   mkdir -p "${gcov_dir}"
@@ -154,6 +200,12 @@ print_gcov_summary() {
 
   if [[ "${object_index}" -eq 0 ]]; then
     log_warn "No .gcno files were found under ${BUILD_DIR}/CMakeFiles."
+    return
+  fi
+
+  gcov_files=("${gcov_dir}"/object_*/*.gcov)
+  if [[ ! -e "${gcov_files[0]}" ]]; then
+    log_warn "No .gcov files were generated under ${gcov_dir}."
     return
   fi
 
@@ -228,7 +280,7 @@ print_gcov_summary() {
         }
       }
     }
-  ' "${gcov_dir}"/object_*/*.gcov
+  ' "${gcov_files[@]}"
 }
 
 print_coverage_report() {
@@ -247,11 +299,30 @@ print_coverage_report() {
   fi
 }
 
+get_ctest_test_count() {
+  local ctest_output
+  local test_count
+
+  if ! ctest_output="$(ctest --test-dir "${BUILD_DIR}" -N 2>&1)"; then
+    printf '%s\n' "${ctest_output}" >&2
+    log_error "CTest test discovery failed."
+  fi
+
+  test_count="$(printf '%s\n' "${ctest_output}" | awk '/Total Tests:/ { count = $3 } END { print count + 0 }')"
+  printf '%s\n' "${test_count}"
+}
+
+# ==============================================================================
+# Main
+# ==============================================================================
+
 main() {
-  local cmake_configure_cmd
-  local cmake_build_cmd
+  local build_args
+  local configure_args
+  local test_count
 
   parse_args "$@"
+  validate_args
 
   COVERAGE="$(normalize_on_off "${COVERAGE}")"
 
@@ -259,37 +330,55 @@ main() {
     VERBOSE_FLAG=(--verbose)
   fi
 
+  log_info "Build type: ${BUILD_TYPE}"
+  log_info "Parallel jobs: ${JOBS}"
+  log_info "Coverage: ${COVERAGE}"
+  if [[ "${#CMAKE_GENERATOR[@]}" -gt 0 ]]; then
+    log_info "Generator: Ninja"
+  else
+    log_info "Generator: CMake default"
+  fi
+
   if [[ "${CLEAN_BUILD}" == true ]]; then
-    log_info "Cleaning ${BUILD_DIR}"
+    log_info "Cleaning build directory..."
     rm -rf "${BUILD_DIR}"
   fi
 
-  log_info "Configuring ${BUILD_TYPE} build"
-  cmake_configure_cmd=(cmake -S "${SCRIPT_DIR}" -B "${BUILD_DIR}")
+  log_info "Configuring with CMake..."
+  configure_args=(-S "${SCRIPT_DIR}" -B "${BUILD_DIR}")
   if [[ "${#CMAKE_GENERATOR[@]}" -gt 0 ]]; then
-    cmake_configure_cmd+=("${CMAKE_GENERATOR[@]}")
+    configure_args+=("${CMAKE_GENERATOR[@]}")
   fi
-  cmake_configure_cmd+=( \
+  configure_args+=( \
     -DCMAKE_BUILD_TYPE="${BUILD_TYPE}" \
     -DSYSTEMVIEW_ENABLE_COVERAGE="${COVERAGE}" \
-    -DSYSTEMVIEW_WARNINGS_AS_ERRORS="$(if [[ "${WARNINGS_AS_ERRORS}" == true ]]; then echo ON; else echo OFF; fi)" \
+    -DSYSTEMVIEW_WARNINGS_AS_ERRORS="$(bool_to_on_off "${WARNINGS_AS_ERRORS}")" \
   )
-  "${cmake_configure_cmd[@]}"
+  cmake "${configure_args[@]}"
 
   if [[ "${COVERAGE}" == "ON" ]]; then
     find "${BUILD_DIR}" -name '*.gcda' -exec rm -f {} +
   fi
 
-  log_info "Building"
-  cmake_build_cmd=(cmake --build "${BUILD_DIR}" --parallel "${JOBS}")
+  log_info "Building SystemView targets..."
+  build_args=(--build "${BUILD_DIR}" -j "${JOBS}")
   if [[ "${#VERBOSE_FLAG[@]}" -gt 0 ]]; then
-    cmake_build_cmd+=("${VERBOSE_FLAG[@]}")
+    build_args+=("${VERBOSE_FLAG[@]}")
   fi
-  "${cmake_build_cmd[@]}"
+  cmake "${build_args[@]}"
+  log_success "Build completed successfully."
 
   if [[ "${RUN_TESTS}" == true ]]; then
-    log_info "Running tests"
-    ctest --test-dir "${BUILD_DIR}" --output-on-failure
+    log_info "Running SystemView unit tests..."
+    test_count="$(get_ctest_test_count)"
+    if [[ "${test_count}" -eq 0 ]]; then
+      log_error "CTest did not discover any unit tests."
+    fi
+    log_info "Discovered ${test_count} unit tests."
+    ctest --test-dir "${BUILD_DIR}" --output-on-failure -j "${JOBS}"
+    log_success "SystemView unit tests passed."
+  else
+    log_info "Skipping CTest."
   fi
 
   if [[ "${COVERAGE}" == "ON" ]]; then

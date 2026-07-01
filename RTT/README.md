@@ -55,18 +55,6 @@ The RTT Target Sources contain additional modules for printf-like output.
 
 `Syscalls/SEGGER_RTT_Syscalls_*.c` provides low-level retargeting functions for `printf()` to RTT with different toolchains.
 
-### Examples
-
-The `Examples` dirctory includes some simple example and test applications to demonstrate RTT.
-Some examples can be run as bare-metal applications, some examples require additional modules, such as an RTOS.
-
-- `Main_RTT_InputEchoApp.c`    - Example application which echoes input on Channel 0.
-- `Main_RTT_MenuApp.c`         - Example application to demonstrate RTT bi-directional functionality.
-- `Main_RTT_PrintfTest.c`      - Example application to test RTT's simple printf implementation.
-- `Main_RTT_SpeedTestApp.c`    - Example application to measure RTT performance. (Requires embOS)
-
-**NOTE:** The examples are not included in the CMSIS-Pack.
-
 ### CMSIS-Pack
 
 The CMSIS-Pack enables easy integration of RTT into CMSIS-based projects.
