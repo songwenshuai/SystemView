@@ -23,7 +23,7 @@ set -euo pipefail
 # ==============================================================================
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-BUILD_DIR="${BUILD_DIR:-"${SCRIPT_DIR}/build"}"
+BUILD_DIR="${BUILD_DIR:-}"
 BUILD_TYPE="${CMAKE_BUILD_TYPE:-Debug}"
 CLEAN_BUILD=false
 VERBOSE=false
@@ -71,7 +71,7 @@ Other:
   -h, --help        Show this help message
 
 Environment:
-  BUILD_DIR         Build directory. Defaults to ./build.
+  BUILD_DIR         Build directory. Defaults to ./build/<type>.
   CMAKE_BUILD_TYPE  Initial build type. Defaults to Debug.
   COVERAGE          Initial coverage switch. Use ON or OFF.
 
@@ -124,6 +124,25 @@ validate_args() {
   fi
 }
 
+configure_environment() {
+  local build_type
+
+  case "${BUILD_TYPE}" in
+    Debug)
+      build_type="debug"
+      ;;
+    Release)
+      build_type="release"
+      ;;
+  esac
+
+  if [[ -z "${BUILD_DIR}" ]]; then
+    BUILD_DIR="${SCRIPT_DIR}/build/${build_type}"
+  elif [[ "${BUILD_DIR}" != /* ]]; then
+    BUILD_DIR="${SCRIPT_DIR}/${BUILD_DIR}"
+  fi
+}
+
 normalize_on_off() {
   local value="$1"
 
@@ -146,6 +165,29 @@ bool_to_on_off() {
   else
     printf '%s\n' "OFF"
   fi
+}
+
+print_build_summary() {
+  local exe
+  local executables=(
+    "${BUILD_DIR}/bin/SEGGER_RTT_PublicAPI_Test"
+    "${BUILD_DIR}/bin/SEGGER_RTT_PublicAPI_ByteLoop_Test"
+    "${BUILD_DIR}/bin/SEGGER_RTT_PublicAPI_PrintfSmallBuffer_Test"
+  )
+
+  echo ""
+  print_color 36 "=== Build Summary ==="
+  echo ""
+  echo "Build Directory:   ${BUILD_DIR}"
+  echo "Build Type:        ${BUILD_TYPE}"
+  echo ""
+  echo "Build Outputs:"
+  for exe in "${executables[@]}"; do
+    if [[ -f "${exe}" ]]; then
+      echo "  ${exe}"
+    fi
+  done
+  echo ""
 }
 
 select_gcov_tool() {
@@ -328,6 +370,7 @@ main() {
 
   parse_args "$@"
   validate_args
+  configure_environment
 
   COVERAGE="$(normalize_on_off "${COVERAGE}")"
   CMAKE_OPTIONS+=("-DCMAKE_BUILD_TYPE=${BUILD_TYPE}")
@@ -388,6 +431,8 @@ main() {
   if [[ "${COVERAGE}" == "ON" ]]; then
     print_coverage_report
   fi
+
+  print_build_summary
 }
 
 main "$@"

@@ -114,8 +114,7 @@ Options:
 
 Environment:
   TRACEHUB_BIN         Explicit tracehub executable path. If unset, this script
-                       checks $ROOT_DIR/tracehub and
-                       $ROOT_DIR/install/bin/tracehub.
+                       requires exactly one SMEM tracehub under $ROOT_DIR/build.
 
 Examples:
   sudo $0
@@ -294,6 +293,8 @@ run_tracehub() {
 
 resolve_tracehub() {
     local candidate
+    local found=""
+    local found_count=0
 
     if [ -n "$TRACEHUB_BIN" ]; then
         if [ -f "$TRACEHUB_BIN" ] && [ -x "$TRACEHUB_BIN" ]; then
@@ -305,19 +306,34 @@ resolve_tracehub() {
     fi
 
     for candidate in \
-        "$ROOT_DIR/tracehub" \
-        "$ROOT_DIR/install/bin/tracehub"
+        "$ROOT_DIR/build/host-smem-debug/tracehub" \
+        "$ROOT_DIR/build/host-smem-release/tracehub" \
+        "$ROOT_DIR/build/linux-arm64-smem-debug/tracehub" \
+        "$ROOT_DIR/build/linux-arm64-smem-release/tracehub"
     do
         if [ -f "$candidate" ] && [ -x "$candidate" ]; then
-            TRACEHUB_BIN="$candidate"
-            return 0
+            found="$candidate"
+            found_count=$((found_count + 1))
         fi
     done
 
+    if [ "$found_count" -eq 1 ]; then
+        TRACEHUB_BIN="$found"
+        return 0
+    fi
+
+    if [ "$found_count" -gt 1 ]; then
+        print_error "multiple SMEM tracehub executables found"
+        print_info "Set TRACEHUB_BIN to the exact executable path"
+        exit 1
+    fi
+
     print_error "tracehub executable not found"
     print_info "Set TRACEHUB_BIN or provide one of:"
-    print_info "  $ROOT_DIR/tracehub"
-    print_info "  $ROOT_DIR/install/bin/tracehub"
+    print_info "  $ROOT_DIR/build/host-smem-debug/tracehub"
+    print_info "  $ROOT_DIR/build/host-smem-release/tracehub"
+    print_info "  $ROOT_DIR/build/linux-arm64-smem-debug/tracehub"
+    print_info "  $ROOT_DIR/build/linux-arm64-smem-release/tracehub"
     exit 1
 }
 

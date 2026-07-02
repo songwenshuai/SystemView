@@ -26,13 +26,6 @@ project(TraceHub
 
 set(TRACEHUB_TARGET tracehub)
 
-# macOS + Ninja: RPATH modification is not supported for Mach-O binaries
-# Set CMAKE_BUILD_WITH_INSTALL_RPATH to build with install RPATH directly
-# Note: APPLE variable is only defined after project() call
-if(APPLE)
-    set(CMAKE_BUILD_WITH_INSTALL_RPATH ON CACHE BOOL "Build with install RPATH" FORCE)
-endif()
-
 # ==============================================================================
 # Build Configuration Options
 # ==============================================================================
@@ -40,6 +33,8 @@ endif()
 option(ENABLE_COVERAGE "Enable code coverage" OFF)
 option(ENABLE_SANITIZERS "Enable address/undefined sanitizers" OFF)
 option(USE_MEMSHM_BACKEND "Use host shared memory backend for simulation" ON)
+set(TRACEHUB_TARGET_ARCH "host" CACHE STRING "TraceHub target architecture")
+set_property(CACHE TRACEHUB_TARGET_ARCH PROPERTY STRINGS host linux-arm64)
 if(CMAKE_CROSSCOMPILING)
     set(BUILD_UNIT_TESTS_DEFAULT OFF)
 else()
@@ -72,6 +67,20 @@ set(TRACEHUB_LOG_MERGER_FLUSH_TIMEOUT_MS "1000u" CACHE STRING "Default swimlane 
 # ==============================================================================
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
+if(NOT TRACEHUB_TARGET_ARCH STREQUAL "host" AND NOT TRACEHUB_TARGET_ARCH STREQUAL "linux-arm64")
+    message(FATAL_ERROR "TRACEHUB_TARGET_ARCH must be host or linux-arm64")
+endif()
+
+if(TRACEHUB_TARGET_ARCH STREQUAL "linux-arm64")
+    string(TOLOWER "${CMAKE_SYSTEM_PROCESSOR}" TRACEHUB_SYSTEM_PROCESSOR)
+    if(NOT CMAKE_SYSTEM_NAME STREQUAL "Linux")
+        message(FATAL_ERROR "TRACEHUB_TARGET_ARCH=linux-arm64 requires CMAKE_SYSTEM_NAME=Linux")
+    endif()
+    if(NOT TRACEHUB_SYSTEM_PROCESSOR MATCHES "^(aarch64|arm64)$")
+        message(FATAL_ERROR "TRACEHUB_TARGET_ARCH=linux-arm64 requires CMAKE_SYSTEM_PROCESSOR=aarch64 or arm64")
+    endif()
+endif()
 
 # SMEM depends on the Linux SharedMem driver. Other host platforms use MEMSHM.
 if((APPLE OR WIN32) AND NOT USE_MEMSHM_BACKEND)
@@ -116,11 +125,6 @@ set(TRACEHUB_SERVICES_DIR "${CMAKE_CURRENT_SOURCE_DIR}/Services")
 if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Debug CACHE STRING "Build type (Debug or Release)" FORCE)
     message(STATUS "CMAKE_BUILD_TYPE not set, defaulting to Debug")
-endif()
-
-# Set default install prefix for standalone builds
-if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
-    set(CMAKE_INSTALL_PREFIX "${CMAKE_BINARY_DIR}/dist" CACHE PATH "Install path prefix" FORCE)
 endif()
 
 # ==============================================================================
@@ -281,15 +285,6 @@ set(SOURCES
 add_executable(${TRACEHUB_TARGET} ${SOURCES})
 
 # ==============================================================================
-# Configure Installation Directories
-# ==============================================================================
-
-set(CMAKE_INSTALL_BINDIR "bin" CACHE STRING "Binary install directory" FORCE)
-set(CMAKE_INSTALL_LIBDIR "lib" CACHE STRING "Library install directory" FORCE)
-set(CMAKE_INSTALL_INCLUDEDIR "include" CACHE STRING "Header install directory" FORCE)
-set(CMAKE_INSTALL_DATADIR "share" CACHE STRING "Data install directory" FORCE)
-
-# ==============================================================================
 # Find Required Packages
 # ==============================================================================
 
@@ -351,15 +346,6 @@ target_compile_definitions(${TRACEHUB_TARGET}
 )
 
 # ==============================================================================
-# Install Rules
-# ==============================================================================
-
-install(TARGETS ${TRACEHUB_TARGET}
-    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
-    COMPONENT Runtime
-)
-
-# ==============================================================================
 # Build Summary
 # ==============================================================================
 
@@ -368,8 +354,8 @@ message(STATUS "TraceHub Configuration Summary")
 message(STATUS "==============================================================================")
 message(STATUS "  Project:              ${PROJECT_NAME} v${PROJECT_VERSION}")
 message(STATUS "  Target:               ${TRACEHUB_TARGET}")
+message(STATUS "  Target Arch:          ${TRACEHUB_TARGET_ARCH}")
 message(STATUS "  Build Type:           ${CMAKE_BUILD_TYPE}")
-message(STATUS "  Install Prefix:       ${CMAKE_INSTALL_PREFIX}")
 message(STATUS "  Code Coverage:        ${ENABLE_COVERAGE}")
 message(STATUS "  Sanitizers:           ${ENABLE_SANITIZERS}")
 message(STATUS "  Default Memory Path:  ${TRACEHUB_EFFECTIVE_DEFAULT_MEMORY_PATH}")

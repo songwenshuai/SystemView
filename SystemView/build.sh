@@ -23,7 +23,7 @@ set -euo pipefail
 # ==============================================================================
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-BUILD_DIR="${BUILD_DIR:-"${SCRIPT_DIR}/build"}"
+BUILD_DIR="${BUILD_DIR:-}"
 BUILD_TYPE="${CMAKE_BUILD_TYPE:-Debug}"
 CLEAN_BUILD=false
 RUN_TESTS=true
@@ -70,7 +70,7 @@ Other:
   -h, --help        Show this help message
 
 Environment:
-  BUILD_DIR         Build directory. Defaults to ./build.
+  BUILD_DIR         Build directory. Defaults to ./build/<type>.
   CMAKE_BUILD_TYPE  Initial build type. Defaults to Debug.
   COVERAGE          Initial coverage switch. Use ON or OFF.
 
@@ -117,6 +117,22 @@ bool_to_on_off() {
   fi
 }
 
+print_build_summary() {
+  local exe="${BUILD_DIR}/bin/SEGGER_SYSVIEW_PublicAPI_Test"
+
+  echo ""
+  print_color 36 "=== Build Summary ==="
+  echo ""
+  echo "Build Directory:   ${BUILD_DIR}"
+  echo "Build Type:        ${BUILD_TYPE}"
+  echo ""
+  echo "Build Outputs:"
+  if [[ -f "${exe}" ]]; then
+    echo "  ${exe}"
+  fi
+  echo ""
+}
+
 parse_args() {
   while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -144,6 +160,25 @@ validate_args() {
 
   if ! [[ "${JOBS}" =~ ^[0-9]+$ ]]; then
     log_error "Invalid number of jobs: ${JOBS}"
+  fi
+}
+
+configure_environment() {
+  local build_type
+
+  case "${BUILD_TYPE}" in
+    Debug)
+      build_type="debug"
+      ;;
+    Release)
+      build_type="release"
+      ;;
+  esac
+
+  if [[ -z "${BUILD_DIR}" ]]; then
+    BUILD_DIR="${SCRIPT_DIR}/build/${build_type}"
+  elif [[ "${BUILD_DIR}" != /* ]]; then
+    BUILD_DIR="${SCRIPT_DIR}/${BUILD_DIR}"
   fi
 }
 
@@ -323,6 +358,7 @@ main() {
 
   parse_args "$@"
   validate_args
+  configure_environment
 
   COVERAGE="$(normalize_on_off "${COVERAGE}")"
 
@@ -385,6 +421,7 @@ main() {
     print_coverage_report
   fi
 
+  print_build_summary
   log_success "SystemView unit-test build completed"
 }
 

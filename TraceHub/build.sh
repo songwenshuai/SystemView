@@ -4,13 +4,13 @@
 # ==============================================================================
 #
 # CMake wrapper script for configuring, building, optional testing, coverage
-# reporting, installing, and optionally running TraceHub.
+# reporting, and optionally running TraceHub.
 #
 # Usage:
 #   ./build.sh                              # Debug host build
 #   ./build.sh --release                    # Release host build
 #   ./build.sh --clean --coverage           # Clean build, run tests, and print coverage
-#   ./build.sh -a ARM64 --toolchain path.cmake
+#   ./build.sh --arch linux-arm64 --toolchain path.cmake
 #   ./build.sh --run -- --help
 #
 # ==============================================================================
@@ -23,9 +23,9 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 BUILD_TYPE="${CMAKE_BUILD_TYPE:-Debug}"
-TARGET_ARCH="${TARGET_ARCH:-HOST}"
+TARGET_ARCH="${TARGET_ARCH:-host}"
 BUILD_DIR=""
-INSTALL_PREFIX="${INSTALL_PREFIX:-}"
+CMAKE_PRESET=""
 CLEAN_BUILD=false
 VERBOSE=false
 RUN_AFTER_BUILD=false
@@ -35,13 +35,11 @@ JOBS=$(nproc 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || echo 4)
 MEMORY_BACKEND="${MEMORY_BACKEND:-}"
 BUILD_UNIT_TESTS=""
 BUILD_SIM_TESTS=""
-TOOLCHAIN_FILE=""
+TOOLCHAIN_FILE="${TOOLCHAIN_FILE:-}"
 APP_BIN="tracehub"
-INSTALL_BINDIR="bin"
-INSTALL_LIBDIR="lib"
 APP_ARGS=()
 
-CMAKE_GENERATOR=(-G Ninja)
+CMAKE_GENERATOR_NAME="Ninja"
 VERBOSE_FLAG=()
 
 # ==============================================================================
@@ -63,14 +61,13 @@ Build Options:
   -d, --debug           Build debug configuration (default)
   --release             Build release configuration
   -t, --type TYPE       Build type: Debug or Release
-  -a, --arch ARCH       Build target: HOST or ARM64 (default: HOST)
-  -c, --clean           Clean build directory before configuring
+  -a, --arch ARCH       Build target: host or linux-arm64 (default: host)
+  -c, --clean           Clean build directory and legacy copied executables
   -j, --jobs N          Number of parallel jobs (default: auto)
   -v, --verbose         Verbose build output
   -n, --ninja           Use Ninja build system (default)
-  -p, --prefix PATH     Installation prefix (default: ./install)
   -b, --backend NAME    Memory backend: memshm or smem
-  --toolchain PATH      CMake toolchain file for cross-compilation
+  --toolchain PATH      CMake toolchain file for linux-arm64 cross builds
 
 Test Options:
   --test                Run CTest after building
@@ -89,16 +86,16 @@ Other:
 
 Environment:
   CMAKE_BUILD_TYPE      Initial build type. Defaults to Debug.
-  TARGET_ARCH           Initial target architecture. Defaults to HOST.
-  INSTALL_PREFIX        Initial installation prefix. Defaults to ./install.
-  MEMORY_BACKEND        Initial memory backend. Defaults by target.
+  TARGET_ARCH           Initial target architecture. Defaults to host.
+  MEMORY_BACKEND        Initial memory backend. Defaults to memshm for host and smem for linux-arm64.
+  TOOLCHAIN_FILE        Initial CMake toolchain file.
   COVERAGE              Initial coverage switch. Use ON or OFF.
 
 Commands:
   ./build.sh
   ./build.sh --release
   ./build.sh --clean --coverage
-  ./build.sh -a ARM64 --toolchain path.cmake
+  ./build.sh --arch linux-arm64 --toolchain path.cmake
   ./build.sh --run -- --help
 
 EOF
@@ -138,6 +135,19 @@ bool_to_on_off() {
   fi
 }
 
+normalize_target_arch() {
+  local value="$1"
+
+  case "${value}" in
+    host|linux-arm64)
+      printf '%s\n' "${value}"
+      ;;
+    *)
+      log_error "Invalid architecture: ${value}. Use host or linux-arm64."
+      ;;
+  esac
+}
+
 parse_args() {
   while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -173,13 +183,8 @@ parse_args() {
         shift
         ;;
       -n|--ninja)
-        CMAKE_GENERATOR=(-G Ninja)
+        CMAKE_GENERATOR_NAME="Ninja"
         shift
-        ;;
-      -p|--prefix)
-        require_next_arg "$1" "$#"
-        INSTALL_PREFIX="$2"
-        shift 2
         ;;
       -b|--backend)
         require_next_arg "$1" "$#"
@@ -228,12 +233,10 @@ parse_args() {
 }
 
 validate_args() {
+  TARGET_ARCH="$(normalize_target_arch "${TARGET_ARCH}")"
+
   if [[ "${BUILD_TYPE}" != "Debug" && "${BUILD_TYPE}" != "Release" ]]; then
     log_error "Invalid build type: ${BUILD_TYPE}. Use Debug or Release."
-  fi
-
-  if [[ "${TARGET_ARCH}" != "HOST" && "${TARGET_ARCH}" != "ARM64" ]]; then
-    log_error "Invalid architecture: ${TARGET_ARCH}. Use HOST or ARM64."
   fi
 
   if ! [[ "${JOBS}" =~ ^[0-9]+$ ]]; then
@@ -243,16 +246,22 @@ validate_args() {
   if [[ -n "${MEMORY_BACKEND}" && "${MEMORY_BACKEND}" != "smem" && "${MEMORY_BACKEND}" != "memshm" ]]; then
     log_error "Invalid memory backend: ${MEMORY_BACKEND}. Use smem or memshm."
   fi
+
+  if [[ -n "${TOOLCHAIN_FILE}" && ! -f "${TOOLCHAIN_FILE}" ]]; then
+    log_error "Toolchain file not found: ${TOOLCHAIN_FILE}"
+  fi
+
+  if [[ "${TARGET_ARCH}" == "host" && -n "${TOOLCHAIN_FILE}" ]]; then
+    log_error "--toolchain is only valid with --arch linux-arm64."
+  fi
 }
 
 configure_environment() {
   local host_os
   local host_machine
   local host_is_windows=false
-
-  if [[ -z "${INSTALL_PREFIX}" ]]; then
-    INSTALL_PREFIX="${SCRIPT_DIR}/install"
-  fi
+  local host_is_linux_arm64=false
+  local build_type
 
   host_os="$(uname -s)"
   host_machine="$(uname -m)"
@@ -263,48 +272,63 @@ configure_environment() {
       ;;
   esac
 
+  if [[ "${host_os}" == "Linux" && ( "${host_machine}" == "aarch64" || "${host_machine}" == "arm64" ) ]]; then
+    host_is_linux_arm64=true
+  fi
+
   if [[ -z "${MEMORY_BACKEND}" ]]; then
-    if [[ "${TARGET_ARCH}" == "HOST" ]]; then
+    if [[ "${TARGET_ARCH}" == "host" ]]; then
       MEMORY_BACKEND="memshm"
     else
       MEMORY_BACKEND="smem"
     fi
   fi
 
-  if [[ "${host_os}" == "Darwin" && "${TARGET_ARCH}" == "HOST" && "${MEMORY_BACKEND}" == "smem" ]]; then
+  if [[ "${TARGET_ARCH}" == "host" && "${host_os}" == "Darwin" && "${MEMORY_BACKEND}" == "smem" ]]; then
     log_error "SMEM backend is not available for native macOS builds. Use --backend memshm."
   fi
 
-  if [[ "${MEMORY_BACKEND}" == "memshm" && "${host_is_windows}" != true ]]; then
-    BUILD_SIM_TESTS="ON"
+  COVERAGE="$(normalize_on_off "${COVERAGE}")"
+
+  if [[ "${TARGET_ARCH}" == "linux-arm64" && -z "${TOOLCHAIN_FILE}" && "${host_is_linux_arm64}" != true ]]; then
+    log_error "linux-arm64 target builds require --toolchain PATH unless running on native Linux ARM64."
+  fi
+
+  if [[ "${TARGET_ARCH}" == "linux-arm64" && "${RUN_AFTER_BUILD}" == true && "${host_is_linux_arm64}" != true ]]; then
+    log_error "--run is only valid for linux-arm64 when running on native Linux ARM64."
+  fi
+
+  if [[ "${TARGET_ARCH}" == "linux-arm64" && "${RUN_TESTS}" == true ]]; then
+    log_error "linux-arm64 deployment presets do not build host-runnable unit tests. Use --arch host for tests."
+  fi
+
+  if [[ "${TARGET_ARCH}" == "linux-arm64" && "${COVERAGE}" != "OFF" ]]; then
+    log_error "Coverage requires a host test build."
+  fi
+
+  if [[ "${TARGET_ARCH}" == "host" ]]; then
+    BUILD_UNIT_TESTS="ON"
+    if [[ "${MEMORY_BACKEND}" == "memshm" && "${host_is_windows}" != true ]]; then
+      BUILD_SIM_TESTS="ON"
+    else
+      BUILD_SIM_TESTS="OFF"
+    fi
   else
+    BUILD_UNIT_TESTS="OFF"
     BUILD_SIM_TESTS="OFF"
   fi
 
-  if [[ "${TARGET_ARCH}" == "HOST" ]]; then
-    BUILD_UNIT_TESTS="ON"
-  else
-    BUILD_UNIT_TESTS="OFF"
-  fi
+  case "${BUILD_TYPE}" in
+    Debug)
+      build_type="debug"
+      ;;
+    Release)
+      build_type="release"
+      ;;
+  esac
 
-  COVERAGE="$(normalize_on_off "${COVERAGE}")"
-  if [[ "${COVERAGE}" == "ON" && "${BUILD_UNIT_TESTS}" != "ON" ]]; then
-    log_error "Coverage requires a HOST build with unit tests enabled."
-  fi
-
-  if [[ -n "${TOOLCHAIN_FILE}" && ! -f "${TOOLCHAIN_FILE}" ]]; then
-    log_error "Toolchain file not found: ${TOOLCHAIN_FILE}"
-  fi
-
-  if [[ "${TARGET_ARCH}" == "ARM64" && -z "${TOOLCHAIN_FILE}" ]]; then
-    if [[ "${host_os}" == "Linux" && ( "${host_machine}" == "aarch64" || "${host_machine}" == "arm64" ) ]]; then
-      log_info "Using native Linux ARM64 system toolchain."
-    else
-      log_error "ARM64 target build requires --toolchain PATH or a native Linux ARM64 host."
-    fi
-  fi
-
-  BUILD_DIR="build/${TARGET_ARCH}_${BUILD_TYPE}"
+  CMAKE_PRESET="${TARGET_ARCH}-${MEMORY_BACKEND}-${build_type}"
+  BUILD_DIR="build/${CMAKE_PRESET}"
 
   if [[ "${VERBOSE}" == true ]]; then
     VERBOSE_FLAG=(--verbose)
@@ -478,18 +502,14 @@ print_configuration() {
   print_section "TraceHub Build Configuration"
   echo ""
   echo "Build Type:          ${BUILD_TYPE}"
-  echo "Build Target:        ${TARGET_ARCH}"
+  echo "Target Arch:         ${TARGET_ARCH}"
+  echo "CMake Preset:        ${CMAKE_PRESET}"
+  echo "Build Directory:     ${BUILD_DIR}"
   if [[ -n "${TOOLCHAIN_FILE}" ]]; then
     echo "Toolchain File:      ${TOOLCHAIN_FILE}"
   fi
-  echo "Build Directory:     ${BUILD_DIR}"
-  echo "Install Prefix:      ${INSTALL_PREFIX}"
   echo "Parallel Jobs:       ${JOBS}"
-  if [[ "${#CMAKE_GENERATOR[@]}" -gt 0 ]]; then
-    echo "Generator:           Ninja"
-  else
-    echo "Generator:           CMake default"
-  fi
+  echo "Generator:           ${CMAKE_GENERATOR_NAME}"
   echo ""
   echo "Build Options:"
   echo "  Clean Build:       $(bool_to_on_off "${CLEAN_BUILD}")"
@@ -529,36 +549,12 @@ configure_cmake() {
 
   print_section "Configuring CMake"
   configure_args=(
-    -S "${SCRIPT_DIR}"
-    -B "${SCRIPT_DIR}/${BUILD_DIR}"
-    -DCMAKE_BUILD_TYPE="${BUILD_TYPE}"
-    -DCMAKE_INSTALL_PREFIX:PATH="${INSTALL_PREFIX}"
-    -DCMAKE_INSTALL_BINDIR:STRING="${INSTALL_BINDIR}"
-    -DCMAKE_INSTALL_LIBDIR:STRING="${INSTALL_LIBDIR}"
-    -DBUILD_UNIT_TESTS="${BUILD_UNIT_TESTS}"
-    -DBUILD_SIM_TESTS="${BUILD_SIM_TESTS}"
+    --preset "${CMAKE_PRESET}"
     -DENABLE_COVERAGE="${COVERAGE}"
   )
 
-  if [[ "${#CMAKE_GENERATOR[@]}" -gt 0 ]]; then
-    configure_args+=("${CMAKE_GENERATOR[@]}")
-  fi
-
-  if [[ "$(uname -s)" == "Darwin" ]]; then
-    configure_args+=(-DCMAKE_BUILD_WITH_INSTALL_RPATH=ON)
-  fi
-
-  case "${MEMORY_BACKEND}" in
-    memshm)
-      configure_args+=(-DUSE_MEMSHM_BACKEND=ON)
-      ;;
-    smem)
-      configure_args+=(-DUSE_MEMSHM_BACKEND=OFF)
-      ;;
-  esac
-
   if [[ -n "${TOOLCHAIN_FILE}" ]]; then
-    configure_args+=("-DCMAKE_TOOLCHAIN_FILE=${TOOLCHAIN_FILE}")
+    configure_args+=("-DCMAKE_TOOLCHAIN_FILE:FILEPATH=${TOOLCHAIN_FILE}")
     log_info "Using toolchain file: ${TOOLCHAIN_FILE}"
   fi
 
@@ -566,7 +562,7 @@ configure_cmake() {
     configure_args+=(-DCMAKE_VERBOSE_MAKEFILE=ON)
   fi
 
-  cmake "${configure_args[@]}"
+  (cd "${SCRIPT_DIR}" && cmake "${configure_args[@]}")
 
   if [[ -f "${SCRIPT_DIR}/${BUILD_DIR}/compile_commands.json" ]]; then
     ln -sf "${SCRIPT_DIR}/${BUILD_DIR}/compile_commands.json" "${SCRIPT_DIR}/build/compile_commands.json"
@@ -607,116 +603,42 @@ run_unit_tests() {
   log_success "TraceHub unit tests passed."
 }
 
-install_tracehub() {
-  print_section "Installing"
-  cmake --install "${SCRIPT_DIR}/${BUILD_DIR}"
-
-  if [[ -f "${SCRIPT_DIR}/${BUILD_DIR}/${APP_BIN}" ]]; then
-    cp "${SCRIPT_DIR}/${BUILD_DIR}/${APP_BIN}" "${SCRIPT_DIR}/"
-    chmod +x "${SCRIPT_DIR}/${APP_BIN}"
-  else
-    log_error "Executable not found: ${SCRIPT_DIR}/${BUILD_DIR}/${APP_BIN}"
-  fi
-
-  if [[ -f "${SCRIPT_DIR}/${BUILD_DIR}/Tests/rtt_sim_rtos" ]]; then
-    cp "${SCRIPT_DIR}/${BUILD_DIR}/Tests/rtt_sim_rtos" "${SCRIPT_DIR}/"
-    chmod +x "${SCRIPT_DIR}/rtt_sim_rtos"
-  fi
-
-  if [[ -f "${SCRIPT_DIR}/${BUILD_DIR}/Tests/rtt_sim_linux" ]]; then
-    cp "${SCRIPT_DIR}/${BUILD_DIR}/Tests/rtt_sim_linux" "${SCRIPT_DIR}/"
-    chmod +x "${SCRIPT_DIR}/rtt_sim_linux"
-  fi
-
-  if [[ -f "${SCRIPT_DIR}/${BUILD_DIR}/Tests/rtt_sim_sysview_tcp_client" ]]; then
-    cp "${SCRIPT_DIR}/${BUILD_DIR}/Tests/rtt_sim_sysview_tcp_client" "${SCRIPT_DIR}/"
-    chmod +x "${SCRIPT_DIR}/rtt_sim_sysview_tcp_client"
-  fi
-
-  if [[ "${BUILD_SIM_TESTS}" == "OFF" ]]; then
-    rm -f "${SCRIPT_DIR}/rtt_sim_rtos" \
-          "${SCRIPT_DIR}/rtt_sim_linux" \
-          "${SCRIPT_DIR}/rtt_sim_sysview_tcp_client"
-  fi
-}
-
 print_build_summary() {
-  local exe
-  local lib
-  local size
-  local name
-
   log_success "Build completed successfully."
   echo ""
   print_section "Build Summary"
   echo ""
   echo "Build Directory:   ${SCRIPT_DIR}/${BUILD_DIR}"
-  echo "Build Target:      ${TARGET_ARCH}"
+  echo "Target Arch:       ${TARGET_ARCH}"
   echo "Build Type:        ${BUILD_TYPE}"
   echo ""
-
-  if [[ -d "${INSTALL_PREFIX}/${INSTALL_BINDIR}" ]]; then
-    echo "Installed Executables:"
-    while IFS= read -r exe; do
-      if [[ -f "${exe}" ]]; then
-        size="$(ls -lh "${exe}" | awk '{print $5}')"
-        name="$(basename "${exe}")"
-        printf "  %-50s %10s\n" "${name}" "${size}"
-      fi
-    done < <(find "${INSTALL_PREFIX}/${INSTALL_BINDIR}" -type f -executable 2>/dev/null | sort)
-    echo ""
+  echo "Build Outputs:"
+  echo "  ${SCRIPT_DIR}/${BUILD_DIR}/${APP_BIN}"
+  if [[ "${BUILD_SIM_TESTS}" == "ON" && -f "${SCRIPT_DIR}/${BUILD_DIR}/Tests/rtt_sim_rtos" ]]; then
+    echo "  ${SCRIPT_DIR}/${BUILD_DIR}/Tests/rtt_sim_rtos"
   fi
-
-  if [[ -d "${INSTALL_PREFIX}/${INSTALL_LIBDIR}" ]]; then
-    echo "Installed Libraries:"
-    while IFS= read -r lib; do
-      if [[ -f "${lib}" ]]; then
-        size="$(ls -lh "${lib}" | awk '{print $5}')"
-        name="$(basename "${lib}")"
-        printf "  %-50s %10s\n" "${name}" "${size}"
-      fi
-    done < <(find "${INSTALL_PREFIX}/${INSTALL_LIBDIR}" \( -name "*.so*" -o -name "*.a" \) 2>/dev/null | sort)
-    echo ""
+  if [[ "${BUILD_SIM_TESTS}" == "ON" && -f "${SCRIPT_DIR}/${BUILD_DIR}/Tests/rtt_sim_linux" ]]; then
+    echo "  ${SCRIPT_DIR}/${BUILD_DIR}/Tests/rtt_sim_linux"
   fi
-
-  echo "Convenience Copy:"
-  echo "  ${SCRIPT_DIR}/${APP_BIN}"
-  if [[ "${BUILD_SIM_TESTS}" == "ON" && -f "${SCRIPT_DIR}/rtt_sim_rtos" ]]; then
-    echo "  ${SCRIPT_DIR}/rtt_sim_rtos"
-  fi
-  if [[ "${BUILD_SIM_TESTS}" == "ON" && -f "${SCRIPT_DIR}/rtt_sim_linux" ]]; then
-    echo "  ${SCRIPT_DIR}/rtt_sim_linux"
-  fi
-  if [[ "${BUILD_SIM_TESTS}" == "ON" && -f "${SCRIPT_DIR}/rtt_sim_sysview_tcp_client" ]]; then
-    echo "  ${SCRIPT_DIR}/rtt_sim_sysview_tcp_client"
+  if [[ "${BUILD_SIM_TESTS}" == "ON" && -f "${SCRIPT_DIR}/${BUILD_DIR}/Tests/rtt_sim_sysview_tcp_client" ]]; then
+    echo "  ${SCRIPT_DIR}/${BUILD_DIR}/Tests/rtt_sim_sysview_tcp_client"
   fi
   echo ""
 
   if [[ "${RUN_AFTER_BUILD}" != true ]]; then
     log_info "To run the application:"
-    echo "  ${INSTALL_PREFIX}/${INSTALL_BINDIR}/${APP_BIN} --help"
-    echo "  or"
-    echo "  LD_LIBRARY_PATH=${INSTALL_PREFIX}/${INSTALL_LIBDIR} ${SCRIPT_DIR}/${APP_BIN} --help"
+    echo "  ${SCRIPT_DIR}/${BUILD_DIR}/${APP_BIN} --help"
     echo ""
   fi
 }
 
 run_application() {
-  local lib_path
-
   if [[ "${RUN_AFTER_BUILD}" != true ]]; then
     return
   fi
 
   log_info "Running application..."
-  lib_path="${INSTALL_PREFIX}/${INSTALL_LIBDIR}"
-  if [[ -n "${LD_LIBRARY_PATH:-}" ]]; then
-    export LD_LIBRARY_PATH="${lib_path}:${LD_LIBRARY_PATH}"
-  else
-    export LD_LIBRARY_PATH="${lib_path}"
-  fi
-
-  exec "${SCRIPT_DIR}/${APP_BIN}" "${APP_ARGS[@]}"
+  exec "${SCRIPT_DIR}/${BUILD_DIR}/${APP_BIN}" "${APP_ARGS[@]}"
 }
 
 # ==============================================================================
@@ -742,8 +664,6 @@ main() {
     echo ""
   fi
 
-  install_tracehub
-  echo ""
   print_build_summary
   run_application
 }

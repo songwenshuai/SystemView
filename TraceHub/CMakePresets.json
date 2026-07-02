@@ -1,0 +1,126 @@
+{
+  "version": 6,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 28,
+    "patch": 0
+  },
+  "configurePresets": [
+    {
+      "name": "base",
+      "hidden": true,
+      "generator": "Ninja",
+      "cacheVariables": {
+        "ENABLE_COVERAGE": "OFF"
+      }
+    },
+    {
+      "name": "host-memshm",
+      "hidden": true,
+      "inherits": "base",
+      "cacheVariables": {
+        "TRACEHUB_TARGET_ARCH": "host",
+        "USE_MEMSHM_BACKEND": "ON",
+        "BUILD_UNIT_TESTS": "ON",
+        "BUILD_SIM_TESTS": "ON"
+      }
+    },
+    {
+      "name": "host-smem",
+      "hidden": true,
+      "inherits": "base",
+      "cacheVariables": {
+        "TRACEHUB_TARGET_ARCH": "host",
+        "USE_MEMSHM_BACKEND": "OFF",
+        "BUILD_UNIT_TESTS": "ON",
+        "BUILD_SIM_TESTS": "OFF"
+      }
+    },
+    {
+      "name": "linux-arm64-memshm",
+      "hidden": true,
+      "inherits": "base",
+      "cacheVariables": {
+        "TRACEHUB_TARGET_ARCH": "linux-arm64",
+        "USE_MEMSHM_BACKEND": "ON",
+        "BUILD_UNIT_TESTS": "OFF",
+        "BUILD_SIM_TESTS": "OFF"
+      }
+    },
+    {
+      "name": "linux-arm64-smem",
+      "hidden": true,
+      "inherits": "base",
+      "cacheVariables": {
+        "TRACEHUB_TARGET_ARCH": "linux-arm64",
+        "USE_MEMSHM_BACKEND": "OFF",
+        "BUILD_UNIT_TESTS": "OFF",
+        "BUILD_SIM_TESTS": "OFF"
+      }
+    },
+    {
+      "name": "host-memshm-debug",
+      "inherits": "host-memshm",
+      "binaryDir": "${sourceDir}/build/host-memshm-debug",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug"
+      }
+    },
+    {
+      "name": "host-memshm-release",
+      "inherits": "host-memshm",
+      "binaryDir": "${sourceDir}/build/host-memshm-release",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release"
+      }
+    },
+    {
+      "name": "host-smem-debug",
+      "inherits": "host-smem",
+      "binaryDir": "${sourceDir}/build/host-smem-debug",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug"
+      }
+    },
+    {
+      "name": "host-smem-release",
+      "inherits": "host-smem",
+      "binaryDir": "${sourceDir}/build/host-smem-release",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release"
+      }
+    },
+    {
+      "name": "linux-arm64-memshm-debug",
+      "inherits": "linux-arm64-memshm",
+      "binaryDir": "${sourceDir}/build/linux-arm64-memshm-debug",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug"
+      }
+    },
+    {
+      "name": "linux-arm64-memshm-release",
+      "inherits": "linux-arm64-memshm",
+      "binaryDir": "${sourceDir}/build/linux-arm64-memshm-release",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release"
+      }
+    },
+    {
+      "name": "linux-arm64-smem-debug",
+      "inherits": "linux-arm64-smem",
+      "binaryDir": "${sourceDir}/build/linux-arm64-smem-debug",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug"
+      }
+    },
+    {
+      "name": "linux-arm64-smem-release",
+      "inherits": "linux-arm64-smem",
+      "binaryDir": "${sourceDir}/build/linux-arm64-smem-release",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release"
+      }
+    }
+  ]
+}

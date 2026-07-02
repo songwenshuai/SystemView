@@ -1251,18 +1251,17 @@ cd TraceHub
 ./build.sh
 ```
 
-构建系统使用本目录的独立 CMake 配置，生成可执行文件 `tracehub`。`build.sh` 是 Linux/macOS shell 入口；Windows 主机应直接使用 CMake/Ninja 或 CMake 的 Visual Studio generator。使用 `./build.sh` 时，主二进制位于 `build/<ARCH>_<TYPE>/tracehub`，并会复制一份到 `TraceHub/tracehub` 方便脚本直接调用；开启 `BUILD_SIM_TESTS` 的 MEMSHM 构建还会复制仿真程序到 TraceHub 目录。构建过程不加载仓库外的 CMake 模块或环境脚本。
+构建系统使用本目录的独立 CMake 配置，生成可执行文件 `tracehub`。`CMakePresets.json` 是构建目标、后端默认值和构建目录的权威入口；`build.sh` 是 Linux/macOS shell 封装，负责选择 preset、传入站点相关 toolchain 并执行构建。Windows 主机应直接使用 CMake/Ninja 或 CMake 的 Visual Studio generator。使用 `./build.sh` 时，主二进制位于 `build/<arch>-<backend>-<type>/tracehub`；开启 `BUILD_SIM_TESTS` 的 MEMSHM 主机构建时，仿真程序位于同一构建目录的 `Tests/`。构建过程不加载仓库外的 CMake 模块或环境脚本，不提供 install 目标。
 
 `build.sh` 参数：
 
 ```bash
--p, --prefix <path>       安装前缀，默认 TraceHub/install
 -t, --type <type>         构建类型：Debug 或 Release，默认 Debug
--a, --arch <arch>         构建目标：HOST 或 ARM64，默认 HOST
--c, --clean               构建前清理对应 build 目录和便捷复制文件
+-a, --arch <arch>         构建目标：host 或 linux-arm64，默认 host
+-c, --clean               构建前清理对应 build 目录和历史复制的可执行文件
 -j, --jobs <n>            并行构建任务数，默认自动检测
--b, --backend <name>      内存后端：memshm 或 smem；HOST 默认 memshm，ARM64 默认 smem
---toolchain <path>        ARM64 交叉编译使用的 CMake toolchain 文件
+-b, --backend <name>      内存后端：memshm 或 smem；host 默认 memshm，linux-arm64 默认 smem
+--toolchain <path>        linux-arm64 交叉构建使用的 CMake toolchain 文件
 -v, --verbose             启用 CMake verbose build 输出
 -r, --run                 构建成功后运行 tracehub
 --                        与 -r 配合使用，后续参数传递给 tracehub
@@ -1275,29 +1274,39 @@ cd TraceHub
 ./build.sh --backend memshm
 
 # 运行单元测试
-ctest --test-dir build/HOST_Debug/Tests --output-on-failure
+ctest --test-dir build/host-memshm-debug --output-on-failure
 
 # 运行 MEMSHM 主机仿真 smoke 验证
-bash Tests/Scripts/run-memshm-smoke.sh build/HOST_Debug
+bash Tests/Scripts/run-memshm-smoke.sh build/host-memshm-debug
 
 # Linux SharedMem 硬件后端构建
 ./build.sh --backend smem
 
 # Linux SharedMem 真实芯片 preflight 验证
-sudo bash Tests/Scripts/run-smem-preflight.sh --build-dir build/HOST_Debug -k /path/to/SharedMem.ko
+sudo bash Tests/Scripts/run-smem-preflight.sh --build-dir build/host-smem-debug -k /path/to/SharedMem.ko
+
+# Linux ARM64 SharedMem 用户态程序交叉构建
+./build.sh --arch linux-arm64 --backend smem --toolchain /path/to/toolchain.cmake
+
+# Linux ARM64 SharedMem 真实芯片 preflight 验证
+sudo bash Tests/Scripts/run-smem-preflight.sh --build-dir build/linux-arm64-smem-debug -k /path/to/SharedMem.ko
 ```
 
 直接使用 CMake 时使用以下命令：
 
 ```bash
 # Linux/macOS: 配置并编译 MEMSHM 后端和仿真测试目标
-cmake -S . -B build/HOST_Debug -GNinja -DCMAKE_BUILD_TYPE=Debug -DUSE_MEMSHM_BACKEND=ON -DBUILD_SIM_TESTS=ON
-cmake --build build/HOST_Debug
-ctest --test-dir build/HOST_Debug/Tests --output-on-failure
+cmake --preset host-memshm-debug
+cmake --build build/host-memshm-debug
+ctest --test-dir build/host-memshm-debug --output-on-failure
 
 # Linux: 配置并编译 SMEM 后端
-cmake -S . -B build/HOST_Debug -GNinja -DCMAKE_BUILD_TYPE=Debug -DUSE_MEMSHM_BACKEND=OFF -DBUILD_SIM_TESTS=OFF
-cmake --build build/HOST_Debug
+cmake --preset host-smem-debug
+cmake --build build/host-smem-debug
+
+# Linux ARM64: 使用 toolchain 文件交叉配置并编译 SMEM 后端
+cmake --preset linux-arm64-smem-debug -DCMAKE_TOOLCHAIN_FILE=/path/to/toolchain.cmake
+cmake --build build/linux-arm64-smem-debug
 
 # Windows Visual Studio generator: 配置并编译 TraceHub MEMSHM 核心工具和单元测试
 cmake -S . -B build/win -DUSE_MEMSHM_BACKEND=ON -DBUILD_UNIT_TESTS=ON -DBUILD_SIM_TESTS=OFF
@@ -1314,23 +1323,21 @@ ctest --test-dir build/win/Tests -C Debug --output-on-failure
 # 显式选择 MEMSHM 后端
 ./build.sh --backend memshm
 
-# 显式选择原生主机构建目标
-./build.sh -a HOST --backend memshm
-
 # 直接使用 CMake 时默认也是 MEMSHM
-cmake -S . -B build -DUSE_MEMSHM_BACKEND=ON
+cmake --preset host-memshm-debug
 
 # Linux SharedMem 硬件后端
 ./build.sh --backend smem
 
 # 直接使用 CMake 选择 SMEM
-cmake -S . -B build-smem -DUSE_MEMSHM_BACKEND=OFF
+cmake --preset host-smem-debug
 
-# 非 ARM64 主机交叉构建 Linux ARM64 主机用户态版本
-./build.sh -a ARM64 --backend smem --toolchain /path/to/toolchain.cmake
+# Linux ARM64 SharedMem 用户态程序
+./build.sh --arch linux-arm64 --backend smem --toolchain /path/to/toolchain.cmake
+
 ```
 
-Linux、macOS 和 Windows 原生运行均支持 MEMSHM 仿真后端。Linux 同时支持 SMEM SharedMem 硬件后端；SMEM 后端使用仓库 `SharedMem/UAPI/SharedMem.h` 作为唯一 UAPI 来源，默认设备节点为 `/dev/shared_mem0`，运行脚本加载 `SharedMem.ko` 时使用 `phys_addrs` 和 `mem_sizes` 参数。`Scripts/run-*.sh` 脚本只适用于 Linux SMEM 硬件路径，并支持 `--device` 指定 SharedMem 设备路径，支持 `--rtt-timeout-ms` 控制 RTTCB 发现等待时间，支持 `--log-dir` 指定自动生成日志和记录文件目录。runner 解析 tracehub 二进制时优先使用 `TRACEHUB_BIN` 环境变量，其次检查 `TraceHub/tracehub` 和 `TraceHub/install/bin/tracehub`；使用 `sudo` 时可通过 `sudo TRACEHUB_BIN=/path/to/tracehub Scripts/run-console.sh` 传入显式路径。脚本发现 `SharedMem` 已加载时默认拒绝覆盖；显式传入 `--use-loaded-module` 时会复用已加载模块并校验设备节点可读写，显式传入 `--force-reload` 时会卸载并重新加载模块，两个选项互斥；脚本退出时只卸载本次运行加载的模块。加载或重载模块需要 root 权限，复用已加载模块只要求当前用户可读写设备节点。`Scripts/run-console.sh` 和 `Scripts/run-terminal.sh` 支持 `--linux` 或 `--rtos` 选择单通道日志，通道号可用 `--channel` 覆盖。`BUILD_UNIT_TESTS` 在原生主机构建中默认开启，Windows 主机构建会构建单元测试目标；`BUILD_SIM_TESTS` 在 Linux/macOS MEMSHM 后端默认开启，在 Windows 核心工具构建中默认关闭。模拟程序固定使用 MEMSHM，因此 SMEM 后端不会构建模拟程序，显式启用该组合会在 CMake 配置阶段报错。Linux simulator 负责初始化 RTTCB、写入 channel 0 文本日志、使用 SEGGER_SYSVIEW 在 channel 2 写入 Linux 事件，并读取 Linux/SystemView down-buffer；RTOS simulator 写入 channel 1 文本日志、等待 channel 2 和 SystemView spinlock 就绪后使用 SEGGER_SYSVIEW 写入 RTOS 事件，并读取 RTOS down-buffer。两个模拟程序共同形成多核 SystemView 二进制 SVDat 事件流，覆盖启动同步、系统描述、任务创建/切换、中断、timer、marker 和 target printf 场景。
+Linux、macOS 和 Windows 原生运行均支持 MEMSHM 仿真后端。Linux 同时支持 SMEM SharedMem 硬件后端；Linux ARM64 目标通过 `--arch linux-arm64` 和 CMake toolchain 文件构建，若在原生 Linux ARM64 主机上构建可省略 `--toolchain`。SMEM 后端使用仓库 `SharedMem/UAPI/SharedMem.h` 作为唯一 UAPI 来源，默认设备节点为 `/dev/shared_mem0`，运行脚本加载 `SharedMem.ko` 时使用 `phys_addrs` 和 `mem_sizes` 参数。`Scripts/run-*.sh` 脚本只适用于 Linux SMEM 硬件路径，并支持 `--device` 指定 SharedMem 设备路径，支持 `--rtt-timeout-ms` 控制 RTTCB 发现等待时间，支持 `--log-dir` 指定自动生成日志和记录文件目录。runner 解析 tracehub 二进制时优先使用 `TRACEHUB_BIN` 环境变量；未设置时只接受 `TraceHub/build/host-smem-debug/tracehub`、`TraceHub/build/host-smem-release/tracehub`、`TraceHub/build/linux-arm64-smem-debug/tracehub`、`TraceHub/build/linux-arm64-smem-release/tracehub` 中唯一存在且可执行的文件；若存在多个候选会直接报错，要求显式设置 `TRACEHUB_BIN`。使用 `sudo` 时可通过 `sudo TRACEHUB_BIN=/path/to/tracehub Scripts/run-console.sh` 传入显式路径。脚本发现 `SharedMem` 已加载时默认拒绝覆盖；显式传入 `--use-loaded-module` 时会复用已加载模块并校验设备节点可读写，显式传入 `--force-reload` 时会卸载并重新加载模块，两个选项互斥；脚本退出时只卸载本次运行加载的模块。加载或重载模块需要 root 权限，复用已加载模块只要求当前用户可读写设备节点。`Scripts/run-console.sh` 和 `Scripts/run-terminal.sh` 支持 `--linux` 或 `--rtos` 选择单通道日志，通道号可用 `--channel` 覆盖。`BUILD_UNIT_TESTS` 在 host preset 中默认开启，Linux ARM64 deployment preset 默认关闭；`BUILD_SIM_TESTS` 在 host MEMSHM preset 中默认开启，在 SMEM 和 Linux ARM64 preset 中默认关闭。模拟程序固定使用 MEMSHM，因此 SMEM 后端不会构建模拟程序，显式启用该组合会在 CMake 配置阶段报错。Linux simulator 负责初始化 RTTCB、写入 channel 0 文本日志、使用 SEGGER_SYSVIEW 在 channel 2 写入 Linux 事件，并读取 Linux/SystemView down-buffer；RTOS simulator 写入 channel 1 文本日志、等待 channel 2 和 SystemView spinlock 就绪后使用 SEGGER_SYSVIEW 写入 RTOS 事件，并读取 RTOS down-buffer。两个模拟程序共同形成多核 SystemView 二进制 SVDat 事件流，覆盖启动同步、系统描述、任务创建/切换、中断、timer、marker 和 target printf 场景。
 如果已有旧版 `/rtt_sim` 主机共享内存对象小于当前默认布局，MEMSHM 会直接报错而不是继续映射；重新创建共享内存对象或使用 `--memshm-reset` 后再运行模拟程序。
 
 SMEM runner 脚本参数（脚本用于加载 SharedMem 模块，这些不是 tracehub 核心 CLI 参数）：
@@ -1381,14 +1388,14 @@ bash Tests/Scripts/run-memshm-smoke.sh
 也可以显式指定构建目录：
 
 ```bash
-bash Tests/Scripts/run-memshm-smoke.sh build/HOST_Debug
+bash Tests/Scripts/run-memshm-smoke.sh build/host-memshm-debug
 ```
 
 手动 MEMSHM 仿真联调可按 `tracehub -> rtt_sim_linux -> rtt_sim_rtos` 顺序在不同终端启动。冷启动整套仿真时，第一个终端启动 TraceHub 并重置同名共享内存对象：
 
 ```bash
 cd TraceHub
-./build/HOST_Debug/tracehub \
+./build/host-memshm-debug/tracehub \
   --shm /rtt_sim \
   --addr 0x10000000 \
   --size 0 \
@@ -1403,7 +1410,7 @@ cd TraceHub
 
 ```bash
 cd TraceHub
-./build/HOST_Debug/tracehub \
+./build/host-memshm-debug/tracehub \
   --shm /rtt_sim \
   --addr 0x10000000 \
   --size 0 \
@@ -1415,21 +1422,21 @@ cd TraceHub
 
 ```bash
 cd TraceHub
-./build/HOST_Debug/Tests/rtt_sim_linux
+./build/host-memshm-debug/Tests/rtt_sim_linux
 ```
 
 第三个终端启动 RTOS simulator：
 
 ```bash
 cd TraceHub
-./build/HOST_Debug/Tests/rtt_sim_rtos
+./build/host-memshm-debug/Tests/rtt_sim_rtos
 ```
 
 需要同时验证 SystemView TCP 服务时，第一个终端使用带端口的命令：
 
 ```bash
 cd TraceHub
-./build/HOST_Debug/tracehub \
+./build/host-memshm-debug/tracehub \
   --shm /rtt_sim \
   --addr 0x10000000 \
   --size 0 \
@@ -1443,7 +1450,7 @@ cd TraceHub
 
 ```bash
 cd TraceHub
-./build/HOST_Debug/Tests/rtt_sim_sysview_tcp_client 127.0.0.1 19112 1 10000
+./build/host-memshm-debug/Tests/rtt_sim_sysview_tcp_client 127.0.0.1 19112 1 10000
 ```
 
 SMEM preflight 脚本用于验证 Linux SharedMem 真实芯片启动路径。它会加载或复用 `SharedMem` 模块，启动 SMEM 后端的 `tracehub`，并使用有限 `--rtt-timeout-ms` 验证 SharedMem 设备访问、mmap、RTTCB 发现、Linux/RTOS/SystemView channel layout 以及 `main_<timestamp>.log` 创建。该脚本要求目标端已经完成共享 RTT layout 集成，包括 uncache 共享内存、Linux/RTOS 一致时间戳、SystemView 跨核锁和稳定 channel 分配。
@@ -1453,7 +1460,15 @@ SMEM preflight 脚本用于验证 Linux SharedMem 真实芯片启动路径。它
 ```bash
 cd TraceHub
 ./build.sh --backend smem
-sudo bash Tests/Scripts/run-smem-preflight.sh --build-dir build/HOST_Debug -k /path/to/SharedMem.ko
+sudo bash Tests/Scripts/run-smem-preflight.sh --build-dir build/host-smem-debug -k /path/to/SharedMem.ko
+```
+
+Linux ARM64 交叉构建产物用于真实芯片 preflight 时，显式指定 ARM64 构建目录：
+
+```bash
+cd TraceHub
+./build.sh --arch linux-arm64 --backend smem --toolchain /path/to/toolchain.cmake
+sudo bash Tests/Scripts/run-smem-preflight.sh --build-dir build/linux-arm64-smem-debug -k /path/to/SharedMem.ko
 ```
 
 如果 `SharedMem` 已由外部流程加载且参数确认正确，可复用现有模块：
@@ -1465,7 +1480,7 @@ bash Tests/Scripts/run-smem-preflight.sh --use-loaded-module --log-dir ./logs
 SMEM preflight 是测试脚本，参数集合独立于 tracehub 核心 CLI。常用选项：
 
 ```bash
---build-dir <dir>          tracehub 所在构建目录，默认 build/HOST_Debug
+--build-dir <dir>          tracehub 所在构建目录，默认 build/host-smem-debug
 -k, --ko <path>            SharedMem.ko 路径，默认 /lib/modules/$(uname -r)/SharedMem.ko
 --force-reload             卸载已加载的 SharedMem 后重新加载
 --use-loaded-module        复用已加载的 SharedMem 模块

@@ -15,7 +15,7 @@ set -eEuo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
-BUILD_DIR="$ROOT_DIR/build/HOST_Debug"
+BUILD_DIR="$ROOT_DIR/build/host-smem-debug"
 RTT_REGION_ADDR="0x10040000"
 MEM_SIZE="0x20000"
 DEVICE_PATH="/dev/shared_mem0"
@@ -70,7 +70,8 @@ Options:
   -h, --help               Show this help message
 
 Examples:
-  sudo bash Tests/Scripts/run-smem-preflight.sh --build-dir build/HOST_Debug -k /path/to/SharedMem.ko
+  sudo bash Tests/Scripts/run-smem-preflight.sh --build-dir build/host-smem-debug -k /path/to/SharedMem.ko
+  sudo bash Tests/Scripts/run-smem-preflight.sh --build-dir build/linux-arm64-smem-debug -k /path/to/SharedMem.ko
   sudo bash Tests/Scripts/run-smem-preflight.sh --force-reload --rtt-timeout-ms 10000
   bash Tests/Scripts/run-smem-preflight.sh --use-loaded-module --device /dev/shared_mem0
   bash Tests/Scripts/run-smem-preflight.sh --use-loaded-module --startup-only
