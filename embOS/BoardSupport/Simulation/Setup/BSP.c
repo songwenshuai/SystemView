@@ -34,176 +34,23 @@ Purpose : BSP for embOS simulation.
   #error "EMBOS_SIM_HOST_WINDOWS, EMBOS_SIM_HOST_POSIX and EMBOS_SIM_GUI must be defined by the simulation build."
 #endif
 
-#if (EMBOS_SIM_HOST_WINDOWS != 0)
+#if ((EMBOS_SIM_HOST_WINDOWS != 0) && (EMBOS_SIM_HOST_POSIX != 0))
+  #error "Only one simulation host platform can be enabled."
+#endif
+
+#if ((EMBOS_SIM_HOST_WINDOWS == 0) && (EMBOS_SIM_HOST_POSIX == 0))
+  #error "Unsupported simulation platform."
+#endif
 
 #include "BSP.h"
 #if (EMBOS_SIM_GUI != 0)
 #include "SIM_OS.h"
 #endif
-#include <stdio.h>
-
-/*********************************************************************
-*
-*       Configuration
-*
-**********************************************************************
-*/
-
-//
-// If BSP_ENABLE_PRINT_LEDS is 1 the state of the LEDs is printed to stdout after an LED is set, cleared or toggled.
-//
-#ifndef   BSP_ENABLE_PRINT_LEDS
-  #if (EMBOS_SIM_GUI != 0)
-    #define BSP_ENABLE_PRINT_LEDS  (0)
-  #else
-    #define BSP_ENABLE_PRINT_LEDS  (1)
-  #endif
-#endif
-
-//
-// Specifies the number of LEDs shown in the terminal output.
-//
-#ifndef   BSP_PRINT_LED_COUNT
-  #define BSP_PRINT_LED_COUNT  (8)
-#endif
-
-#if ((BSP_PRINT_LED_COUNT < 1) || (BSP_PRINT_LED_COUNT > 32))
-  #error "BSP_PRINT_LED_COUNT must be between 1 and 32."
-#endif
-
-/*********************************************************************
-*
-*       Static data
-*
-**********************************************************************
-*/
-
-static unsigned int LEDs;
-#if (BSP_ENABLE_PRINT_LEDS != 0)
-static char     _Symbol[2] = {' ', 'x'};
-#endif
-
-/*********************************************************************
-*
-*       Local functions
-*
-**********************************************************************
-*/
-
-/*********************************************************************
-*
-*       _IsLEDIndexValid()
-*/
-static int _IsLEDIndexValid(int Index) {
-  return ((Index >= 0) && (Index < 32));
-}
-
-/*********************************************************************
-*
-*       _UpdateWindow()
-*/
-static void _UpdateWindow(void) {
-#if (EMBOS_SIM_GUI != 0)
-  SIM_OS_UpdateWindow();
-#endif
-}
-
-/*********************************************************************
-*
-*       _PrintLEDState()
-*/
-#if (BSP_ENABLE_PRINT_LEDS != 0)
-static void _PrintLEDState(void) {
-  int i;
-
-  for (i = 0; i < BSP_PRINT_LED_COUNT; ++i) {
-    printf("[%c] ", _Symbol[(BSP_GetLEDState(i) != 0)]);
-  }
-  printf("\n");
-  fflush(stdout);
-}
-#endif
-
-/*********************************************************************
-*
-*       _UpdateOutput()
-*/
-static void _UpdateOutput(void) {
-#if (BSP_ENABLE_PRINT_LEDS != 0)
-  _PrintLEDState();
-#endif
-  _UpdateWindow();
-}
-
-/*********************************************************************
-*
-*       Global functions
-*
-**********************************************************************
-*/
-
-/*********************************************************************
-*
-*       BSP_Init()
-*/
-void BSP_Init(void) {
-  LEDs = 0;
-  _UpdateOutput();
-}
-
-/*********************************************************************
-*
-*       BSP_SetLED()
-*/
-void BSP_SetLED(int Index) {
-  if (_IsLEDIndexValid(Index) != 0) {
-    LEDs |= (1u << Index);
-    _UpdateOutput();
-  }
-}
-
-/*********************************************************************
-*
-*       BSP_ClrLED()
-*/
-void BSP_ClrLED(int Index) {
-  if (_IsLEDIndexValid(Index) != 0) {
-    LEDs &= ~(1u << Index);
-    _UpdateOutput();
-  }
-}
-
-/*********************************************************************
-*
-*       BSP_ToggleLED()
-*/
-void BSP_ToggleLED(int Index) {
-  if (_IsLEDIndexValid(Index) != 0) {
-    LEDs ^= (1u << Index);
-    _UpdateOutput();
-  }
-}
-
-/*********************************************************************
-*
-*       BSP_GetLEDState()
-*/
-int BSP_GetLEDState(int Index) {
-  if (_IsLEDIndexValid(Index) == 0) {
-    return 0;
-  }
-  return (LEDs & (1u << Index));
-}
-
-#elif (EMBOS_SIM_HOST_POSIX != 0)
-
-#include "BSP.h"
-#if (EMBOS_SIM_GUI != 0)
-#include "SIM_OS.h"
-#endif
+#if (EMBOS_SIM_HOST_POSIX != 0)
 #include <pthread.h>
-#include <stdio.h>
 #include <stdlib.h>
+#endif
+#include <stdio.h>
 #include <string.h>
 
 /*********************************************************************
@@ -225,13 +72,62 @@ int BSP_GetLEDState(int Index) {
 #endif
 
 //
-// Specifies the number of LEDs.
+// Specifies the number of LEDs tracked by the BSP.
 //
 #ifndef   BSP_MAX_LEDS
-  #if (EMBOS_SIM_GUI != 0)
+  #if (EMBOS_SIM_HOST_WINDOWS != 0)
+    #define BSP_MAX_LEDS  (32)
+  #elif (EMBOS_SIM_GUI != 0)
     #define BSP_MAX_LEDS  (8)
   #else
     #define BSP_MAX_LEDS  (4)
+  #endif
+#endif
+
+#if (BSP_MAX_LEDS < 1)
+  #error "BSP_MAX_LEDS must be greater than zero."
+#endif
+
+#if (BSP_MAX_LEDS > 32)
+  #error "BSP_MAX_LEDS must be between 1 and 32."
+#endif
+
+//
+// Specifies the number of LEDs shown in the terminal output.
+//
+#ifndef   BSP_PRINT_LED_COUNT
+  #if (EMBOS_SIM_HOST_POSIX != 0)
+    #define BSP_PRINT_LED_COUNT  (BSP_MAX_LEDS)
+  #elif (BSP_MAX_LEDS < 8)
+    #define BSP_PRINT_LED_COUNT  (BSP_MAX_LEDS)
+  #else
+    #define BSP_PRINT_LED_COUNT  (8)
+  #endif
+#endif
+
+#if ((BSP_PRINT_LED_COUNT < 1) || (BSP_PRINT_LED_COUNT > BSP_MAX_LEDS))
+  #error "BSP_PRINT_LED_COUNT must be between 1 and BSP_MAX_LEDS."
+#endif
+
+//
+// Selects whether terminal LED output rewrites the previous LED line.
+//
+#ifndef   BSP_PRINT_LEDS_REWRITE_LINE
+  #if (EMBOS_SIM_HOST_POSIX != 0)
+    #define BSP_PRINT_LEDS_REWRITE_LINE  (1)
+  #else
+    #define BSP_PRINT_LEDS_REWRITE_LINE  (0)
+  #endif
+#endif
+
+//
+// Selects whether BSP_Init() prints the initial LED state.
+//
+#ifndef   BSP_PRINT_LEDS_ON_INIT
+  #if (EMBOS_SIM_HOST_WINDOWS != 0)
+    #define BSP_PRINT_LEDS_ON_INIT  (1)
+  #else
+    #define BSP_PRINT_LEDS_ON_INIT  (0)
   #endif
 #endif
 
@@ -242,11 +138,15 @@ int BSP_GetLEDState(int Index) {
 **********************************************************************
 */
 
+#if (EMBOS_SIM_HOST_POSIX != 0)
 static pthread_mutex_t _Lock = PTHREAD_MUTEX_INITIALIZER;
-static char            _LEDState[BSP_MAX_LEDS];
+#endif
+static unsigned char   _LEDState[BSP_MAX_LEDS];
 #if (BSP_ENABLE_PRINT_LEDS != 0)
 static char     _Symbol[2] = {' ', 'x'};
+#if (BSP_PRINT_LEDS_REWRITE_LINE != 0)
 static int      _LEDLineActive;
+#endif
 #endif
 
 /*********************************************************************
@@ -260,22 +160,26 @@ static int      _LEDLineActive;
 *
 *       _FailPthread()
 */
+#if (EMBOS_SIM_HOST_POSIX != 0)
 static void _FailPthread(const char* sText, int Error) {
   fprintf(stderr, "[ERROR] %s failed: %d\n", sText, Error);
   exit(EXIT_FAILURE);
 }
+#endif
 
 /*********************************************************************
 *
 *       _LockLEDState()
 */
 static void _LockLEDState(void) {
+#if (EMBOS_SIM_HOST_POSIX != 0)
   int Error;
 
   Error = pthread_mutex_lock(&_Lock);
   if (Error != 0) {
     _FailPthread("pthread_mutex_lock", Error);
   }
+#endif
 }
 
 /*********************************************************************
@@ -283,12 +187,14 @@ static void _LockLEDState(void) {
 *       _UnlockLEDState()
 */
 static void _UnlockLEDState(void) {
+#if (EMBOS_SIM_HOST_POSIX != 0)
   int Error;
 
   Error = pthread_mutex_unlock(&_Lock);
   if (Error != 0) {
     _FailPthread("pthread_mutex_unlock", Error);
   }
+#endif
 }
 
 /*********************************************************************
@@ -317,19 +223,63 @@ static void _UpdateWindow(void) {
 static void _PrintLEDState(void) {
   int i;
 
+#if (BSP_PRINT_LEDS_REWRITE_LINE != 0)
   if (_LEDLineActive == 0) {
     printf("\033[H\033[J");
   } else {
     printf("\033[F\033[K");
   }
-  for (i = 0; i < BSP_MAX_LEDS; ++i) {
+#endif
+  for (i = 0; i < BSP_PRINT_LED_COUNT; ++i) {
     printf("[%c] ", _Symbol[(int)_LEDState[i]]);
   }
   printf("\n");
   fflush(stdout);
+#if (BSP_PRINT_LEDS_REWRITE_LINE != 0)
   _LEDLineActive = 1;
+#endif
 }
 #endif
+
+/*********************************************************************
+*
+*       _PrintLEDStateOnChange()
+*/
+static void _PrintLEDStateOnChange(void) {
+#if (BSP_ENABLE_PRINT_LEDS != 0)
+  _PrintLEDState();
+#endif
+}
+
+/*********************************************************************
+*
+*       _SetLEDState()
+*/
+static void _SetLEDState(int Index, unsigned char State) {
+  if (_IsLEDIndexValid(Index) == 0) {
+    return;
+  }
+  _LockLEDState();
+  _LEDState[Index] = State;
+  _PrintLEDStateOnChange();
+  _UnlockLEDState();
+  _UpdateWindow();
+}
+
+/*********************************************************************
+*
+*       _ToggleLEDState()
+*/
+static void _ToggleLEDState(int Index) {
+  if (_IsLEDIndexValid(Index) == 0) {
+    return;
+  }
+  _LockLEDState();
+  _LEDState[Index] ^= 1u;
+  _PrintLEDStateOnChange();
+  _UnlockLEDState();
+  _UpdateWindow();
+}
 
 /*********************************************************************
 *
@@ -345,8 +295,11 @@ static void _PrintLEDState(void) {
 void BSP_Init(void) {
   _LockLEDState();
   memset(_LEDState, 0, sizeof(_LEDState));
-#if (BSP_ENABLE_PRINT_LEDS != 0)
+#if ((BSP_ENABLE_PRINT_LEDS != 0) && (BSP_PRINT_LEDS_REWRITE_LINE != 0))
   _LEDLineActive = 0;
+#endif
+#if ((BSP_ENABLE_PRINT_LEDS != 0) && (BSP_PRINT_LEDS_ON_INIT != 0))
+  _PrintLEDState();
 #endif
   _UnlockLEDState();
   _UpdateWindow();
@@ -357,16 +310,7 @@ void BSP_Init(void) {
 *       BSP_SetLED()
 */
 void BSP_SetLED(int Index) {
-  if (_IsLEDIndexValid(Index) == 0) {
-    return;
-  }
-  _LockLEDState();
-  _LEDState[Index] = 1;
-#if (BSP_ENABLE_PRINT_LEDS != 0)
-  _PrintLEDState();
-#endif
-  _UnlockLEDState();
-  _UpdateWindow();
+  _SetLEDState(Index, 1u);
 }
 
 /*********************************************************************
@@ -374,16 +318,7 @@ void BSP_SetLED(int Index) {
 *       BSP_ClrLED()
 */
 void BSP_ClrLED(int Index) {
-  if (_IsLEDIndexValid(Index) == 0) {
-    return;
-  }
-  _LockLEDState();
-  _LEDState[Index] = 0;
-#if (BSP_ENABLE_PRINT_LEDS != 0)
-  _PrintLEDState();
-#endif
-  _UnlockLEDState();
-  _UpdateWindow();
+  _SetLEDState(Index, 0u);
 }
 
 /*********************************************************************
@@ -391,16 +326,7 @@ void BSP_ClrLED(int Index) {
 *       BSP_ToggleLED()
 */
 void BSP_ToggleLED(int Index) {
-  if (_IsLEDIndexValid(Index) == 0) {
-    return;
-  }
-  _LockLEDState();
-  _LEDState[Index] ^= 1;
-#if (BSP_ENABLE_PRINT_LEDS != 0)
-  _PrintLEDState();
-#endif
-  _UnlockLEDState();
-  _UpdateWindow();
+  _ToggleLEDState(Index);
 }
 
 /*********************************************************************
@@ -414,13 +340,9 @@ int BSP_GetLEDState(int Index) {
     return 0;
   }
   _LockLEDState();
-  State = _LEDState[Index];
+  State = (_LEDState[Index] != 0u) ? (int)(1u << Index) : 0;
   _UnlockLEDState();
   return State;
 }
-
-#else
-  #error "Unsupported simulation platform."
-#endif
 
 /*************************** End of file ****************************/

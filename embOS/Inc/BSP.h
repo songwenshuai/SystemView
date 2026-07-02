@@ -70,6 +70,9 @@ void          BSP_Init        (void);
 void          BSP_SetLED      (int Index);
 void          BSP_ClrLED      (int Index);
 void          BSP_ToggleLED   (int Index);
+//
+// Returns (1u << Index) if the selected LED is on. Returns 0 if it is off or Index is invalid.
+//
 int           BSP_GetLEDState (int Index);
 int           BSP_FPGA_Init   (void);
 

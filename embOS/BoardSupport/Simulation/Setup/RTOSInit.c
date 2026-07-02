@@ -34,6 +34,14 @@ Purpose : Initializes and handles the hardware for embOS.
   #error "EMBOS_SIM_HOST_WINDOWS and EMBOS_SIM_HOST_POSIX must be defined by the simulation build."
 #endif
 
+#if ((EMBOS_SIM_HOST_WINDOWS != 0) && (EMBOS_SIM_HOST_POSIX != 0))
+  #error "Only one simulation host platform can be enabled."
+#endif
+
+#if ((EMBOS_SIM_HOST_WINDOWS == 0) && (EMBOS_SIM_HOST_POSIX == 0))
+  #error "Unsupported simulation platform."
+#endif
+
 #if defined(__linux__)
   #define _GNU_SOURCE
 #endif
@@ -43,10 +51,24 @@ Purpose : Initializes and handles the hardware for embOS.
 #include <Windows.h>
 #include <stdio.h>
 #include <time.h>
+
+#elif (EMBOS_SIM_HOST_POSIX != 0)
+
+#include <errno.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <time.h>
+
+#endif
+
 #include "RTOS.h"
 #include "UDPCOM.h"
 #if (OS_SUPPORT_TRACE_API != 0)
-#include "SEGGER_SYSVIEW_Win32.h"
+  #if (EMBOS_SIM_HOST_WINDOWS != 0)
+    #include "SEGGER_SYSVIEW_Win32.h"
+  #else
+    #include "SEGGER_SYSVIEW_Posix.h"
+  #endif
 #endif
 
 /*********************************************************************
@@ -63,12 +85,18 @@ Purpose : Initializes and handles the hardware for embOS.
 **********************************************************************
 */
 //
-// If between two embOS system tick ISRs more than TIME_DIFF_MAX milliseconds
-// have elapsed, then tDiff will be set to TIME_DIFF_MAX. This might occur when
-// one debugs and single steps through the application or if the CPU load is
-// very high. This  value can be changed as desired. Please consider that if
-// TIME_DIFF_MAX cuts off system ticks, that the embOS time doesn't resemble
-// the real time anymore. The limit can be disabled with a value of 0.
+// On Windows, if between two embOS system tick ISRs more than TIME_DIFF_MAX
+// milliseconds have elapsed, then tDiff will be set to TIME_DIFF_MAX. This might
+// occur when one debugs and single steps through the application or if the CPU
+// load is very high. Please consider that if TIME_DIFF_MAX cuts off system ticks,
+// the embOS time doesn't resemble the real time anymore.
+//
+// On POSIX, if the host does not schedule the tick thread for more than
+// TIME_DIFF_MAX system ticks, the next tick is re-anchored to the current
+// monotonic time. This matches the Windows simulation behavior and prevents
+// delayed host scheduling from being converted into a burst of missed ticks.
+//
+// The limit can be disabled with a value of 0.
 //
 #ifndef   TIME_DIFF_MAX
   #define TIME_DIFF_MAX  (1)
@@ -78,21 +106,38 @@ Purpose : Initializes and handles the hardware for embOS.
 *
 *       System tick settings
 */
-#define OS_TIMER_FREQ  ((OS_U32)_TimerFrequency.QuadPart)
-#define OS_TICK_FREQ   (1000u)
-#define OS_INT_FREQ    (OS_TICK_FREQ)
+#define OS_TICK_FREQ  (1000u)
+#define OS_INT_FREQ   (OS_TICK_FREQ)
 
 /*********************************************************************
 *
 *       embOSView settings
 */
+#if (EMBOS_SIM_HOST_WINDOWS != 0)
+  #if (defined(_WIN64) && (_WIN64 == 1)) || (defined(__x86_64__) && (__x86_64__ == 1))
+    #define EMBOS_SIM_HOST_64BIT  (1)
+  #else
+    #define EMBOS_SIM_HOST_64BIT  (0)
+  #endif
+#else
+  #define EMBOS_SIM_HOST_64BIT  (OS_64BIT)
+#endif
+
 #ifndef   OS_VIEW_IFSELECT
-#if (defined(_WIN64) && (_WIN64 == 1)) || (defined(__x86_64__) && (__x86_64__ == 1))
+#if (EMBOS_SIM_HOST_64BIT == 1)
   #define OS_VIEW_IFSELECT  OS_VIEW_DISABLED  // embOSView communication currently not supported for devices with 64-bit address range
 #else
   #define OS_VIEW_IFSELECT  OS_VIEW_IF_ETHERNET
 #endif
 #endif
+
+#if (EMBOS_SIM_HOST_WINDOWS != 0)
+
+/*********************************************************************
+*
+*       System tick settings
+*/
+#define OS_TIMER_FREQ  ((OS_U32)_TimerFrequency.QuadPart)
 
 /*********************************************************************
 *
@@ -168,7 +213,7 @@ static void _ISRTickThread(void) {
 *    WIN32 QueueUserAPC() API function to wake up a thread
 */
 static void APIENTRY _voidAPC(ULONG_PTR Dummy) {
-  OS_USEPARA(Dummy);
+  OS_USE_PARA(Dummy);
 }
 
 /*********************************************************************
@@ -182,15 +227,37 @@ static void APIENTRY _voidAPC(ULONG_PTR Dummy) {
 static void CALLBACK _CbSignalTickProc(UINT uID, UINT uMsg, DWORD_PTR dwUser, DWORD_PTR dw1, DWORD_PTR dw2) {
   static int IsThreadNameSet = 0;
 
-  OS_USEPARA(uID);
-  OS_USEPARA(uMsg);
-  OS_USEPARA(dw1);
-  OS_USEPARA(dw2);
+  OS_USE_PARA(uID);
+  OS_USE_PARA(uMsg);
+  OS_USE_PARA(dw1);
+  OS_USE_PARA(dw2);
   if (IsThreadNameSet == 0) {
     IsThreadNameSet = 1;
     OS_SIM_SetThreadName(-1, "Tick ISR (Helper Thread)");
   }
   QueueUserAPC(_voidAPC, (void*)dwUser, 0);
+}
+
+/*********************************************************************
+*
+*       _StartSystemTick()
+*
+*  Function description
+*    Starts the host timer source for the system tick interrupt.
+*/
+static void _StartSystemTick(void) {
+  HANDLE hISRThread;
+
+  //
+  // Get time stamp counter (TSC) frequency. Usually it's the CPU frequency divided by 1024.
+  //
+  QueryPerformanceFrequency(&_TimerFrequency);
+  //
+  // Start tick ISR
+  //
+  QueryPerformanceCounter(&_CycleStamp);  // Initial value for system tick zero.
+  hISRThread = (HANDLE)OS_SIM_CreateISRThreadEx(_ISRTickThread, "Tick ISR");
+  timeSetEvent(1, 0, _CbSignalTickProc, (DWORD_PTR)hISRThread, (TIME_PERIODIC | TIME_CALLBACK_FUNCTION));
 }
 
 /*********************************************************************
@@ -212,106 +279,7 @@ static unsigned int _OS_GetHWTimerCycles(void) {
   return Cycles;
 }
 
-/*********************************************************************
-*
-*       _OS_GetHWTimer_IntPending()
-*
-*  Function description
-*    Returns if the hardware timer interrupt pending flag is set.
-*
-*  Return value
-*    == 0: Interrupt pending flag not set.
-*    != 0: Interrupt pending flag set.
-*/
-static unsigned int _OS_GetHWTimer_IntPending(void) {
-  return 0;
-}
-
-/*********************************************************************
-*
-*       Global functions
-*
-**********************************************************************
-*/
-
-/*********************************************************************
-*
-*       OS_InitHW()
-*
-*  Function description
-*    Initialize the hardware required for embOS to run.
-*/
-void OS_InitHW(void) {
-  HANDLE hISRThread;
-
-  OS_INT_IncDI();
-  //
-  // Get time stamp counter (TSC) frequency. Usually it's the CPU frequency divided by 1024.
-  //
-  QueryPerformanceFrequency(&_TimerFrequency);
-  //
-  // Start tick ISR
-  //
-  QueryPerformanceCounter(&_CycleStamp);  // Initial value for system tick zero.
-  hISRThread = (HANDLE)OS_SIM_CreateISRThreadEx(_ISRTickThread, "Tick ISR");
-  timeSetEvent(1, 0, _CbSignalTickProc, (DWORD_PTR)hISRThread, (TIME_PERIODIC | TIME_CALLBACK_FUNCTION));
-  //
-  // Inform embOS about the timer settings
-  //
-  {
-    OS_SYSTIMER_CONFIG SysTimerConfig = {OS_TIMER_FREQ, OS_INT_FREQ, OS_TIMER_UPCOUNTING, _OS_GetHWTimerCycles, _OS_GetHWTimer_IntPending};
-    OS_TIME_ConfigSysTimer(&SysTimerConfig);
-  }
-  //
-  // Initialize communication for embOSView
-  //
-#if (OS_VIEW_IFSELECT == OS_VIEW_IF_ETHERNET)
-  UDP_Process_Init();
-#endif
-  //
-  // Configure and initialize SEGGER SystemView
-  //
-#if (OS_SUPPORT_TRACE_API != 0)
-  SEGGER_SYSVIEW_Conf();
-#endif
-  OS_INT_DecRI();
-}
-
-/*********************************************************************
-*
-*       Optional communication with embOSView
-*
-**********************************************************************
-*/
-
-/*********************************************************************
-*
-*       OS_COM_Send1()
-*
-*  Function description
-*    Sends one character.
-*/
-void OS_COM_Send1(OS_U8 c) {
-#if (OS_VIEW_IFSELECT == OS_VIEW_IF_ETHERNET)
-  UDP_Process_Send1(c);
-#elif (OS_VIEW_IFSELECT == OS_VIEW_DISABLED)
-  OS_USEPARA(c);           // Avoid compiler warning
-  OS_COM_ClearTxActive();  // Let embOS know that Tx is not busy
-#endif
-}
-
 #elif (EMBOS_SIM_HOST_POSIX != 0)
-
-#include <errno.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <time.h>
-
-#include "RTOS.h"
-#include "UDPCOM.h"
-#if (OS_SUPPORT_TRACE_API != 0)
-#include "SEGGER_SYSVIEW_Posix.h"
-#endif
 
 /*********************************************************************
 *
@@ -323,16 +291,6 @@ void OS_COM_Send1(OS_U8 c) {
 #define CYCLES_TO_NSEC(x)  ((x) * ((NSEC_PER_SEC) / (OS_TIMER_FREQ)))
 #define NSEC_TO_CYCLES(x)  ((x) / ((NSEC_PER_SEC) / (OS_TIMER_FREQ)))
 #define SEC_TO_CYCLES(x)   ((x) * (OS_TIMER_FREQ))
-
-//
-// If the host does not schedule the POSIX tick thread for more than
-// TIME_DIFF_MAX system ticks, the next tick is re-anchored to the current
-// monotonic time. This matches the Windows simulation behavior and prevents
-// delayed host scheduling from being converted into a burst of missed ticks.
-//
-#ifndef   TIME_DIFF_MAX
-  #define TIME_DIFF_MAX  (1)
-#endif
 
 #ifndef   EMBOS_SIM_TRACE_TICK
   #define EMBOS_SIM_TRACE_TICK         (0)
@@ -359,26 +317,11 @@ void OS_COM_Send1(OS_U8 c) {
 // affects the cycle resolution. By default, OS_TIMER_FREQ is set to
 // 1000000, i.e. 1 MHz, meaning that one cycle equals one microsecond.
 //
-//
 #define OS_TIMER_FREQ       (1000000)  // 1 MHz
-#define OS_TICK_FREQ        (1000)     // 1000 ticks per second
-#define OS_INT_FREQ         (OS_TICK_FREQ)
 #define OS_CYCLES_PER_TICK  (OS_TIMER_FREQ / OS_TICK_FREQ)
 
 #if (OS_TIMER_FREQ > NSEC_PER_SEC)
   #error "Timer frequency values greater than 1 GHz are not supported."
-#endif
-
-/*********************************************************************
-*
-*       embOSView settings
-*/
-#ifndef   OS_VIEW_IFSELECT
-#if (OS_64BIT == 1)
-  #define OS_VIEW_IFSELECT  OS_VIEW_DISABLED  // embOSView communication currently not supported for devices with 64-bit address range
-#else
-  #define OS_VIEW_IFSELECT  OS_VIEW_IF_ETHERNET
-#endif
 #endif
 
 /*********************************************************************
@@ -633,6 +576,17 @@ static void _SystemTickHandler(void) {
 
 /*********************************************************************
 *
+*       _StartSystemTick()
+*
+*  Function description
+*    Starts the host timer source for the system tick interrupt.
+*/
+static void _StartSystemTick(void) {
+  OS_SIM_CreateISRThreadEx(_SystemTickHandler, _SystemTickController, "System Tick ISR");
+}
+
+/*********************************************************************
+*
 *       _OS_GetHWTimerCycles()
 *
 *  Function description
@@ -654,6 +608,15 @@ static unsigned int _OS_GetHWTimerCycles(void) {
   return (unsigned int)Cycles;
 }
 
+#endif
+
+/*********************************************************************
+*
+*       Common local functions
+*
+**********************************************************************
+*/
+
 /*********************************************************************
 *
 *       _OS_GetHWTimer_IntPending()
@@ -667,6 +630,54 @@ static unsigned int _OS_GetHWTimerCycles(void) {
 */
 static unsigned int _OS_GetHWTimer_IntPending(void) {
   return 0;
+}
+
+/*********************************************************************
+*
+*       _ConfigSysTimer()
+*
+*  Function description
+*    Informs embOS about the timer settings.
+*/
+static void _ConfigSysTimer(void) {
+  OS_SYSTIMER_CONFIG SysTimerConfig = {OS_TIMER_FREQ, OS_INT_FREQ, OS_TIMER_UPCOUNTING, _OS_GetHWTimerCycles, _OS_GetHWTimer_IntPending};
+
+  //
+  // Inform embOS about the timer settings
+  //
+  OS_TIME_ConfigSysTimer(&SysTimerConfig);
+}
+
+/*********************************************************************
+*
+*       _InitEmbOSViewCommunication()
+*
+*  Function description
+*    Initializes communication for embOSView.
+*/
+static void _InitEmbOSViewCommunication(void) {
+#if (OS_VIEW_IFSELECT == OS_VIEW_IF_ETHERNET)
+  //
+  // Initialize communication for embOSView
+  //
+  UDP_Process_Init();
+#endif
+}
+
+/*********************************************************************
+*
+*       _ConfigureSystemView()
+*
+*  Function description
+*    Configures and initializes SEGGER SystemView.
+*/
+static void _ConfigureSystemView(void) {
+#if (OS_SUPPORT_TRACE_API != 0)
+  //
+  // Configure and initialize SEGGER SystemView
+  //
+  SEGGER_SYSVIEW_Conf();
+#endif
 }
 
 /*********************************************************************
@@ -685,23 +696,22 @@ static unsigned int _OS_GetHWTimer_IntPending(void) {
 */
 void OS_InitHW(void) {
   OS_INT_IncDI();
-  OS_SIM_CreateISRThreadEx(_SystemTickHandler, _SystemTickController, "System Tick ISR");
-  {
-    OS_SYSTIMER_CONFIG SysTimerConfig = {OS_TIMER_FREQ, OS_INT_FREQ, OS_TIMER_UPCOUNTING, _OS_GetHWTimerCycles, _OS_GetHWTimer_IntPending};
-    OS_TIME_ConfigSysTimer(&SysTimerConfig);
-  }
+  //
+  // Start tick ISR
+  //
+  _StartSystemTick();
+  //
+  // Inform embOS about the timer settings
+  //
+  _ConfigSysTimer();
   //
   // Initialize communication for embOSView
   //
-#if (OS_VIEW_IFSELECT == OS_VIEW_IF_ETHERNET)
-  UDP_Process_Init();
-#endif
+  _InitEmbOSViewCommunication();
   //
   // Configure and initialize SEGGER SystemView
   //
-#if (OS_SUPPORT_TRACE_API != 0)
-  SEGGER_SYSVIEW_Conf();
-#endif
+  _ConfigureSystemView();
   OS_INT_DecRI();
 }
 
@@ -727,9 +737,5 @@ void OS_COM_Send1(OS_U8 c) {
   OS_COM_ClearTxActive();  // Let embOS know that Tx is not busy
 #endif
 }
-
-#else
-  #error "Unsupported simulation platform."
-#endif
 
 /*************************** End of file ****************************/
