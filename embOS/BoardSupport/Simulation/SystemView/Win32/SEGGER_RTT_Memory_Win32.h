@@ -9,7 +9,7 @@
 *                                                                    *
 **********************************************************************
 ----------------------------------------------------------------------
-File    : SEGGER_RTT_Memory.h
+File    : SEGGER_RTT_Memory_Win32.h
 Purpose : MEMSHM RTT memory ownership for embOS simulation.
 ---------------------------END-OF-HEADER------------------------------
 */

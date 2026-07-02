@@ -55,7 +55,7 @@ global symbols and relocation-required local labels needed for linking.
 Simulation-specific SEGGER configuration headers, the MEMSHM RTT memory owner
 API, the Win32/POSIX MEMSHM owner implementations, platform SystemView
 configuration sources and the embOS SystemView interface are stored in the local
-SEGGER directory so this board support package owns its target configuration.
+SystemView directory so this board support package owns its target configuration.
 
 The simulation target maps host shared memory object /rtt_sim and uses the
 local SEGGER_RTT_Conf.h and SEGGER_SYSVIEW_Conf.h for both shared targets.

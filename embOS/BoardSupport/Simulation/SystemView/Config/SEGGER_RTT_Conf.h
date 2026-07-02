@@ -20,7 +20,13 @@ Purpose : User configuration file for RTT.
 #ifndef SEGGER_RTT_CONF_H
 #define SEGGER_RTT_CONF_H
 
-#include "SEGGER_RTT_Memory.h"
+#if defined(EMBOS_SIM_HOST_WINDOWS) && (EMBOS_SIM_HOST_WINDOWS != 0)
+  #include "SEGGER_RTT_Memory_Win32.h"
+#elif defined(EMBOS_SIM_HOST_POSIX) && (EMBOS_SIM_HOST_POSIX != 0)
+  #include "SEGGER_RTT_Memory_Posix.h"
+#else
+  #error "Unsupported embOS simulation host platform"
+#endif
 
 /*********************************************************************
 *
