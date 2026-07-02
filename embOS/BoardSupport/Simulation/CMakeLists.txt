@@ -35,7 +35,7 @@ project(embOSSimulationStart
 )
 
 # ==============================================================================
-# Build Options
+# Build Configuration Options
 # ==============================================================================
 
 set(EMBOS_SIM_DEFAULT_APPLICATION_SOURCE "Application/OS_StartLEDBlink.c")
@@ -845,7 +845,7 @@ set_target_properties(Start PROPERTIES
 )
 
 # ==============================================================================
-# Configuration Summary
+# Build Summary
 # ==============================================================================
 
 message(STATUS "")

@@ -243,6 +243,10 @@ validate_args() {
     log_error "Invalid number of jobs: ${JOBS}"
   fi
 
+  if [[ "${JOBS}" -lt 1 ]]; then
+    log_error "Invalid number of jobs: ${JOBS}"
+  fi
+
   if [[ -n "${MEMORY_BACKEND}" && "${MEMORY_BACKEND}" != "smem" && "${MEMORY_BACKEND}" != "memshm" ]]; then
     log_error "Invalid memory backend: ${MEMORY_BACKEND}. Use smem or memshm."
   fi
@@ -528,6 +532,10 @@ print_configuration() {
 clean_outputs() {
   if [[ "${CLEAN_BUILD}" != true ]]; then
     return
+  fi
+
+  if [[ "${SCRIPT_DIR}/${BUILD_DIR}" != "${SCRIPT_DIR}/build/"* ]]; then
+    log_error "Refusing to clean unexpected build directory: ${SCRIPT_DIR}/${BUILD_DIR}"
   fi
 
   if [[ -d "${SCRIPT_DIR}/${BUILD_DIR}" ]]; then
