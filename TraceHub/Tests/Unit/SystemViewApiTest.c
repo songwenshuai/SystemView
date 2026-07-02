@@ -18,6 +18,7 @@ Purpose : Unit checks for SystemView service APIs
 #include "TestCommon.h"
 
 #define STUB_THREAD_RESULT_COUNT 4u
+#define STUB_SOCKET_BUFFER_SIZE  128u
 
 static int      _stub_rtt_up_check_result;
 static int      _stub_rtt_down_check_result;
@@ -39,6 +40,17 @@ static unsigned _stub_sleep_count;
 static unsigned _stub_rtt_up_check_count;
 static unsigned _stub_rtt_down_check_count;
 static unsigned _stub_rtt_read_count;
+static unsigned char _stub_socket_receive_data[STUB_SOCKET_BUFFER_SIZE];
+static unsigned char _stub_socket_send_data[STUB_SOCKET_BUFFER_SIZE];
+static unsigned _stub_socket_receive_size;
+static unsigned _stub_socket_receive_offset;
+static unsigned _stub_socket_receive_chunk_size;
+static unsigned _stub_socket_send_size;
+static unsigned _stub_socket_send_chunk_size;
+static int      _stub_socket_readable_result;
+static int      _stub_socket_writeable_result;
+static int      _stub_socket_receive_error;
+static int      _stub_socket_send_error;
 
 static void _ResetSystemViewStubs(void) {
     unsigned i;
@@ -65,6 +77,17 @@ static void _ResetSystemViewStubs(void) {
     _stub_rtt_up_check_count = 0u;
     _stub_rtt_down_check_count = 0u;
     _stub_rtt_read_count = 0u;
+    memset(_stub_socket_receive_data, 0, sizeof(_stub_socket_receive_data));
+    memset(_stub_socket_send_data, 0, sizeof(_stub_socket_send_data));
+    _stub_socket_receive_size = 0u;
+    _stub_socket_receive_offset = 0u;
+    _stub_socket_receive_chunk_size = 0u;
+    _stub_socket_send_size = 0u;
+    _stub_socket_send_chunk_size = 0u;
+    _stub_socket_readable_result = 1;
+    _stub_socket_writeable_result = 1;
+    _stub_socket_receive_error = 0;
+    _stub_socket_send_error = 0;
 }
 
 void LOG_Debug(const char *file, int line, const char *function, const char *sFormat, ...) {
@@ -228,6 +251,74 @@ int SYS_SOCKET_ListenAtTCPAddr(SYS_SOCKET_HANDLE hSocket,
     return _stub_socket_listen_result;
 }
 
+int SYS_SOCKET_IsReadable(SYS_SOCKET_HANDLE hSocket, int TimeoutMs) {
+    (void)hSocket;
+    (void)TimeoutMs;
+    if (_stub_socket_readable_result != 1) {
+        return _stub_socket_readable_result;
+    }
+    return (_stub_socket_receive_offset < _stub_socket_receive_size) ? 1 : 0;
+}
+
+int SYS_SOCKET_IsWriteable(SYS_SOCKET_HANDLE hSocket, int TimeoutMs) {
+    (void)hSocket;
+    (void)TimeoutMs;
+    return _stub_socket_writeable_result;
+}
+
+int SYS_SOCKET_Receive(SYS_SOCKET_HANDLE hSocket, void *pData, unsigned MaxNumBytes) {
+    unsigned NumBytes;
+
+    (void)hSocket;
+    if (_stub_socket_receive_error != 0) {
+        return _stub_socket_receive_error;
+    }
+    if ((pData == NULL) || (MaxNumBytes == 0u)) {
+        return 0;
+    }
+    if (_stub_socket_receive_offset >= _stub_socket_receive_size) {
+        return 0;
+    }
+
+    NumBytes = _stub_socket_receive_size - _stub_socket_receive_offset;
+    if (NumBytes > MaxNumBytes) {
+        NumBytes = MaxNumBytes;
+    }
+    if ((_stub_socket_receive_chunk_size > 0u) &&
+        (NumBytes > _stub_socket_receive_chunk_size)) {
+        NumBytes = _stub_socket_receive_chunk_size;
+    }
+    memcpy(pData,
+           _stub_socket_receive_data + _stub_socket_receive_offset,
+           NumBytes);
+    _stub_socket_receive_offset += NumBytes;
+    return (int)NumBytes;
+}
+
+int SYS_SOCKET_Send(SYS_SOCKET_HANDLE hSocket, const void *pData, unsigned NumBytes) {
+    unsigned CopySize;
+
+    (void)hSocket;
+    if (_stub_socket_send_error != 0) {
+        return _stub_socket_send_error;
+    }
+    if ((pData == NULL) || (NumBytes == 0u)) {
+        return 0;
+    }
+
+    CopySize = NumBytes;
+    if ((_stub_socket_send_chunk_size > 0u) &&
+        (CopySize > _stub_socket_send_chunk_size)) {
+        CopySize = _stub_socket_send_chunk_size;
+    }
+    if (CopySize > (sizeof(_stub_socket_send_data) - _stub_socket_send_size)) {
+        return -1;
+    }
+    memcpy(_stub_socket_send_data + _stub_socket_send_size, pData, CopySize);
+    _stub_socket_send_size += CopySize;
+    return (int)CopySize;
+}
+
 void _SystemView_ServiceThread(void *pArg) {
     (void)pArg;
 }
@@ -296,6 +387,56 @@ static int _TestSystemViewRecordFileHeader(void) {
     TEST_ASSERT(Test_ReadTmpFile(null_state_file, buffer, sizeof(buffer)) == 0);
     TEST_ASSERT(strstr(buffer, "; Description TraceHub SystemView RTT recording, channel 0\n") != NULL);
     fclose(null_state_file);
+    return 0;
+}
+
+static int _TestSystemViewHandshakeProtocol(void) {
+    SystemView_State_t state;
+    unsigned char      hello[SYSVIEW_HELLO_SIZE];
+    unsigned char      expected_response[SYSVIEW_HELLO_SIZE];
+
+    _ResetSystemViewStubs();
+    memset(&state, 0, sizeof(state));
+    state.Running = true;
+    TEST_ASSERT(SystemView_BuildHelloMessage(hello, sizeof(hello)));
+    memcpy(_stub_socket_receive_data, hello, sizeof(hello));
+    _stub_socket_receive_size = sizeof(hello);
+    _stub_socket_receive_chunk_size = 7u;
+    _stub_socket_send_chunk_size = 5u;
+
+    TEST_ASSERT(_SystemView_PerformHandshake(&state, (SYS_SOCKET_HANDLE)50));
+    TEST_ASSERT(_stub_socket_receive_offset == SYSVIEW_HELLO_SIZE);
+    TEST_ASSERT(_stub_socket_send_size == SYSVIEW_HELLO_SIZE);
+    TEST_ASSERT(SystemView_BuildHelloMessage(expected_response, sizeof(expected_response)));
+    TEST_ASSERT(memcmp(_stub_socket_send_data,
+                       expected_response,
+                       sizeof(expected_response)) == 0);
+
+    _ResetSystemViewStubs();
+    memset(&state, 0, sizeof(state));
+    state.Running = true;
+    TEST_ASSERT(SystemView_BuildHelloMessage(hello, sizeof(hello)));
+    hello[0] = 'X';
+    memcpy(_stub_socket_receive_data, hello, sizeof(hello));
+    _stub_socket_receive_size = sizeof(hello);
+    TEST_ASSERT(!_SystemView_PerformHandshake(&state, (SYS_SOCKET_HANDLE)51));
+    TEST_ASSERT(_stub_socket_send_size == 0u);
+
+    _ResetSystemViewStubs();
+    memset(&state, 0, sizeof(state));
+    state.Running = true;
+    _stub_socket_readable_result = 0;
+    TEST_ASSERT(!_SystemView_PerformHandshake(&state, (SYS_SOCKET_HANDLE)52));
+    TEST_ASSERT(_stub_socket_send_size == 0u);
+
+    _ResetSystemViewStubs();
+    memset(&state, 0, sizeof(state));
+    state.Running = true;
+    TEST_ASSERT(SystemView_BuildHelloMessage(hello, sizeof(hello)));
+    memcpy(_stub_socket_receive_data, hello, sizeof(hello));
+    _stub_socket_receive_size = sizeof(hello);
+    _stub_socket_send_error = SYS_SOCKET_ERR_CONNRESET;
+    TEST_ASSERT(!_SystemView_PerformHandshake(&state, (SYS_SOCKET_HANDLE)53));
     return 0;
 }
 
@@ -762,6 +903,7 @@ static int _TestSystemViewRecoveryAndChannelHelpers(void) {
 int main(void) {
     TEST_RUN(_TestSystemViewHelloHelpers);
     TEST_RUN(_TestSystemViewRecordFileHeader);
+    TEST_RUN(_TestSystemViewHandshakeProtocol);
     TEST_RUN(_TestSystemViewLifecycle);
     TEST_RUN(_TestSystemViewRecordStartAndStop);
     TEST_RUN(_TestSystemViewNetworkStartAndStop);

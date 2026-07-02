@@ -22,7 +22,6 @@ fi
 
 SHM_NAME="/rtt_sim"
 BASE_ADDRESS="0x10000000"
-SYSVIEW_PORT="19112"
 POLL_TIMEOUT_SEC=20
 
 TRACEHUB_PID=""
@@ -60,8 +59,6 @@ dump_log_tail() {
         "linux.err"
         "rtos.out"
         "rtos.err"
-        "sysview_client.out"
-        "sysview_client.err"
     )
 
     for file in "${files[@]}"; do
@@ -280,17 +277,14 @@ smoke_artifacts_ready() {
     local linux_log
     local rtos_log
     local swimlane_log
-    local sysview_file
 
     linux_log="$(find_first_file 'linux_*.log')"
     rtos_log="$(find_first_file 'rtos_*.log')"
     swimlane_log="$(find_first_file 'swimlane_*.log')"
-    sysview_file="$(find_first_file 'sysview_*.SVDat')"
 
     [ -n "$linux_log" ] || return 1
     [ -n "$rtos_log" ] || return 1
     [ -n "$swimlane_log" ] || return 1
-    [ -n "$sysview_file" ] || return 1
 
     grep -q "Linux: Application event" "$linux_log" || return 1
     grep -q "RTOS: Task scheduler tick" "$rtos_log" || return 1
@@ -310,12 +304,10 @@ main() {
     local tracehub_bin
     local linux_sim_bin
     local rtos_sim_bin
-    local sysview_tcp_client_bin
 
     tracehub_bin="$(resolve_executable "tracehub" "tracehub")"
     linux_sim_bin="$(resolve_executable "rtt_sim_linux" "Tests/rtt_sim_linux")"
     rtos_sim_bin="$(resolve_executable "rtt_sim_rtos" "Tests/rtt_sim_rtos")"
-    sysview_tcp_client_bin="$(resolve_executable "rtt_sim_sysview_tcp_client" "Tests/rtt_sim_sysview_tcp_client")"
 
     WORK_DIR="$(mktemp -d "${TMPDIR:-/tmp}/tracehub-smoke.XXXXXX")"
     trap cleanup EXIT
@@ -331,7 +323,6 @@ main() {
         --memshm-reset \
         --rtt-timeout-ms 10000 \
         --swimlane \
-        --systemview-port "$SYSVIEW_PORT" \
         > tracehub.out 2> tracehub.err &
     TRACEHUB_PID="$!"
 
@@ -347,11 +338,8 @@ main() {
 
     wait_until "$POLL_TIMEOUT_SEC" "MEMSHM smoke output artifacts" smoke_artifacts_ready
 
-    "$sysview_tcp_client_bin" 127.0.0.1 "$SYSVIEW_PORT" 1 10000 \
-        > sysview_client.out 2> sysview_client.err
-
     printf "MEMSHM smoke validation passed\n"
-    printf "Validated clean source text logs, clean swimlane ordering, SystemView SVDat output, and SystemView TCP delivery\n"
+    printf "Validated clean source text logs and clean swimlane ordering\n"
 }
 
 main "$@"

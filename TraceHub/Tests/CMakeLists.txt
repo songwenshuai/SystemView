@@ -5,7 +5,6 @@
 # These test programs simulate heterogeneous multi-core system for RTT testing:
 #   - rtt_sim_linux : Simulates Linux logs and owns RTT control block init
 #   - rtt_sim_rtos  : Simulates RTOS logs and waits for RTT control block
-# Both programs also generate SEGGER SystemView events on RTT channel 2.
 #
 # Usage:
 #   mkdir build && cd build
@@ -64,9 +63,6 @@ set(TRACEHUB_SERVICES_DIR ${TRACEHUB_SOURCE_DIR}/Services)
 set(SEGGER_RTT_SOURCE_DIR ${TRACEHUB_SOURCE_DIR}/../RTT/RTT)
 set(SEGGER_RTT_SEGGER_DIR ${TRACEHUB_SOURCE_DIR}/../RTT/SEGGER)
 set(SEGGER_SYSVIEW_SOURCE_DIR ${TRACEHUB_SOURCE_DIR}/../SystemView/SYSVIEW)
-set(SEGGER_SOURCE_DIR ${TRACEHUB_SOURCE_DIR}/../SystemView/SEGGER)
-set(SEGGER_CONFIG_DIR ${TRACEHUB_SOURCE_DIR}/../SystemView/Config)
-set(SYSVIEW_CONFIG_DIR ${CMAKE_CURRENT_SOURCE_DIR}/SystemViewConfig)
 set(TRACEHUB_TEST_COMMON_SOURCE ${CMAKE_CURRENT_SOURCE_DIR}/Unit/TestCommon.c)
 
 # Common source files needed by test programs
@@ -84,14 +80,11 @@ set(COMMON_SOURCES
     ${TRACEHUB_LOG_DIR}/LogSwimLane.c
     ${TRACEHUB_CORE_DIR}/Utils.c
     ${TRACEHUB_CORE_DIR}/SYS.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/Sim/RTTSimSystemView.c
     ${SEGGER_RTT_SOURCE_DIR}/SEGGER_RTT.c
-    ${SEGGER_SYSVIEW_SOURCE_DIR}/SEGGER_SYSVIEW.c
 )
 
 # Include directories
 set(COMMON_INCLUDES
-    ${SYSVIEW_CONFIG_DIR}
     ${CMAKE_CURRENT_SOURCE_DIR}/Sim
     ${TRACEHUB_APP_DIR}
     ${TRACEHUB_CORE_DIR}
@@ -102,14 +95,12 @@ set(COMMON_INCLUDES
     ${SEGGER_RTT_SOURCE_DIR}
     ${SEGGER_RTT_SEGGER_DIR}
     ${SEGGER_SYSVIEW_SOURCE_DIR}
-    ${SEGGER_SOURCE_DIR}
-    ${SEGGER_CONFIG_DIR}
 )
 
-# Compile definitions for Linux, RTOS, and SystemView channel support
+# Compile definitions for Linux and RTOS RTT text channel support
 set(COMMON_DEFINITIONS
-    SEGGER_RTT_MAX_NUM_UP_BUFFERS=3
-    SEGGER_RTT_MAX_NUM_DOWN_BUFFERS=3
+    SEGGER_RTT_MAX_NUM_UP_BUFFERS=2
+    SEGGER_RTT_MAX_NUM_DOWN_BUFFERS=2
     BUFFER_SIZE_UP=1048576
     BUFFER_SIZE_DOWN=1048576
     SEGGER_RTT_MODE_DEFAULT=SEGGER_RTT_MODE_BLOCK_IF_FIFO_FULL
@@ -146,12 +137,6 @@ if(BUILD_SIM_TESTS)
     target_compile_definitions(rtt_sim_linux PRIVATE ${COMMON_DEFINITIONS})
     target_link_libraries(rtt_sim_linux PRIVATE ${COMMON_LIBRARIES})
 
-    add_executable(rtt_sim_sysview_tcp_client
-        Sim/RTTSimSystemViewTCPClient.c
-    )
-
-    target_include_directories(rtt_sim_sysview_tcp_client PRIVATE ${COMMON_INCLUDES})
-    target_link_libraries(rtt_sim_sysview_tcp_client PRIVATE ${COMMON_LIBRARIES})
 endif()
 
 # ==============================================================================
@@ -378,6 +363,7 @@ if(BUILD_UNIT_TESTS)
         ${TRACEHUB_TEST_COMMON_SOURCE}
         ${TRACEHUB_SERVICES_DIR}/SystemViewService.c
         ${TRACEHUB_SERVICES_DIR}/SystemViewState.c
+        ${TRACEHUB_SERVICES_DIR}/SystemViewHandshake.c
         ${TRACEHUB_SERVICES_DIR}/SystemViewRecord.c
         ${TRACEHUB_CORE_DIR}/ByteQueue.c
     )
@@ -398,8 +384,8 @@ message(STATUS "TraceHub Test Programs")
 message(STATUS "==============================================================================")
 message(STATUS "  TraceHub Source Dir:  ${TRACEHUB_SOURCE_DIR}")
 if(BUILD_SIM_TESTS)
-    message(STATUS "  UP Buffers:      3")
-    message(STATUS "  DOWN Buffers:    3")
+    message(STATUS "  UP Buffers:      2")
+    message(STATUS "  DOWN Buffers:    2")
     message(STATUS "  Memory Backend:  MEMSHM (host shared memory)")
 endif()
 message(STATUS "  Unit Tests:      ${BUILD_UNIT_TESTS}")
@@ -407,9 +393,8 @@ message(STATUS "  Simulation:      ${BUILD_SIM_TESTS}")
 message(STATUS "")
 message(STATUS "Targets:")
 if(BUILD_SIM_TESTS)
-    message(STATUS "  - rtt_sim_linux : Linux simulator (owns RTT CB init, writes SystemView events)")
-    message(STATUS "  - rtt_sim_rtos  : RTOS simulator (waits for RTT CB, writes SystemView events)")
-    message(STATUS "  - rtt_sim_sysview_tcp_client : SystemView TCP smoke client")
+    message(STATUS "  - rtt_sim_linux : Linux text log simulator (owns RTT CB init)")
+    message(STATUS "  - rtt_sim_rtos  : RTOS text log simulator (waits for RTT CB)")
 endif()
 if(BUILD_UNIT_TESTS)
     message(STATUS "  - test_logline_parser : timestamp parser unit checks")

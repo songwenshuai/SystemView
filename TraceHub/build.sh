@@ -545,8 +545,7 @@ clean_outputs() {
 
   rm -f "${SCRIPT_DIR}/${APP_BIN}" \
         "${SCRIPT_DIR}/rtt_sim_rtos" \
-        "${SCRIPT_DIR}/rtt_sim_linux" \
-        "${SCRIPT_DIR}/rtt_sim_sysview_tcp_client"
+        "${SCRIPT_DIR}/rtt_sim_linux"
 }
 
 configure_cmake() {
@@ -627,9 +626,6 @@ print_build_summary() {
   fi
   if [[ "${BUILD_SIM_TESTS}" == "ON" && -f "${SCRIPT_DIR}/${BUILD_DIR}/Tests/rtt_sim_linux" ]]; then
     echo "  ${SCRIPT_DIR}/${BUILD_DIR}/Tests/rtt_sim_linux"
-  fi
-  if [[ "${BUILD_SIM_TESTS}" == "ON" && -f "${SCRIPT_DIR}/${BUILD_DIR}/Tests/rtt_sim_sysview_tcp_client" ]]; then
-    echo "  ${SCRIPT_DIR}/${BUILD_DIR}/Tests/rtt_sim_sysview_tcp_client"
   fi
   echo ""
 

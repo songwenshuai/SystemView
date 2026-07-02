@@ -44,7 +44,6 @@
 ----------------------------------------------------------------------
 File    : RTTSimLinux.c
 Purpose : Simulate Linux logs written to RTT channel 0
-          and SystemView multi-core events to RTT channel 2.
           Linux app is the SOLE INITIALIZER of RTT control block.
           First startup: initializes RTTCB.
           Restart: reuses existing valid RTTCB (no re-init).
@@ -68,9 +67,7 @@ Purpose : Simulate Linux logs written to RTT channel 0
 #include "RTTMemory.h"
 #include "SYS.h"
 #include "SEGGER_RTT.h"
-#include "SEGGER_SYSVIEW_Conf.h"
 #include "RTTSimCommon.h"
-#include "RTTSimSystemView.h"
 
 /*********************************************************************
 *
@@ -83,16 +80,8 @@ Purpose : Simulate Linux logs written to RTT channel 0
 #define SIM_BASE_ADDRESS        UINT64_C(0x10000000)
 #define SIM_LINUX_CHANNEL       0
 #define SIM_RTOS_CHANNEL        1
-#define SIM_SYSVIEW_CHANNEL     SEGGER_SYSVIEW_RTT_CHANNEL
 #define SIM_LOG_INTERVAL_MS     50
-#define SIM_NUM_CHANNELS        3
-#define SIM_SYSVIEW_CPU_FREQ_HZ UINT32_C(1200000000)
-#define SIM_SYSVIEW_RAM_BASE    UINT32_C(0x00000000)
-#define SIM_SYSVIEW_TASK_BASE   UINT32_C(0x10010000)
-#define SIM_SYSVIEW_STACK_BASE  UINT32_C(0x10080000)
-#define SIM_SYSVIEW_MARKER_BASE UINT32_C(0x10001000)
-#define SIM_SYSVIEW_TIMER_BASE  UINT32_C(0x10020000)
-#define SIM_SYSVIEW_IRQ_BASE    32u
+#define SIM_NUM_CHANNELS        2
 
 /*********************************************************************
 *
@@ -142,9 +131,7 @@ int main(int argc, char *argv[]) {
     int      ret;
     unsigned log_count = 0;
     unsigned next_log_count;
-    unsigned sysview_cycle_count = 0;
     unsigned load_percent;
-    unsigned sysview_bytes;
     uint64_t timestamp_us;
     char     log_msg[256];
     unsigned message_len;
@@ -152,7 +139,6 @@ int main(int argc, char *argv[]) {
     int      exit_code = 0;
     uintptr_t rtt_address;
     size_t    rtt_region_size;
-    RTT_SIM_SYSVIEW_CoreConfig_t sysview_config;
 
     (void)argc;
     (void)argv;
@@ -164,7 +150,6 @@ int main(int argc, char *argv[]) {
     printf("  Shared Memory: %s\n", SIM_SHM_NAME);
     printf("  Backend Addr:  0x%016" PRIx64 "\n", SIM_BASE_ADDRESS);
     printf("  RTT Channel:   %d (Linux)\n", SIM_LINUX_CHANNEL);
-    printf("  RTT Channel:   %d (SystemView trace)\n", SIM_SYSVIEW_CHANNEL);
     printf("==============================================\n\n");
     //
     // Setup signal handler (don't restart syscalls after signal)
@@ -219,31 +204,6 @@ int main(int argc, char *argv[]) {
     printf("[Linux] RTT CB ready\n");
     printf("[Linux] Channel %d (Linux) available\n", SIM_LINUX_CHANNEL);
     printf("[Linux] Channel %d (RTOS) available\n", SIM_RTOS_CHANNEL);
-    printf("[Linux] Channel %d (SystemView trace) available\n", SIM_SYSVIEW_CHANNEL);
-
-    memset(&sysview_config, 0, sizeof(sysview_config));
-    sysview_config.rtt_address      = rtt_address;
-    sysview_config.rtt_region_size  = rtt_region_size;
-    sysview_config.channel          = SIM_SYSVIEW_CHANNEL;
-    sysview_config.num_channels     = SIM_NUM_CHANNELS;
-    sysview_config.core_id          = 0u;
-    sysview_config.lock_owner       = true;
-    sysview_config.core_name        = "Linux";
-    sysview_config.application_name = "tracehub-multicore-sim";
-    sysview_config.device_name      = "MEMSHM heterogeneous target";
-    sysview_config.os_name          = "Linux";
-    sysview_config.cpu_freq_hz      = SIM_SYSVIEW_CPU_FREQ_HZ;
-    sysview_config.ram_base         = SIM_SYSVIEW_RAM_BASE;
-    sysview_config.task_base        = SIM_SYSVIEW_TASK_BASE;
-    sysview_config.stack_base       = SIM_SYSVIEW_STACK_BASE;
-    sysview_config.marker_base      = SIM_SYSVIEW_MARKER_BASE;
-    sysview_config.timer_base       = SIM_SYSVIEW_TIMER_BASE;
-    sysview_config.interrupt_base   = SIM_SYSVIEW_IRQ_BASE;
-    if (RTT_SIM_SYSVIEW_StartCore(&sysview_config) != 0) {
-        fprintf(stderr, "[Linux] ERROR: Failed to start SystemView event generator\n");
-        RTTMem_Cleanup();
-        return 1;
-    }
     snprintf(log_msg, sizeof(log_msg),
              "Linux boot banner without timestamp\r\n");
     message_len = (unsigned)strlen(log_msg);
@@ -255,7 +215,6 @@ int main(int argc, char *argv[]) {
                 SIM_LINUX_CHANNEL,
                 bytes_written,
                 message_len);
-        RTT_SIM_SYSVIEW_StopCore();
         RTTMem_Cleanup();
         return 1;
     }
@@ -295,21 +254,13 @@ int main(int argc, char *argv[]) {
             break;
         }
 
-        sysview_cycle_count++;
-        sysview_bytes = RTT_SIM_SYSVIEW_RecordCycle(sysview_cycle_count, load_percent);
-        printf("SystemView [ch%d Linux]: event cycle #%u (%u bytes)\n",
-               SIM_SYSVIEW_CHANNEL, sysview_cycle_count, sysview_bytes);
-
         SYS_Sleep(SIM_LOG_INTERVAL_MS);
     }
     //
     // Cleanup
     //
-    RTT_SIM_SYSVIEW_StopCore();
     printf("\nLinux Simulator shutting down...\n");
     printf("Total logs sent: %u\n", log_count);
-    printf("Total SystemView cycles sent: %u\n", sysview_cycle_count);
-    printf("Total SystemView bytes recorded: %" PRIu64 "\n", RTT_SIM_SYSVIEW_GetRecordedBytes());
     RTTMem_Cleanup();
     printf("Cleanup complete\n");
 
