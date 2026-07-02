@@ -139,7 +139,9 @@ static int _TestWhitespaceHelpers(void) {
 
 static int _TestUtf8BoundaryAdjustment(void) {
     static const char text[] = "A\xE2\x82\xAC""B";
+    static const char four_byte_text[] = "A\xF0\x9F\x98\x80""B";
     static const char continuation[] = "\x82";
+    static const char invalid_lead[] = "A\xF8""B";
 
     TEST_ASSERT(LogLineParser_AdjustUtf8Boundary(NULL, 1u) == 0u);
     TEST_ASSERT(LogLineParser_AdjustUtf8Boundary(text, 0u) == 0u);
@@ -149,6 +151,10 @@ static int _TestUtf8BoundaryAdjustment(void) {
     TEST_ASSERT(LogLineParser_AdjustUtf8Boundary(text, 4u) == 4u);
     TEST_ASSERT(LogLineParser_AdjustUtf8Boundary(text, 5u) == 5u);
     TEST_ASSERT(LogLineParser_AdjustUtf8Boundary(continuation, 1u) == 0u);
+    TEST_ASSERT(LogLineParser_AdjustUtf8Boundary(four_byte_text, 2u) == 1u);
+    TEST_ASSERT(LogLineParser_AdjustUtf8Boundary(four_byte_text, 4u) == 1u);
+    TEST_ASSERT(LogLineParser_AdjustUtf8Boundary(four_byte_text, 5u) == 5u);
+    TEST_ASSERT(LogLineParser_AdjustUtf8Boundary(invalid_lead, 2u) == 2u);
     return 0;
 }
 
@@ -197,6 +203,21 @@ int main(void) {
         return 1;
     }
     if (_ExpectNoTimestamp("[12:00:60] clock") != 0) {
+        return 1;
+    }
+    if (_ExpectNoTimestamp("[18446744073709551616] overflow") != 0) {
+        return 1;
+    }
+    if (_ExpectNoTimestamp("[5124095576030432:00:00] overflow") != 0) {
+        return 1;
+    }
+    if (_ExpectNoTimestamp("[12::00] clock") != 0) {
+        return 1;
+    }
+    if (_ExpectNoTimestamp("[12:00:] clock") != 0) {
+        return 1;
+    }
+    if (_ExpectNoTimestamp("[12:00:00.] clock") != 0) {
         return 1;
     }
     if (_ExpectNoTimestamp("[123]message") != 0) {

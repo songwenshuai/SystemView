@@ -302,21 +302,40 @@ if(BUILD_UNIT_TESTS)
         add_test(NAME test_rtt_smem_backend COMMAND test_rtt_smem_backend)
     endif()
 
-    add_executable(test_app_api
-        Unit/AppApiTest.c
+    add_executable(test_app_options
+        Unit/AppOptionsTest.c
         ${TRACEHUB_TEST_COMMON_SOURCE}
         ${TRACEHUB_APP_DIR}/OptionsApi.c
         ${TRACEHUB_APP_DIR}/OptionsParse.c
         ${TRACEHUB_APP_DIR}/OptionsGetoptWin.c
+        ${TRACEHUB_APP_DIR}/CLI.c
+    )
+
+    target_include_directories(test_app_options PRIVATE ${COMMON_INCLUDES})
+    target_compile_definitions(test_app_options PRIVATE ${COMMON_DEFINITIONS})
+    add_test(NAME test_app_options COMMAND test_app_options)
+
+    add_executable(test_app_service_plan
+        Unit/AppServicePlanTest.c
+        ${TRACEHUB_TEST_COMMON_SOURCE}
         ${TRACEHUB_APP_DIR}/ServicePlan.c
+    )
+
+    target_include_directories(test_app_service_plan PRIVATE ${COMMON_INCLUDES})
+    target_compile_definitions(test_app_service_plan PRIVATE ${COMMON_DEFINITIONS})
+    add_test(NAME test_app_service_plan COMMAND test_app_service_plan)
+
+    add_executable(test_app_runloop
+        Unit/AppRunLoopTest.c
+        ${TRACEHUB_TEST_COMMON_SOURCE}
         ${TRACEHUB_APP_DIR}/CLI.c
         ${TRACEHUB_APP_DIR}/TraceHubSignal.c
         ${TRACEHUB_APP_DIR}/RunLoop.c
     )
 
-    target_include_directories(test_app_api PRIVATE ${COMMON_INCLUDES})
-    target_compile_definitions(test_app_api PRIVATE ${COMMON_DEFINITIONS})
-    add_test(NAME test_app_api COMMAND test_app_api)
+    target_include_directories(test_app_runloop PRIVATE ${COMMON_INCLUDES})
+    target_compile_definitions(test_app_runloop PRIVATE ${COMMON_DEFINITIONS})
+    add_test(NAME test_app_runloop COMMAND test_app_runloop)
 
     add_executable(test_corelog_recorder_api
         Unit/CoreLogRecorderApiTest.c
@@ -340,23 +359,34 @@ if(BUILD_UNIT_TESTS)
     target_link_libraries(test_corelog_recorder_api PRIVATE ${COMMON_LIBRARIES})
     add_test(NAME test_corelog_recorder_api COMMAND test_corelog_recorder_api)
 
-    add_executable(test_services_api
-        Unit/ServicesApiTest.c
+    add_executable(test_terminal_api
+        Unit/TerminalApiTest.c
         ${TRACEHUB_TEST_COMMON_SOURCE}
         ${TRACEHUB_SERVICES_DIR}/TerminalService.c
         ${TRACEHUB_SERVICES_DIR}/TerminalState.c
+        ${TRACEHUB_CORE_DIR}/ByteQueue.c
+    )
+
+    target_include_directories(test_terminal_api PRIVATE ${COMMON_INCLUDES})
+    target_compile_definitions(test_terminal_api PRIVATE
+        TERMINAL_DEFAULT_NETWORK_QUEUE_SIZE=8192u
+    )
+    add_test(NAME test_terminal_api COMMAND test_terminal_api)
+
+    add_executable(test_systemview_api
+        Unit/SystemViewApiTest.c
+        ${TRACEHUB_TEST_COMMON_SOURCE}
         ${TRACEHUB_SERVICES_DIR}/SystemViewService.c
         ${TRACEHUB_SERVICES_DIR}/SystemViewState.c
         ${TRACEHUB_SERVICES_DIR}/SystemViewRecord.c
         ${TRACEHUB_CORE_DIR}/ByteQueue.c
     )
 
-    target_include_directories(test_services_api PRIVATE ${COMMON_INCLUDES})
-    target_compile_definitions(test_services_api PRIVATE
-        TERMINAL_DEFAULT_NETWORK_QUEUE_SIZE=8192u
+    target_include_directories(test_systemview_api PRIVATE ${COMMON_INCLUDES})
+    target_compile_definitions(test_systemview_api PRIVATE
         SYSTEMVIEW_DEFAULT_NETWORK_QUEUE_SIZE=8192u
     )
-    add_test(NAME test_services_api COMMAND test_services_api)
+    add_test(NAME test_systemview_api COMMAND test_systemview_api)
 endif()
 
 # ==============================================================================
@@ -395,8 +425,11 @@ if(BUILD_UNIT_TESTS)
     if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
         message(STATUS "  - test_rtt_smem_backend : Linux SMEM backend API checks")
     endif()
-    message(STATUS "  - test_app_api : options, service plan, CLI, signal, and run loop API checks")
+    message(STATUS "  - test_app_options : application option parser checks")
+    message(STATUS "  - test_app_service_plan : application service plan checks")
+    message(STATUS "  - test_app_runloop : CLI, signal, and run loop API checks")
     message(STATUS "  - test_corelog_recorder_api : core log recorder API checks")
-    message(STATUS "  - test_services_api : Terminal and SystemView service API checks")
+    message(STATUS "  - test_terminal_api : Terminal service API checks")
+    message(STATUS "  - test_systemview_api : SystemView service API checks")
 endif()
 message(STATUS "==============================================================================")

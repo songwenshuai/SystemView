@@ -66,6 +66,10 @@ static int _TestRejectInvalidCreateInputs(void) {
 
 static int _TestInvalidEntryAccessors(void) {
     LogEntry_t invalid;
+    LogEntry_t missing_content;
+    LogEntry_t empty_content;
+    LogEntry_t oversized_content;
+    LogEntry_t invalid_source;
 
     memset(&invalid, 0, sizeof(invalid));
     invalid.valid = false;
@@ -88,6 +92,35 @@ static int _TestInvalidEntryAccessors(void) {
     TEST_ASSERT(LogEntry_GetContentLen(&invalid) == 0u);
     TEST_ASSERT(!LogEntry_IsValid(&invalid));
     TEST_ASSERT(LogEntry_Clone(&invalid) == NULL);
+
+    memset(&missing_content, 0, sizeof(missing_content));
+    missing_content.valid = true;
+    missing_content.source = LOG_SOURCE_LINUX;
+    missing_content.content = NULL;
+    missing_content.content_len = 1u;
+    TEST_ASSERT(!LogEntry_IsValid(&missing_content));
+    TEST_ASSERT(LogEntry_Clone(&missing_content) == NULL);
+
+    memset(&empty_content, 0, sizeof(empty_content));
+    empty_content.valid = true;
+    empty_content.source = LOG_SOURCE_LINUX;
+    empty_content.content = (char *)"x";
+    empty_content.content_len = 0u;
+    TEST_ASSERT(!LogEntry_IsValid(&empty_content));
+
+    memset(&oversized_content, 0, sizeof(oversized_content));
+    oversized_content.valid = true;
+    oversized_content.source = LOG_SOURCE_LINUX;
+    oversized_content.content = (char *)"x";
+    oversized_content.content_len = LOG_ENTRY_MAX_CONTENT_LEN + 1u;
+    TEST_ASSERT(!LogEntry_IsValid(&oversized_content));
+
+    memset(&invalid_source, 0, sizeof(invalid_source));
+    invalid_source.valid = true;
+    invalid_source.source = LOG_SOURCE_MAX;
+    invalid_source.content = (char *)"x";
+    invalid_source.content_len = 1u;
+    TEST_ASSERT(!LogEntry_IsValid(&invalid_source));
     return 0;
 }
 

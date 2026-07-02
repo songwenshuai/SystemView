@@ -9,12 +9,14 @@ Purpose : Unit checks for RTT memory and bridge public APIs
 */
 
 #include <stdbool.h>
+#include <limits.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
 
 #include "RTTMemory.h"
 #include "RTTBridge.h"
+#include "RTTBridge_internal.h"
 #include "SEGGER_RTT.h"
 #include "TestCommon.h"
 
@@ -30,14 +32,20 @@ static size_t    _stub_init_size;
 
 static int       _stub_find_result;
 static size_t    _stub_find_region_size;
+static unsigned  _stub_find_failures_before_success;
+static unsigned  _stub_find_call_count;
 static int       _stub_check_init_result;
 static int       _stub_check_region_result;
 static int       _stub_check_up_result;
 static int       _stub_check_down_result;
 static unsigned  _stub_bytes_in_buffer;
 static unsigned  _stub_read_result;
+static unsigned  _stub_write_result;
+static bool      _stub_write_override_enabled;
 static int       _stub_ensure_result;
 static unsigned  _stub_sleep_count;
+static bool      _stub_force_map_base_failure;
+static bool      _stub_force_search_base_failure;
 
 static void _ResetStubs(void) {
     _stub_base = 0x10000000u;
@@ -51,14 +59,25 @@ static void _ResetStubs(void) {
     _stub_init_size = 0u;
     _stub_find_result = 0;
     _stub_find_region_size = 0x1000u;
+    _stub_find_failures_before_success = 0u;
+    _stub_find_call_count = 0u;
     _stub_check_init_result = 0;
     _stub_check_region_result = 0;
     _stub_check_up_result = 0;
     _stub_check_down_result = 0;
     _stub_bytes_in_buffer = 3u;
     _stub_read_result = 2u;
+    _stub_write_result = 0u;
+    _stub_write_override_enabled = false;
     _stub_ensure_result = 0;
     _stub_sleep_count = 0u;
+    _stub_force_map_base_failure = false;
+    _stub_force_search_base_failure = false;
+}
+
+static void _ResetRegionSearchState(void) {
+    _ResetStubs();
+    memset(&_bridge_state, 0, sizeof(_bridge_state));
 }
 
 static int _BackendInit(const char *path, uint64_t base, size_t size) {
@@ -84,6 +103,12 @@ static size_t _BackendGetSize(void) {
 static uintptr_t _BackendToLocal(uint64_t address, size_t size) {
     uint64_t offset;
 
+    if (_stub_force_map_base_failure && address == _stub_base && size == _stub_size) {
+        return 0u;
+    }
+    if (_stub_force_search_base_failure && address != _stub_base) {
+        return 0u;
+    }
     if (address < _stub_base) {
         return 0u;
     }
@@ -140,8 +165,13 @@ int SEGGER_RTT_CheckDownBuffer(PTR_ADDR Address, size_t Size, unsigned BufferInd
 }
 
 int SEGGER_RTT_FindValidControlBlock(PTR_ADDR *pAddress, size_t Size, size_t *pRegionSize) {
+    _stub_find_call_count++;
     if (_stub_find_result != 0) {
         return _stub_find_result;
+    }
+    if (_stub_find_failures_before_success > 0u) {
+        _stub_find_failures_before_success--;
+        return -1;
     }
     if (pAddress == NULL || pRegionSize == NULL) {
         return -1;
@@ -175,6 +205,9 @@ unsigned SEGGER_RTT_WriteDownBufferNoLock(PTR_ADDR Address,
     (void)Address;
     (void)BufferIndex;
     (void)pBuffer;
+    if (_stub_write_override_enabled) {
+        return _stub_write_result;
+    }
     return NumBytes;
 }
 
@@ -300,6 +333,66 @@ static int _TestBridgeInitAbortCleansBackend(void) {
     return 0;
 }
 
+static int _TestBridgeInitFailureAndRetryPaths(void) {
+    RTTBridge_Config_t config;
+    volatile sig_atomic_t run_flag;
+
+    run_flag = 1;
+
+    _ResetStubs();
+    RTTBridge_Cleanup();
+    memset(&config, 0, sizeof(config));
+    config.device_path = "stub";
+    config.run_flag = &run_flag;
+    _stub_init_result = -1;
+
+    TEST_ASSERT(RTTBridge_Init(&config) == -1);
+    TEST_ASSERT(_stub_init_count == 1u);
+    TEST_ASSERT(_stub_cleanup_count == 0u);
+    TEST_ASSERT(!RTTBridge_GetState()->initialized);
+
+    _ResetStubs();
+    RTTBridge_Cleanup();
+    memset(&config, 0, sizeof(config));
+    config.device_path = "stub";
+    config.run_flag = &run_flag;
+    _stub_size = 0u;
+
+    TEST_ASSERT(RTTBridge_Init(&config) == -1);
+    TEST_ASSERT(_stub_find_call_count == 0u);
+    TEST_ASSERT(_stub_cleanup_count == 1u);
+    TEST_ASSERT(!RTTBridge_GetState()->initialized);
+
+    _ResetStubs();
+    RTTBridge_Cleanup();
+    memset(&config, 0, sizeof(config));
+    config.device_path = "stub";
+    config.run_flag = &run_flag;
+    config.rtt_search_timeout_ms = 1u;
+    _stub_find_result = -1;
+
+    TEST_ASSERT(RTTBridge_Init(&config) == -2);
+    TEST_ASSERT(_stub_find_call_count == 2u);
+    TEST_ASSERT(_stub_sleep_count == 1u);
+    TEST_ASSERT(_stub_cleanup_count == 1u);
+    TEST_ASSERT(!RTTBridge_GetState()->initialized);
+
+    _ResetStubs();
+    RTTBridge_Cleanup();
+    memset(&config, 0, sizeof(config));
+    config.device_path = "stub";
+    config.run_flag = &run_flag;
+    config.rtt_search_timeout_ms = 2000u;
+    _stub_find_failures_before_success = 1u;
+
+    TEST_ASSERT(RTTBridge_Init(&config) == 0);
+    TEST_ASSERT(_stub_find_call_count == 2u);
+    TEST_ASSERT(_stub_sleep_count == 1u);
+    TEST_ASSERT(RTTBridge_GetState()->initialized);
+    RTTBridge_Cleanup();
+    return 0;
+}
+
 static int _TestBridgeInitializedOperations(void) {
     RTTBridge_Config_t config;
     volatile sig_atomic_t run_flag;
@@ -341,11 +434,139 @@ static int _TestBridgeInitializedOperations(void) {
     return 0;
 }
 
+static int _TestBridgeChannelFailureContracts(void) {
+    RTTBridge_Config_t config;
+    volatile sig_atomic_t run_flag;
+    uintptr_t address;
+    size_t    region_size;
+    char      buffer[8];
+
+    _ResetStubs();
+    _stub_check_init_result = -1;
+    TEST_ASSERT(RTTBridge_WaitForRTTInitialized(1u, 1u, 1u) == -1);
+    TEST_ASSERT(_stub_sleep_count == 1u);
+
+    _ResetStubs();
+    _stub_check_region_result = -1;
+    TEST_ASSERT(RTTBridge_WaitForRTTUpChannelReady(1u, 16u, 0u, 1u, 1u) == -1);
+    TEST_ASSERT(_stub_sleep_count == 1u);
+
+    _ResetStubs();
+    RTTBridge_Cleanup();
+    run_flag = 1;
+    memset(&config, 0, sizeof(config));
+    config.device_path = "stub";
+    config.run_flag = &run_flag;
+    TEST_ASSERT(RTTBridge_Init(&config) == 0);
+    TEST_ASSERT(RTTBridge_GetValidatedRTTRegion(&address, &region_size) == 0);
+
+    _stub_check_up_result = -1;
+    TEST_ASSERT(RTTBridge_CheckUpBufferChannel(0u) == -1);
+    TEST_ASSERT(RTTBridge_GetBytesInBuffer(0u) == -1);
+    TEST_ASSERT(RTTBridge_ReadUpBufferNoLock(0u, buffer, sizeof(buffer)) == -1);
+    _stub_check_up_result = 0;
+
+    _stub_check_down_result = -1;
+    TEST_ASSERT(RTTBridge_CheckDownBufferChannel(0u) == -1);
+    TEST_ASSERT(RTTBridge_WriteDownBufferNoLock(0u, "abc", 3u) == -1);
+    _stub_check_down_result = 0;
+
+    _stub_bytes_in_buffer = (unsigned)INT_MAX + 1u;
+    TEST_ASSERT(RTTBridge_GetBytesInBuffer(0u) == -1);
+    _stub_bytes_in_buffer = 3u;
+
+    _stub_read_result = (unsigned)INT_MAX + 1u;
+    TEST_ASSERT(RTTBridge_ReadUpBufferNoLock(0u, buffer, sizeof(buffer)) == -1);
+    _stub_read_result = 2u;
+
+    _stub_write_override_enabled = true;
+    _stub_write_result = (unsigned)INT_MAX + 1u;
+    TEST_ASSERT(RTTBridge_WriteDownBufferNoLock(0u, "abc", 3u) == -1);
+    _stub_write_override_enabled = false;
+
+    TEST_ASSERT(RTTBridge_ReadUpBufferNoLock(0u, buffer, (size_t)INT_MAX + 1u) == -1);
+    TEST_ASSERT(RTTBridge_WriteDownBufferNoLock(0u, "abc", (size_t)INT_MAX + 1u) == -1);
+
+    _stub_check_region_result = -1;
+    _stub_find_region_size = 0x800u;
+    TEST_ASSERT(RTTBridge_GetValidatedRTTRegion(&address, &region_size) == 0);
+    TEST_ASSERT(region_size == _stub_find_region_size);
+
+    RTTBridge_Cleanup();
+    return 0;
+}
+
+static int _TestRegionSearchValidationContracts(void) {
+    uintptr_t address;
+    size_t    region_size;
+
+    _ResetRegionSearchState();
+    RTTBridge_Cleanup();
+    TEST_ASSERT(RTTMem_InstallBackend(&_stub_backend) == 0);
+    TEST_ASSERT(RTTBridgeRegion_SetupMemoryMapping(NULL, 0u, 0u) == -1);
+
+    address = 0u;
+    region_size = 0u;
+    TEST_ASSERT(RTTBridgeRegion_FindValid(NULL, &region_size) == -2);
+    TEST_ASSERT(RTTBridgeRegion_FindValid(&address, NULL) == -2);
+
+    _ResetRegionSearchState();
+    _stub_size = 0u;
+    TEST_ASSERT(RTTBridgeRegion_FindValid(&address, &region_size) == -2);
+
+    _ResetRegionSearchState();
+    _bridge_state.config.rtt_address = _stub_base - 1u;
+    TEST_ASSERT(RTTBridgeRegion_FindValid(&address, &region_size) == -2);
+
+    _ResetRegionSearchState();
+    _bridge_state.config.rtt_address = _stub_base + _stub_size;
+    TEST_ASSERT(RTTBridgeRegion_FindValid(&address, &region_size) == -2);
+
+    _ResetRegionSearchState();
+    _bridge_state.config.rtt_region_size = SEGGER_RTT__CB_OFF_A_UP - 1u;
+    TEST_ASSERT(RTTBridgeRegion_FindValid(&address, &region_size) == -2);
+
+    _ResetRegionSearchState();
+    _bridge_state.config.rtt_address = _stub_base + (_stub_size / 2u);
+    _bridge_state.config.rtt_region_size = (_stub_size / 2u) + 1u;
+    TEST_ASSERT(RTTBridgeRegion_FindValid(&address, &region_size) == -2);
+
+    _ResetRegionSearchState();
+    _stub_force_map_base_failure = true;
+    TEST_ASSERT(RTTBridgeRegion_FindValid(&address, &region_size) == -2);
+
+    _ResetRegionSearchState();
+    _stub_force_search_base_failure = true;
+    _bridge_state.config.rtt_address = _stub_base + SEGGER_RTT__CB_OFF_A_UP;
+    _bridge_state.config.rtt_region_size = SEGGER_RTT__CB_OFF_A_UP;
+    TEST_ASSERT(RTTBridgeRegion_FindValid(&address, &region_size) == -2);
+
+    _ResetRegionSearchState();
+    _stub_find_result = -1;
+    TEST_ASSERT(RTTBridgeRegion_FindValid(&address, &region_size) == -1);
+    TEST_ASSERT(_stub_find_call_count == 1u);
+
+    _ResetRegionSearchState();
+    _bridge_state.config.rtt_address = _stub_base + 0x100u;
+    _bridge_state.config.rtt_region_size = 0x300u;
+    _stub_find_region_size = 0x200u;
+    TEST_ASSERT(RTTBridgeRegion_FindValid(&address, &region_size) == 0);
+    TEST_ASSERT(address == _stub_local_base + 0x100u);
+    TEST_ASSERT(region_size == 0x200u);
+    TEST_ASSERT(_stub_find_call_count == 1u);
+
+    RTTBridge_Cleanup();
+    return 0;
+}
+
 int main(void) {
     TEST_RUN(_TestMemoryDispatcher);
     TEST_RUN(_TestBridgeInvalidStateContracts);
     TEST_RUN(_TestBridgeInitAbortCleansBackend);
+    TEST_RUN(_TestBridgeInitFailureAndRetryPaths);
     TEST_RUN(_TestBridgeInitializedOperations);
+    TEST_RUN(_TestBridgeChannelFailureContracts);
+    TEST_RUN(_TestRegionSearchValidationContracts);
     return 0;
 }
 
